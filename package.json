@@ -1,0 +1,33 @@
+{
+  "name": "pulseshift",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Healthcare workforce scheduling copilot and Kronos-style replacement prototype.",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace @pulseshift/web",
+    "dev:web": "npm run dev --workspace @pulseshift/web",
+    "dev:api": "npm run start:dev --workspace @pulseshift/api",
+    "build": "npm run build --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "db:generate": "npm run db:generate --workspace @pulseshift/db",
+    "db:migrate": "npm run db:migrate --workspace @pulseshift/db",
+    "db:seed": "npm run db:seed --workspace @pulseshift/db",
+    "quality": "npm run typecheck && npm run lint && npm run test"
+  },
+  "engines": {
+    "node": ">=20.11.0",
+    "npm": ">=10.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "eslint": "^9.17.0",
+    "prettier": "^3.4.2",
+    "typescript": "^5.7.2"
+  }
+}

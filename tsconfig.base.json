@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "baseUrl": ".",
+    "paths": {
+      "@pulseshift/domain": ["packages/domain/src/index.ts"],
+      "@pulseshift/tools": ["packages/tools/src/index.ts"],
+      "@pulseshift/ai": ["packages/ai/src/index.ts"],
+      "@pulseshift/integrations": ["packages/integrations/src/index.ts"],
+      "@pulseshift/evals": ["packages/evals/src/index.ts"]
+    }
+  }
+}
