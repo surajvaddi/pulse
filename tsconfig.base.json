@@ -13,6 +13,7 @@
     "skipLibCheck": true,
     "baseUrl": ".",
     "paths": {
+      "@pulseshift/db": ["packages/db/src/index.ts"],
       "@pulseshift/domain": ["packages/domain/src/index.ts"],
       "@pulseshift/tools": ["packages/tools/src/index.ts"],
       "@pulseshift/ai": ["packages/ai/src/index.ts"],

@@ -1,0 +1,17 @@
+{
+  "name": "@pulseshift/db",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint \"src/**/*.ts\"",
+    "test": "tsc --noEmit",
+    "db:generate": "echo \"Prisma schema will be added in Phase 1\"",
+    "db:migrate": "echo \"Prisma migrations will be added in Phase 1\"",
+    "db:seed": "echo \"Seed data will be added in Phase 1\""
+  }
+}
