@@ -127,6 +127,15 @@ Phase 8 verification status:
 - Web pages added for staffing gaps, staff directory, credential warnings, and timecard resolution.
 - API e2e checks cover staffing gaps, candidate ranking, credential warnings, staff visibility, and timecard resolution.
 
+Phase 9 verification status:
+
+- Integration package defines workforce adapter contracts, sync run summaries, connection metadata, and CSV import previews.
+- Demo integration API lists Kronos, payroll CSV, and HRIS connections.
+- Manual sync endpoint exercises mock staff, schedule, timecard import, and schedule export paths.
+- Sync runs are persisted in demo state and appended to the audit trail.
+- Admin integrations console displays connection status, sync history, manual sync controls, and import preview rows.
+- API e2e checks cover integration listing, import preview counts, sync run creation, sync run ordering, and audit logging.
+
 ## Source Documents
 
 - `spec.md`: full product specification.

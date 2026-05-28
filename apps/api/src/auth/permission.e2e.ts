@@ -184,6 +184,41 @@ async function main() {
     .expect(201);
   assert.equal(resolvedException.body.status, "RESOLVED");
 
+  const integrations = await request(server)
+    .get("/integrations")
+    .set("x-demo-user-id", "user_admin")
+    .expect(200);
+  assert.equal(integrations.body[0].id, "integration_kronos_icu");
+
+  const importPreview = await request(server)
+    .get("/integrations/integration_kronos_icu/import-preview")
+    .set("x-demo-user-id", "user_admin")
+    .expect(200);
+  assert.equal(importPreview.body.acceptedRows, 2);
+  assert.equal(importPreview.body.rejectedRows, 1);
+
+  const syncRun = await request(server)
+    .post("/integrations/integration_kronos_icu/sync")
+    .set("x-demo-user-id", "user_admin")
+    .send({ direction: "BIDIRECTIONAL" })
+    .expect(201);
+  assert.equal(syncRun.body.status, "SUCCEEDED");
+  assert.ok(syncRun.body.imported >= 1);
+  assert.equal(syncRun.body.exported, 1);
+
+  const syncRuns = await request(server)
+    .get("/integrations/integration_kronos_icu/sync-runs")
+    .set("x-demo-user-id", "user_admin")
+    .expect(200);
+  assert.equal(syncRuns.body[0].id, syncRun.body.id);
+
+  const auditAfterSync = await request(server)
+    .get("/demo/audit")
+    .set("x-demo-user-id", "user_admin")
+    .expect(200);
+  const syncAuditActions = auditAfterSync.body.map((log: { action: string }) => log.action);
+  assert.ok(syncAuditActions.includes("integration.sync_completed"));
+
   await app.close();
 }
 
