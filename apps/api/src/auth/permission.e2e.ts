@@ -130,6 +130,14 @@ async function main() {
     .expect(201);
   assert.equal(logout.body.status, "SIGNED_OUT");
 
+  process.env.ENABLE_DEMO_RESET = "false";
+  await request(server)
+    .post("/demo/reset")
+    .set("x-demo-user-id", "user_admin")
+    .send({})
+    .expect(403);
+  delete process.env.ENABLE_DEMO_RESET;
+
   await request(server)
     .get("/demo/audit")
     .set("x-demo-user-id", "user_payroll")

@@ -91,6 +91,10 @@ export class DemoController {
 
   @Post("reset")
   reset(@CurrentSession() session: DemoSession) {
+    if (process.env.ENABLE_DEMO_RESET === "false") {
+      throw new ForbiddenException("Demo reset is disabled in this environment");
+    }
+
     this.assertAllowed(
       session,
       this.permissions.hasPermission(session, "audit:read", {
