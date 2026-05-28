@@ -70,6 +70,16 @@ Phase 2 verification status:
 - Payroll audit denial and admin audit access: passing.
 - Full workspace typecheck, lint, test, and build: passing.
 
+Phase 3 verification status:
+
+- App shell navigation, desktop sidebar, top bar, and mobile nav: implemented.
+- Employee home and schedule pages: API-backed with scoped self schedule data.
+- Open shifts, swap center, timecard, notifications, copilot, and manager dashboard pages: implemented.
+- Employee schedule privacy: preserved through `/demo/schedule/me` and API permission e2e checks.
+- Manager dashboard unit scope: API-backed through `user_jordan_manager`.
+- Full workspace typecheck, lint, and test: passing.
+- Production build: passing with the API running for dynamic server-rendered pages.
+
 ## Source Documents
 
 - `spec.md`: full product specification.
