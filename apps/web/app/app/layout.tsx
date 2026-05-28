@@ -8,6 +8,7 @@ import {
   Home,
   LayoutDashboard,
   ReceiptText,
+  ShieldAlert,
   Users
 } from "lucide-react";
 
@@ -19,6 +20,8 @@ const navItems = [
   { href: "/app/open-shifts", label: "Open Shifts", icon: Clock3 },
   { href: "/app/swaps", label: "Swaps", icon: Users },
   { href: "/app/timecards", label: "Timecards", icon: ReceiptText },
+  { href: "/app/staffing-gaps", label: "Staffing", icon: ShieldAlert },
+  { href: "/app/staff", label: "Staff", icon: Users },
   { href: "/app/manager", label: "Manager", icon: LayoutDashboard },
   { href: "/app/copilot", label: "Copilot", icon: Bot }
 ];

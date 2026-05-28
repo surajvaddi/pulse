@@ -60,3 +60,14 @@ export async function askCopilotAction(formData: FormData) {
   await apiPost("/copilot/messages", { message }, userId);
   revalidatePath(`/app/copilot?last=${encoded}`);
 }
+
+export async function resolveTimecardAction(formData: FormData) {
+  const exceptionId = String(formData.get("exceptionId"));
+  await apiPost(
+    `/operations/timecards/exceptions/${exceptionId}/resolve`,
+    { resolution: "Payroll reviewed employee note and manager context" },
+    "user_payroll"
+  );
+  revalidatePath("/app/timecards");
+  revalidatePath("/app/manager");
+}

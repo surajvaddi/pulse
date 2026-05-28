@@ -1,4 +1,5 @@
 import { apiGet, type TimecardException } from "@/lib/api";
+import { resolveTimecardAction } from "../actions";
 
 export default async function TimecardsPage() {
   const exceptions = await apiGet<TimecardException[]>("/demo/timecards/exceptions");
@@ -21,7 +22,12 @@ export default async function TimecardsPage() {
                 <strong>{exception.type.replaceAll("_", " ")}</strong>
                 <span>{exception.explanation}</span>
               </div>
-              <span className="status-pill">{exception.status}</span>
+              <form action={resolveTimecardAction}>
+                <input type="hidden" name="exceptionId" value={exception.id} />
+                <button className="command-button" type="submit">
+                  {exception.status === "RESOLVED" ? "Resolved" : "Resolve"}
+                </button>
+              </form>
             </article>
           ))}
         </div>
@@ -29,4 +35,3 @@ export default async function TimecardsPage() {
     </section>
   );
 }
-

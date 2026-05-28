@@ -81,6 +81,39 @@ export type CopilotResponse = {
   }>;
 };
 
+export type StaffingGap = {
+  id: string;
+  unitId: string;
+  role: string;
+  requiredCount: number;
+  assignedCount: number;
+  gapCount: number;
+  severity: string;
+  recommendedActions: string[];
+};
+
+export type CoverageCandidate = {
+  employeeId: string;
+  name: string;
+  role: string;
+  eligibility: string;
+  availability: string;
+  overtimeRisk: string;
+};
+
+export type StaffMember = CoverageCandidate & {
+  unitId?: string;
+  certifications?: string[];
+};
+
+export type CredentialWarning = {
+  employeeId: string;
+  employeeName: string;
+  certification: string;
+  status: string;
+  expiresAt: string | null;
+};
+
 export const demoUsers: Array<{ id: DemoUserId; label: string; role: string }> = [
   { id: "user_priya", label: "Priya Raman", role: "Employee" },
   { id: "user_maya", label: "Maya Shah", role: "Employee" },
