@@ -2,10 +2,11 @@ import { MiddlewareConsumer, Module, NestModule } from "@nestjs/common";
 
 import { AuthModule } from "./auth/auth.module";
 import { DemoAuthMiddleware } from "./auth/demo-auth.middleware";
+import { DemoModule } from "./demo/demo.module";
 import { HealthController } from "./health.controller";
 
 @Module({
-  imports: [AuthModule],
+  imports: [AuthModule, DemoModule],
   controllers: [HealthController]
 })
 export class AppModule implements NestModule {
