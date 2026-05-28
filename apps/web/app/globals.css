@@ -183,6 +183,12 @@ h1 {
   gap: 10px;
 }
 
+.prompt-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 120px;
+  gap: 10px;
+}
+
 .copilot-entry label {
   font-weight: 800;
 }
@@ -357,6 +363,10 @@ h1 {
   }
 
   .timeline {
+    grid-template-columns: 1fr;
+  }
+
+  .prompt-form {
     grid-template-columns: 1fr;
   }
 

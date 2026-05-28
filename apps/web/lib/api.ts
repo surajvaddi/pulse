@@ -70,6 +70,17 @@ export type Notification = {
   payload: Record<string, string>;
 };
 
+export type CopilotResponse = {
+  mode: "ANSWER" | "ACTION_PREVIEW" | "BLOCKED";
+  answer: string;
+  toolCalls: Array<{
+    id: string;
+    toolName: string;
+    status: string;
+    riskLevel: string;
+  }>;
+};
+
 export const demoUsers: Array<{ id: DemoUserId; label: string; role: string }> = [
   { id: "user_priya", label: "Priya Raman", role: "Employee" },
   { id: "user_maya", label: "Maya Shah", role: "Employee" },
