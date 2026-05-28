@@ -50,6 +50,15 @@ Phase 0 verification status:
 - Docker Compose runtime: pending local Docker availability; this environment does not have `docker` installed.
 - Security audit: no high or critical advisories; current Next/PostCSS advisory is moderate and requires a breaking downgrade from npm's suggested fix.
 
+Phase 1 verification status:
+
+- Domain package typecheck and lint: passing.
+- Prisma client generation: passing.
+- Prisma schema validation: passing when `DATABASE_URL` is set.
+- Full workspace typecheck, lint, test, and build: passing.
+- Seed script typecheck/lint: passing.
+- Seed execution and migrations: pending a reachable local PostgreSQL server. This environment does not have Docker installed and nothing is listening at `localhost:5432`.
+
 ## Source Documents
 
 - `spec.md`: full product specification.

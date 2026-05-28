@@ -16,6 +16,7 @@
     "lint": "npm run lint --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
     "db:generate": "npm run db:generate --workspace @pulseshift/db",
+    "db:validate": "npm run db:validate --workspace @pulseshift/db",
     "db:migrate": "npm run db:migrate --workspace @pulseshift/db",
     "db:seed": "npm run db:seed --workspace @pulseshift/db",
     "quality": "npm run typecheck && npm run lint && npm run test"

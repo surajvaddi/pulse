@@ -11,6 +11,7 @@
     "lint": "eslint \"src/**/*.ts\" \"prisma/**/*.ts\"",
     "test": "tsc --noEmit",
     "db:generate": "prisma generate --schema prisma/schema.prisma",
+    "db:validate": "prisma validate --schema prisma/schema.prisma",
     "db:migrate": "prisma migrate dev --schema prisma/schema.prisma",
     "db:push": "prisma db push --schema prisma/schema.prisma",
     "db:seed": "tsx prisma/seed.ts"
