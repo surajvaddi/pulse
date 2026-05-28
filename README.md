@@ -100,6 +100,15 @@ Phase 5 verification status:
 - Manager dashboard exposes recent audit records.
 - API e2e checks assert policy decisions and audit records for claim and swap workflows.
 
+Phase 6 verification status:
+
+- Notification API lists notifications scoped to the current demo user.
+- Notification read endpoint updates in-app read state.
+- Workflow-created approval and swap notifications are visible through the inbox API.
+- Web notification inbox is API-backed and uses server actions to mark notifications read.
+- Server action revalidation provides the initial live-update foundation for notification and workflow views.
+- API e2e checks cover notification listing and read-state mutation.
+
 ## Source Documents
 
 - `spec.md`: full product specification.
