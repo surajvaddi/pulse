@@ -1,8 +1,9 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 
-import { apiPost, type DemoUserId, type Invitation } from "@/lib/api";
+import { apiPost, apiPostWithAccessToken, type DemoUserId, type Invitation } from "@/lib/api";
 
 export async function startDemoSessionAction(formData: FormData) {
   const userId = String(formData.get("userId") ?? "user_priya");
@@ -11,7 +12,19 @@ export async function startDemoSessionAction(formData: FormData) {
 
 export async function logoutAction() {
   await apiPost("/auth/logout", {}, "user_priya");
+  (await cookies()).delete("ps_access_token");
   redirect("/login");
+}
+
+export async function establishSupabaseSessionAction(accessToken: string) {
+  (await cookies()).set("ps_access_token", accessToken, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: 60 * 60
+  });
+  redirect("/app/home");
 }
 
 export async function inviteWorkforceMemberAction(formData: FormData) {
@@ -31,7 +44,12 @@ export async function inviteWorkforceMemberAction(formData: FormData) {
 
 export async function acceptInvitationAction(formData: FormData) {
   const token = String(formData.get("token") ?? "");
+  const accessToken = String(formData.get("accessToken") ?? "");
   const userId = String(formData.get("userId") ?? "user_priya") as DemoUserId;
-  await apiPost<Invitation>(`/invitations/${token}/accept`, {}, userId);
+  if (accessToken) {
+    await apiPostWithAccessToken<Invitation>(`/invitations/${token}/accept`, {}, accessToken);
+  } else {
+    await apiPost<Invitation>(`/invitations/${token}/accept`, {}, userId);
+  }
   redirect("/onboarding/profile");
 }

@@ -1,8 +1,8 @@
 import Link from "next/link";
-import { CheckCircle2, UserPlus } from "lucide-react";
+import { CheckCircle2 } from "lucide-react";
 
-import { acceptInvitationAction } from "../../account-actions";
-import { apiGet, demoUsers, type Invitation } from "@/lib/api";
+import { apiPublicGet, type Invitation } from "@/lib/api";
+import { AcceptInviteForm } from "./accept-invite-form";
 
 type AcceptInvitePageProps = {
   searchParams: Promise<{
@@ -13,7 +13,7 @@ type AcceptInvitePageProps = {
 export default async function AcceptInvitePage({ searchParams }: AcceptInvitePageProps) {
   const { token } = await searchParams;
   const invitation = token
-    ? await apiGet<Invitation>(`/invitations/${encodeURIComponent(token)}`, "user_priya").catch(
+    ? await apiPublicGet<Invitation>(`/invitations/${encodeURIComponent(token)}`).catch(
         () => null
       )
     : null;
@@ -32,21 +32,7 @@ export default async function AcceptInvitePage({ searchParams }: AcceptInvitePag
         </div>
 
         {invitation && token ? (
-          <form action={acceptInvitationAction} className="auth-form">
-            <input type="hidden" name="token" value={token} />
-            <label htmlFor="userId">Accept as</label>
-            <select id="userId" name="userId" defaultValue="user_priya">
-              {demoUsers.slice(0, 2).map((user) => (
-                <option key={user.id} value={user.id}>
-                  {user.label}
-                </option>
-              ))}
-            </select>
-            <button className="command-button" type="submit">
-              <UserPlus size={18} aria-hidden="true" />
-              Accept invite
-            </button>
-          </form>
+          <AcceptInviteForm token={token} />
         ) : (
           <Link className="command-button" href="/login">
             <CheckCircle2 size={18} aria-hidden="true" />

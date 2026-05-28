@@ -20,6 +20,7 @@ Required variables:
 - `NEXT_PUBLIC_APP_URL`: public web URL for invite/auth redirects.
 - `ENABLE_DEMO_AUTH`: `true` only for local/demo environments; set to `false` for staging and production.
 - `ENABLE_DEMO_RESET`: `true` only for local/demo environments; set to `false` for staging and production.
+- `AUTH_PERSISTENCE`: `memory` for local demo invites, `prisma` for Supabase-backed invitations and account linking.
 - `WORKFLOW_PERSISTENCE`: `memory` for the local MVP demo, `prisma` for database-backed workflow state.
 - `OPENAI_API_KEY` or `AI_GATEWAY_API_KEY`: LLM provider key.
 
@@ -45,7 +46,18 @@ Hosted setup:
 5. Store Supabase anon/service-role/JWT settings in the deployment secret store.
 6. Set `ENABLE_DEMO_AUTH=false` outside local demos so requests require Supabase bearer tokens.
 7. Set `ENABLE_DEMO_RESET=false` outside local demos so destructive reset is not exposed.
-8. Set `WORKFLOW_PERSISTENCE=prisma` in staging and production so workflow writes survive API restarts.
+8. Set `AUTH_PERSISTENCE=prisma` so invitations are stored in Postgres and accepted users are linked to Supabase Auth IDs.
+9. Set `WORKFLOW_PERSISTENCE=prisma` in staging and production so workflow writes survive API restarts.
+
+## Supabase Auth Smoke Test
+
+For local Supabase testing against seeded users:
+
+1. Create Supabase Auth users with the seeded emails, such as `admin@example.com` and `priya.nurse@example.com`.
+2. Start the API with `ENABLE_DEMO_AUTH=false`, `ENABLE_DEMO_RESET=false`, `AUTH_PERSISTENCE=prisma`, and `WORKFLOW_PERSISTENCE=prisma`.
+3. Run `npm run db:push` and `npm run db:seed` against the Supabase database.
+4. Sign in at `/login` with one of the Supabase users. On first successful request, PulseShift links the real Supabase `sub` to the matching seeded app user by email.
+5. Invite a workforce member from `/onboarding/organization`, create or sign in as that invited Supabase user, then open the invite URL and accept it.
 
 ## Prisma Commands
 

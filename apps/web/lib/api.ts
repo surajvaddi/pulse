@@ -242,11 +242,22 @@ export const demoUsers: Array<{ id: DemoUserId; label: string; role: string }> =
   { id: "user_admin", label: "Alex Admin", role: "Admin" }
 ];
 
+async function authHeaders(userId: DemoUserId) {
+  const { cookies } = await import("next/headers");
+  const accessToken = (await cookies()).get("ps_access_token")?.value;
+  if (accessToken) {
+    return {
+      authorization: `Bearer ${accessToken}`
+    };
+  }
+  return {
+    "x-demo-user-id": userId
+  };
+}
+
 export async function apiGet<T>(path: string, userId: DemoUserId = "user_priya"): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
-    headers: {
-      "x-demo-user-id": userId
-    },
+    headers: await authHeaders(userId),
     cache: "no-store"
   });
 
@@ -266,7 +277,41 @@ export async function apiPost<T>(
     method: "POST",
     headers: {
       "content-type": "application/json",
-      "x-demo-user-id": userId
+      ...(await authHeaders(userId))
+    },
+    body: JSON.stringify(body),
+    cache: "no-store"
+  });
+
+  if (!response.ok) {
+    throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+  }
+
+  return (await response.json()) as T;
+}
+
+export async function apiPublicGet<T>(path: string): Promise<T> {
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    cache: "no-store"
+  });
+
+  if (!response.ok) {
+    throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+  }
+
+  return (await response.json()) as T;
+}
+
+export async function apiPostWithAccessToken<T>(
+  path: string,
+  body: Record<string, unknown> = {},
+  accessToken: string
+): Promise<T> {
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      authorization: `Bearer ${accessToken}`
     },
     body: JSON.stringify(body),
     cache: "no-store"

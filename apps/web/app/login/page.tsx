@@ -1,9 +1,10 @@
 import Link from "next/link";
-import { LogIn, ShieldCheck } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
 
 import { startDemoSessionAction } from "../account-actions";
 import { demoUsers } from "@/lib/api";
 import { isSupabaseConfigured, supabaseConfig } from "@/lib/supabase";
+import { LoginForm } from "./login-form";
 
 export default function LoginPage() {
   const configured = isSupabaseConfigured();
@@ -25,6 +26,8 @@ export default function LoginPage() {
           </div>
         </div>
 
+        <LoginForm configured={configured} />
+
         <form action={startDemoSessionAction} className="auth-form">
           <label htmlFor="userId">Demo identity</label>
           <select id="userId" name="userId" defaultValue="user_priya">
@@ -35,8 +38,7 @@ export default function LoginPage() {
             ))}
           </select>
           <button className="command-button" type="submit">
-            <LogIn size={18} aria-hidden="true" />
-            Continue
+            Continue as demo user
           </button>
           <Link className="command-button" href="/onboarding/organization">
             <ShieldCheck size={18} aria-hidden="true" />
