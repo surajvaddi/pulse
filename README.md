@@ -9,6 +9,7 @@ Prerequisites:
 - Node.js 20.11 or newer
 - npm 10 or newer
 - Docker Desktop or another Docker Compose compatible runtime
+- Supabase project credentials when testing production auth or hosted database behavior
 
 Commands:
 
@@ -22,6 +23,13 @@ npm run db:seed
 npm run dev:web
 npm run dev:api
 ```
+
+Production-readiness setup:
+
+- Use `DATABASE_URL` for the pooled Supabase Postgres runtime connection.
+- Use `DIRECT_URL` for Prisma migrations against Supabase.
+- Configure Supabase auth keys in `.env`; keep `SUPABASE_SERVICE_ROLE_KEY` server-only.
+- See `docs/production-readiness.md` for Supabase setup, migration commands, seed/reset policy, CI gates, and the repository migration pattern.
 
 Seeded demo users:
 
@@ -167,6 +175,7 @@ Phase 11 verification status:
 - `plan.md`: architecture and product roadmap.
 - `implement.md`: phase-by-phase Goal Mode execution guide.
 - `DEMO.md`: repeatable MVP demo script and readiness checklist.
+- `docs/production-readiness.md`: Supabase, CI, migration, and production-readiness runbook.
 
 ## Safety Boundaries
 
