@@ -1,4 +1,4 @@
-import { ForbiddenException, Controller, Get, Param } from "@nestjs/common";
+import { ForbiddenException, Controller, Get, Inject, Param } from "@nestjs/common";
 
 import { CurrentSession } from "../auth/session.decorator";
 import type { DemoSession } from "../auth/demo-users";
@@ -12,7 +12,7 @@ import {
 
 @Controller("demo")
 export class DemoController {
-  constructor(private readonly permissions: PermissionService) {}
+  constructor(@Inject(PermissionService) private readonly permissions: PermissionService) {}
 
   @Get("schedule/me")
   mySchedule(@CurrentSession() session: DemoSession) {
@@ -84,4 +84,3 @@ export class DemoController {
     }
   }
 }
-
