@@ -151,6 +151,39 @@ async function main() {
     .expect(200);
   assert.ok(adminToolCalls.body.length >= 4);
 
+  const staffingGaps = await request(server)
+    .get("/operations/staffing/gaps")
+    .set("x-demo-user-id", "user_jordan_manager")
+    .expect(200);
+  assert.equal(staffingGaps.body[0].id, "gap_icu_rn_night");
+  assert.equal(staffingGaps.body[0].gapCount, 1);
+
+  const candidates = await request(server)
+    .get("/operations/staffing/gaps/gap_icu_rn_night/candidates")
+    .set("x-demo-user-id", "user_jordan_manager")
+    .expect(200);
+  assert.ok(candidates.body.candidates.some((candidate: { name: string }) => candidate.name === "Nina Patel"));
+
+  const credentialWarnings = await request(server)
+    .get("/operations/credentials/warnings")
+    .set("x-demo-user-id", "user_admin")
+    .expect(200);
+  assert.equal(credentialWarnings.body[0].employeeName, "Nina Patel");
+
+  const employeeStaffView = await request(server)
+    .get("/operations/staff")
+    .set("x-demo-user-id", "user_priya")
+    .expect(200);
+  assert.equal(employeeStaffView.body[0].eligibility, "ICU qualified");
+  assert.equal(employeeStaffView.body[0].certifications, undefined);
+
+  const resolvedException = await request(server)
+    .post("/operations/timecards/exceptions/timecard_exception_late_priya/resolve")
+    .set("x-demo-user-id", "user_payroll")
+    .send({ resolution: "Manager confirmed early unit need." })
+    .expect(201);
+  assert.equal(resolvedException.body.status, "RESOLVED");
+
   await app.close();
 }
 

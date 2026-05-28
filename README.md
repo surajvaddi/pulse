@@ -118,6 +118,15 @@ Phase 7 verification status:
 - Copilot UI posts prompts and displays answer mode, answer text, tool name, risk level, and status.
 - Admin-scoped tool-call listing is covered by API e2e checks.
 
+Phase 8 verification status:
+
+- Staffing gap API computes ICU RN night gap and ranked coverage candidates.
+- Staff directory API returns manager detail and limits employee-facing staff fields.
+- Credential warning API surfaces expiring certification risk.
+- Payroll timecard resolution endpoint updates exception status and appends audit history.
+- Web pages added for staffing gaps, staff directory, credential warnings, and timecard resolution.
+- API e2e checks cover staffing gaps, candidate ranking, credential warnings, staff visibility, and timecard resolution.
+
 ## Source Documents
 
 - `spec.md`: full product specification.
