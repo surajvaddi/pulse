@@ -45,3 +45,10 @@ export async function approveSwapAction(formData: FormData) {
   revalidatePath("/app/schedule");
   revalidatePath("/app/manager");
 }
+
+export async function markNotificationReadAction(formData: FormData) {
+  const notificationId = String(formData.get("notificationId"));
+  const userId = String(formData.get("userId") ?? "user_priya") as DemoUserId;
+  await apiPost(`/notifications/${notificationId}/read`, {}, userId);
+  revalidatePath("/app/notifications");
+}

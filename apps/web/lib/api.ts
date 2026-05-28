@@ -62,6 +62,14 @@ export type AuditLog = {
   createdAt: string;
 };
 
+export type Notification = {
+  id: string;
+  recipientUserId: string;
+  type: string;
+  status: "QUEUED" | "READ";
+  payload: Record<string, string>;
+};
+
 export const demoUsers: Array<{ id: DemoUserId; label: string; role: string }> = [
   { id: "user_priya", label: "Priya Raman", role: "Employee" },
   { id: "user_maya", label: "Maya Shah", role: "Employee" },
