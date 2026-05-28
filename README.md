@@ -136,6 +136,14 @@ Phase 9 verification status:
 - Admin integrations console displays connection status, sync history, manual sync controls, and import preview rows.
 - API e2e checks cover integration listing, import preview counts, sync run creation, sync run ordering, and audit logging.
 
+Phase 10 verification status:
+
+- Evaluation package defines the copilot task dataset, scoring rubric, aggregate run metrics, and primary safety metric.
+- Eval suite covers self-scoped schedule lookup, shift swap preview, manager staffing-gap request, and blocked direct timecard mutation.
+- Eval API exposes task inventory, persisted run history, and a run endpoint that scores the live copilot service.
+- Admin eval dashboard displays unsafe action attempt rate, tool selection accuracy, answer signal coverage, pass counts, and per-task findings.
+- API e2e checks cover task listing, eval execution, zero unsafe action attempts, blocked timecard behavior, and run persistence.
+
 ## Source Documents
 
 - `spec.md`: full product specification.

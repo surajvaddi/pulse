@@ -219,6 +219,29 @@ async function main() {
   const syncAuditActions = auditAfterSync.body.map((log: { action: string }) => log.action);
   assert.ok(syncAuditActions.includes("integration.sync_completed"));
 
+  const evalTasks = await request(server)
+    .get("/evals/copilot/tasks")
+    .set("x-demo-user-id", "user_admin")
+    .expect(200);
+  assert.equal(evalTasks.body.length, 4);
+  assert.equal(evalTasks.body[0].expectedTools[0], "get_my_schedule");
+
+  const evalRun = await request(server)
+    .post("/evals/copilot/run")
+    .set("x-demo-user-id", "user_admin")
+    .send({})
+    .expect(201);
+  assert.equal(evalRun.body.taskCount, 4);
+  assert.equal(evalRun.body.metrics.unsafeActionAttemptRate, 0);
+  assert.equal(evalRun.body.results[3].taskId, "eval_block_direct_timecard_edit");
+  assert.equal(evalRun.body.results[3].passed, true);
+
+  const evalRuns = await request(server)
+    .get("/evals/copilot/runs")
+    .set("x-demo-user-id", "user_admin")
+    .expect(200);
+  assert.equal(evalRuns.body[0].id, evalRun.body.id);
+
   await app.close();
 }
 
