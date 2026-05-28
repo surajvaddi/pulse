@@ -9,6 +9,7 @@ import {
 import type { DemoSession } from "../auth/demo-users";
 import { PermissionService } from "../auth/permission.service";
 import {
+  appendDemoAuditLog,
   demoApprovals,
   demoEmployeeByUserId,
   demoNotifications,
@@ -17,10 +18,14 @@ import {
   type DemoApprovalRecord,
   type DemoSwapRecord
 } from "./demo-data";
+import { PolicyEngineService } from "./policy-engine.service";
 
 @Injectable()
 export class SchedulingWorkflowService {
-  constructor(@Inject(PermissionService) private readonly permissions: PermissionService) {}
+  constructor(
+    @Inject(PermissionService) private readonly permissions: PermissionService,
+    @Inject(PolicyEngineService) private readonly policy: PolicyEngineService
+  ) {}
 
   claimOpenShift(session: DemoSession, shiftId: string) {
     const shift = demoSchedules.find((candidate) => candidate.id === shiftId);
@@ -39,8 +44,15 @@ export class SchedulingWorkflowService {
       throw new BadRequestException("Demo user does not have an employee profile");
     }
 
-    const risk = this.evaluateClaimRisk(session.userId, shiftId);
-    if (risk.requiresApproval) {
+    const policyDecision = this.policy.evaluateOpenShiftClaim(session, shift);
+    if (!policyDecision.allowed) {
+      throw new BadRequestException({
+        message: "Open shift claim blocked by policy",
+        policyDecision
+      });
+    }
+
+    if (policyDecision.requiresApproval) {
       const approval = this.createApproval({
         approvalType: "SHIFT_ASSIGNMENT",
         requestedByUserId: session.userId,
@@ -48,17 +60,33 @@ export class SchedulingWorkflowService {
         targetObjectType: "Shift",
         targetObjectId: shiftId,
         status: "PENDING",
-        riskFlags: risk.riskFlags
+        riskFlags: policyDecision.riskFlags
       });
       this.queueNotification("user_jordan_manager", "APPROVAL_REQUIRED", { approvalId: approval.id });
-      return { status: "PENDING_APPROVAL", shift, approval, risk };
+      appendDemoAuditLog({
+        actorUserId: session.userId,
+        actorType: "USER",
+        action: "shift.claim.approval_requested",
+        objectType: "Shift",
+        objectId: shiftId,
+        after: { approvalId: approval.id, policyDecision }
+      });
+      return { status: "PENDING_APPROVAL", shift, approval, policyDecision };
     }
 
     shift.employeeId = employeeId;
     shift.userId = session.userId;
     shift.status = "ASSIGNED";
     this.queueNotification(session.userId, "SHIFT_ASSIGNED", { shiftId });
-    return { status: "ASSIGNED", shift, risk };
+    appendDemoAuditLog({
+      actorUserId: session.userId,
+      actorType: "USER",
+      action: "shift.claim.assigned",
+      objectType: "Shift",
+      objectId: shiftId,
+      after: { assignedEmployeeId: employeeId, policyDecision }
+    });
+    return { status: "ASSIGNED", shift, policyDecision };
   }
 
   createSwapRequest(session: DemoSession, originalShiftId: string, proposedUserId = "user_maya") {
@@ -70,6 +98,14 @@ export class SchedulingWorkflowService {
     }
     if (originalShift.userId !== session.userId) {
       throw new ForbiddenException("Cannot swap a shift outside your self scope");
+    }
+
+    const policyDecision = this.policy.evaluateSwapCreation(session, originalShift);
+    if (!policyDecision.allowed) {
+      throw new BadRequestException({
+        message: "Swap request blocked by policy",
+        policyDecision
+      });
     }
 
     const proposedEmployeeId = demoEmployeeByUserId.get(proposedUserId);
@@ -86,13 +122,21 @@ export class SchedulingWorkflowService {
       proposedUserId,
       unitId: originalShift.unitId,
       status: "PENDING_COUNTERPARTY",
-      riskFlags: ["MANAGER_APPROVAL_REQUIRED"],
-      managerApprovalRequired: true,
+      riskFlags: policyDecision.riskFlags,
+      managerApprovalRequired: policyDecision.requiresApproval,
       timeline: ["Created", "Waiting for counterparty"]
     };
     demoSwaps.push(swap);
     this.queueNotification(proposedUserId, "SWAP_REQUESTED", { swapId: swap.id });
-    return swap;
+    appendDemoAuditLog({
+      actorUserId: session.userId,
+      actorType: "USER",
+      action: "swap.created",
+      objectType: "ShiftSwapRequest",
+      objectId: swap.id,
+      after: { swap, policyDecision }
+    });
+    return { ...swap, policyDecision };
   }
 
   respondToSwap(session: DemoSession, swapId: string, decision: "accept" | "decline") {
@@ -108,6 +152,14 @@ export class SchedulingWorkflowService {
       swap.status = "DENIED";
       swap.timeline.push("Counterparty declined");
       this.queueNotification(swap.requesterUserId, "SWAP_DENIED", { swapId });
+      appendDemoAuditLog({
+        actorUserId: session.userId,
+        actorType: "USER",
+        action: "swap.counterparty_declined",
+        objectType: "ShiftSwapRequest",
+        objectId: swapId,
+        after: { status: swap.status }
+      });
       return swap;
     }
 
@@ -123,6 +175,14 @@ export class SchedulingWorkflowService {
       riskFlags: swap.riskFlags
     });
     this.queueNotification("user_jordan_manager", "APPROVAL_REQUIRED", { approvalId: approval.id });
+    appendDemoAuditLog({
+      actorUserId: session.userId,
+      actorType: "USER",
+      action: "swap.counterparty_accepted",
+      objectType: "ShiftSwapRequest",
+      objectId: swapId,
+      after: { status: swap.status, approvalId: approval.id }
+    });
     return { swap, approval };
   }
 
@@ -131,6 +191,14 @@ export class SchedulingWorkflowService {
     this.assertPermission(session, "shift:swap:approve", { type: "UNIT", unitId: swap.unitId });
     if (swap.status !== "PENDING_MANAGER") {
       throw new BadRequestException("Swap is not waiting for manager approval");
+    }
+
+    const policyDecision = this.policy.evaluateSwapApproval(swap);
+    if (!policyDecision.allowed) {
+      throw new BadRequestException({
+        message: "Swap approval blocked by policy",
+        policyDecision
+      });
     }
 
     const approval = demoApprovals.find((candidate) => candidate.targetObjectId === swapId);
@@ -147,7 +215,16 @@ export class SchedulingWorkflowService {
       }
       this.queueNotification(swap.requesterUserId, "SWAP_DENIED", { swapId });
       this.queueNotification(swap.proposedUserId, "SWAP_DENIED", { swapId });
-      return { swap, approval };
+      appendDemoAuditLog({
+        actorUserId: session.userId,
+        actorType: "USER",
+        action: "swap.manager_denied",
+        objectType: "ShiftSwapRequest",
+        objectId: swapId,
+        ...(reason ? { reason } : {}),
+        after: { status: swap.status, approvalStatus: approval.status, policyDecision }
+      });
+      return { swap, approval, policyDecision };
     }
 
     const shift = demoSchedules.find((candidate) => candidate.id === swap.originalShiftId);
@@ -164,7 +241,16 @@ export class SchedulingWorkflowService {
     }
     this.queueNotification(swap.requesterUserId, "SWAP_APPROVED", { swapId });
     this.queueNotification(swap.proposedUserId, "SWAP_APPROVED", { swapId });
-    return { swap, approval, shift };
+    appendDemoAuditLog({
+      actorUserId: session.userId,
+      actorType: "USER",
+      action: "swap.manager_approved",
+      objectType: "ShiftSwapRequest",
+      objectId: swapId,
+      ...(reason ? { reason } : {}),
+      after: { status: swap.status, approvalStatus: approval.status, shift, policyDecision }
+    });
+    return { swap, approval, shift, policyDecision };
   }
 
   listSwaps(session: DemoSession) {
@@ -180,24 +266,6 @@ export class SchedulingWorkflowService {
     return demoSwaps.filter(
       (swap) => swap.requesterUserId === session.userId || swap.proposedUserId === session.userId
     );
-  }
-
-  private evaluateClaimRisk(userId: string, shiftId: string) {
-    if (userId === "user_priya" && shiftId === "shift_open_icu_night") {
-      return {
-        allowed: true,
-        requiresApproval: true,
-        riskFlags: ["OVERTIME_RISK"],
-        warnings: ["Claiming this may put Priya above 40 hours."]
-      };
-    }
-
-    return {
-      allowed: true,
-      requiresApproval: false,
-      riskFlags: [],
-      warnings: []
-    };
   }
 
   private createApproval(input: Omit<DemoApprovalRecord, "id">) {
