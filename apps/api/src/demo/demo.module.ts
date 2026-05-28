@@ -4,6 +4,7 @@ import { AuthModule } from "../auth/auth.module";
 import { CopilotController } from "./copilot.controller";
 import { CopilotService } from "./copilot.service";
 import { DemoController } from "./demo.controller";
+import { EvalController } from "./eval.controller";
 import { IntegrationController } from "./integration.controller";
 import { NotificationController } from "./notification.controller";
 import { OperationsController } from "./operations.controller";
@@ -19,7 +20,8 @@ import { SchedulingWorkflowService } from "./scheduling-workflow.service";
     NotificationController,
     CopilotController,
     OperationsController,
-    IntegrationController
+    IntegrationController,
+    EvalController
   ],
   providers: [SchedulingWorkflowService, PolicyEngineService, CopilotService]
 })

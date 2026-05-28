@@ -1,4 +1,5 @@
 import type { CsvPreviewRow, IntegrationConnection, IntegrationSyncRun } from "@pulseshift/integrations";
+import type { CopilotEvalRun } from "@pulseshift/evals";
 
 export const demoEmployeeByUserId = new Map<string, string>([
   ["user_priya", "emp_priya"],
@@ -313,10 +314,13 @@ export const demoAIToolCalls: Array<{
   createdAt: string;
 }> = [];
 
+export const demoCopilotEvalRuns: CopilotEvalRun[] = [];
+
 export function resetDemoWorkflowState() {
   demoSwaps.splice(0, demoSwaps.length);
   demoApprovals.splice(0, demoApprovals.length);
   demoAIToolCalls.splice(0, demoAIToolCalls.length);
+  demoCopilotEvalRuns.splice(0, demoCopilotEvalRuns.length);
   demoAuditLogs.splice(1, demoAuditLogs.length - 1);
   demoIntegrationSyncRuns.splice(1, demoIntegrationSyncRuns.length - 1);
 
