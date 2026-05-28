@@ -1,3 +1,5 @@
+import type { CsvPreviewRow, IntegrationConnection, IntegrationSyncRun } from "@pulseshift/integrations";
+
 export const demoEmployeeByUserId = new Map<string, string>([
   ["user_priya", "emp_priya"],
   ["user_maya", "emp_maya"]
@@ -150,6 +152,78 @@ export const demoStaffDirectory = [
   }
 ];
 
+export const demoIntegrationConnections: IntegrationConnection[] = [
+  {
+    id: "integration_kronos_icu",
+    system: "KRONOS",
+    displayName: "Kronos ICU Workforce",
+    status: "CONNECTED",
+    direction: "BIDIRECTIONAL",
+    lastSyncAt: "2026-05-27T22:15:00.000Z",
+    nextSyncAt: "2026-05-28T10:00:00.000Z",
+    recordTypes: ["EMPLOYEE", "SCHEDULE", "TIMECARD"]
+  },
+  {
+    id: "integration_payroll_csv",
+    system: "PAYROLL_CSV",
+    displayName: "Payroll CSV Export",
+    status: "NEEDS_ATTENTION",
+    direction: "EXPORT",
+    lastSyncAt: null,
+    nextSyncAt: null,
+    recordTypes: ["TIMECARD"]
+  },
+  {
+    id: "integration_hris_credentials",
+    system: "HRIS",
+    displayName: "Credential HRIS Feed",
+    status: "CONNECTED",
+    direction: "IMPORT",
+    lastSyncAt: "2026-05-27T08:00:00.000Z",
+    nextSyncAt: "2026-05-28T08:00:00.000Z",
+    recordTypes: ["EMPLOYEE", "CREDENTIAL"]
+  }
+];
+
+export const demoIntegrationSyncRuns: IntegrationSyncRun[] = [
+  {
+    id: "sync_seed_kronos",
+    integrationId: "integration_kronos_icu",
+    status: "SUCCEEDED",
+    startedAt: "2026-05-27T22:12:00.000Z",
+    finishedAt: "2026-05-27T22:15:00.000Z",
+    imported: 8,
+    exported: 3,
+    skipped: 1,
+    failed: 0,
+    summary: "Imported ICU staff and published schedule updates from Kronos."
+  }
+];
+
+export const demoCsvImportRows: CsvPreviewRow[] = [
+  {
+    rowNumber: 1,
+    externalId: "KRONOS-EMP-PRIYA",
+    recordType: "EMPLOYEE",
+    status: "UPDATED",
+    message: "Matched Priya Raman by employee identifier."
+  },
+  {
+    rowNumber: 2,
+    externalId: "KRONOS-SHIFT-OPEN-ICU",
+    recordType: "SCHEDULE",
+    status: "SKIPPED",
+    message: "Open ICU night shift already exists in PulseShift."
+  },
+  {
+    rowNumber: 3,
+    externalId: "KRONOS-TIME-MISSING",
+    recordType: "TIMECARD",
+    status: "FAILED",
+    message: "Missing employee identifier; row requires correction before import."
+  }
+];
+
 export type DemoAuditLogRecord = {
   id: string;
   organizationId: string;
@@ -244,6 +318,7 @@ export function resetDemoWorkflowState() {
   demoApprovals.splice(0, demoApprovals.length);
   demoAIToolCalls.splice(0, demoAIToolCalls.length);
   demoAuditLogs.splice(1, demoAuditLogs.length - 1);
+  demoIntegrationSyncRuns.splice(1, demoIntegrationSyncRuns.length - 1);
 
   const priyaShift = demoSchedules.find((shift) => shift.id === "shift_priya_friday_icu_night");
   if (priyaShift) {

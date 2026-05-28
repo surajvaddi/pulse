@@ -9,7 +9,8 @@
     "outDir": "./dist",
     "rootDir": "./src",
     "paths": {
-      "@pulseshift/domain": ["../../packages/domain/src/index.ts"]
+      "@pulseshift/domain": ["../../packages/domain/src/index.ts"],
+      "@pulseshift/integrations": ["../../packages/integrations/src/index.ts"]
     }
   },
   "include": ["src/**/*.ts"],
