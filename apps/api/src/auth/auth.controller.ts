@@ -1,4 +1,4 @@
-import { Controller, Get, Inject } from "@nestjs/common";
+import { Controller, Get, Inject, Post } from "@nestjs/common";
 
 import { CurrentSession } from "./session.decorator";
 import type { DemoSession } from "./demo-users";
@@ -15,5 +15,10 @@ export class AuthController {
       permissions: this.permissions.effectivePermissions(session),
       scopes: this.permissions.effectiveScopes(session)
     };
+  }
+
+  @Post("logout")
+  logout() {
+    return { status: "SIGNED_OUT" };
   }
 }

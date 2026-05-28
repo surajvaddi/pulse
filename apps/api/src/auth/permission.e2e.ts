@@ -84,6 +84,53 @@ async function main() {
   assert.ok(timeclockEvents.body.length >= 4);
 
   await request(server)
+    .post("/users/invite")
+    .set("x-demo-user-id", "user_payroll")
+    .send({ email: "new.rn@example.com" })
+    .expect(403);
+
+  const invite = await request(server)
+    .post("/users/invite")
+    .set("x-demo-user-id", "user_admin")
+    .send({
+      email: "new.rn@example.com",
+      role: "EMPLOYEE",
+      scope: { type: "SELF" }
+    })
+    .expect(201);
+  assert.equal(invite.body.email, "new.rn@example.com");
+  assert.equal(invite.body.status, "PENDING");
+  assert.equal(invite.body.tokenHash, undefined);
+  assert.ok(invite.body.acceptUrl.includes("/invite/accept?token="));
+
+  const pendingInvite = await request(server)
+    .get(`/invitations/${invite.body.token}`)
+    .set("x-demo-user-id", "user_priya")
+    .expect(200);
+  assert.equal(pendingInvite.body.email, "new.rn@example.com");
+
+  const acceptedInvite = await request(server)
+    .post(`/invitations/${invite.body.token}/accept`)
+    .set("x-demo-user-id", "user_priya")
+    .send({})
+    .expect(201);
+  assert.equal(acceptedInvite.body.status, "ACCEPTED");
+  assert.equal(acceptedInvite.body.acceptedByUserId, "user_priya");
+  assert.equal(acceptedInvite.body.nextStep, "/onboarding/profile");
+
+  await request(server)
+    .get(`/invitations/${invite.body.token}`)
+    .set("x-demo-user-id", "user_priya")
+    .expect(403);
+
+  const logout = await request(server)
+    .post("/auth/logout")
+    .set("x-demo-user-id", "user_priya")
+    .send({})
+    .expect(201);
+  assert.equal(logout.body.status, "SIGNED_OUT");
+
+  await request(server)
     .get("/demo/audit")
     .set("x-demo-user-id", "user_payroll")
     .expect(403);
