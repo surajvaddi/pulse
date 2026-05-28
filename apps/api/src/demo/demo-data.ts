@@ -94,6 +94,62 @@ export const demoTimecardExceptions = [
   }
 ];
 
+export const demoCredentials = [
+  {
+    employeeId: "emp_priya",
+    employeeName: "Priya Raman",
+    certification: "ACLS",
+    status: "VERIFIED",
+    expiresAt: "2027-01-01T00:00:00.000Z"
+  },
+  {
+    employeeId: "emp_maya",
+    employeeName: "Maya Shah",
+    certification: "ICU Qualified",
+    status: "VERIFIED",
+    expiresAt: null
+  },
+  {
+    employeeId: "emp_nina",
+    employeeName: "Nina Patel",
+    certification: "ACLS",
+    status: "EXPIRING_SOON",
+    expiresAt: "2026-06-15T00:00:00.000Z"
+  }
+];
+
+export const demoStaffDirectory = [
+  {
+    employeeId: "emp_priya",
+    userId: "user_priya",
+    name: "Priya Raman",
+    role: "RN",
+    unitId: "unit_icu",
+    certifications: ["BLS", "ACLS", "ICU Qualified"],
+    availability: "Assigned Friday ICU night",
+    overtimeRisk: "MEDIUM"
+  },
+  {
+    employeeId: "emp_maya",
+    userId: "user_maya",
+    name: "Maya Shah",
+    role: "RN",
+    unitId: "unit_icu",
+    certifications: ["BLS", "ACLS", "ICU Qualified"],
+    availability: "Available for Friday swap",
+    overtimeRisk: "LOW"
+  },
+  {
+    employeeId: "emp_nina",
+    name: "Nina Patel",
+    role: "RN",
+    unitId: "unit_icu",
+    certifications: ["BLS", "ACLS", "ICU Qualified"],
+    availability: "Available for open night shift",
+    overtimeRisk: "LOW"
+  }
+];
+
 export type DemoAuditLogRecord = {
   id: string;
   organizationId: string;
@@ -201,5 +257,12 @@ export function resetDemoWorkflowState() {
     delete openShift.employeeId;
     delete openShift.userId;
     openShift.status = "OPEN";
+  }
+
+  const timecardException = demoTimecardExceptions.find(
+    (exception) => exception.id === "timecard_exception_late_priya"
+  );
+  if (timecardException) {
+    timecardException.status = "OPEN";
   }
 }
