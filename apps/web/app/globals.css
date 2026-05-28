@@ -308,6 +308,16 @@ h1 {
   min-height: 56px;
 }
 
+.risk-strip {
+  border: 1px solid #fed7aa;
+  background: #fff7ed;
+  color: #9a3412;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
 .mobile-nav {
   display: none;
 }

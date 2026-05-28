@@ -1,9 +1,10 @@
 import { AlertTriangle, CheckCircle2, Clock3, Users } from "lucide-react";
 
-import { apiGet, type DemoShift } from "@/lib/api";
+import { apiGet, type AuditLog, type DemoShift } from "@/lib/api";
 
 export default async function ManagerPage() {
   const shifts = await apiGet<DemoShift[]>("/demo/schedule/unit/unit_icu", "user_jordan_manager");
+  const auditLogs = await apiGet<AuditLog[]>("/demo/audit", "user_admin");
   const openCount = shifts.filter((shift) => shift.status === "OPEN").length;
 
   const cards = [
@@ -45,7 +46,25 @@ export default async function ManagerPage() {
           <button className="command-button">Find coverage</button>
         </article>
       </section>
+      <section className="panel">
+        <div className="section-heading">
+          <h2>Audit Trail</h2>
+          <span>{auditLogs.length} records</span>
+        </div>
+        <div className="item-list">
+          {auditLogs.slice(-4).map((log) => (
+            <article className="list-row" key={log.id}>
+              <div>
+                <strong>{log.action}</strong>
+                <span>
+                  {log.objectType}: {log.objectId}
+                </span>
+              </div>
+              <span className="status-pill">{log.actorType}</span>
+            </article>
+          ))}
+        </div>
+      </section>
     </section>
   );
 }
-

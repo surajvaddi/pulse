@@ -50,6 +50,18 @@ export type DemoSwap = {
   timeline: string[];
 };
 
+export type AuditLog = {
+  id: string;
+  actorUserId?: string;
+  actorType: string;
+  action: string;
+  objectType: string;
+  objectId: string;
+  reason?: string;
+  after?: Record<string, unknown>;
+  createdAt: string;
+};
+
 export const demoUsers: Array<{ id: DemoUserId; label: string; role: string }> = [
   { id: "user_priya", label: "Priya Raman", role: "Employee" },
   { id: "user_maya", label: "Maya Shah", role: "Employee" },

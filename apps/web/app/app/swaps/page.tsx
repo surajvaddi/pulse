@@ -38,6 +38,11 @@ export default async function SwapsPage() {
                   <h2>{swap.id}</h2>
                   <span>{swap.status}</span>
                 </div>
+                {swap.riskFlags.length > 0 ? (
+                  <div className="risk-strip">
+                    Policy flags: {swap.riskFlags.map((flag) => flag.replaceAll("_", " ")).join(", ")}
+                  </div>
+                ) : null}
                 <div className="timeline">
                   {swap.timeline.map((step) => (
                     <span key={step}>{step}</span>

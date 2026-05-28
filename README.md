@@ -90,6 +90,16 @@ Phase 4 verification status:
 - Web actions: schedule swap request, open-shift claim, Maya accept, and manager approval are wired.
 - API e2e checks cover claim approval routing, forbidden employee approval, counterparty acceptance, manager approval, and schedule reassignment.
 
+Phase 5 verification status:
+
+- Policy engine returns deterministic decisions with allowed, requiresApproval, risk flags, blocking reasons, and warnings.
+- Open-shift claims use policy decisions instead of inline risk logic.
+- Swap creation and manager approval use policy decisions.
+- Every workflow write appends an audit record in the demo audit trail.
+- Swap UI displays policy risk flags.
+- Manager dashboard exposes recent audit records.
+- API e2e checks assert policy decisions and audit records for claim and swap workflows.
+
 ## Source Documents
 
 - `spec.md`: full product specification.
