@@ -172,9 +172,21 @@ export const demoNotifications: Array<{
   }
 ];
 
+export const demoAIToolCalls: Array<{
+  id: string;
+  userId: string;
+  toolName: string;
+  inputJson: Record<string, unknown>;
+  outputJson?: Record<string, unknown>;
+  status: "PROPOSED" | "AUTHORIZED" | "EXECUTED" | "BLOCKED" | "FAILED";
+  riskLevel: "READ_ONLY" | "LOW_RISK_WRITE" | "APPROVAL_REQUIRED" | "BLOCKED";
+  createdAt: string;
+}> = [];
+
 export function resetDemoWorkflowState() {
   demoSwaps.splice(0, demoSwaps.length);
   demoApprovals.splice(0, demoApprovals.length);
+  demoAIToolCalls.splice(0, demoAIToolCalls.length);
   demoAuditLogs.splice(1, demoAuditLogs.length - 1);
 
   const priyaShift = demoSchedules.find((shift) => shift.id === "shift_priya_friday_icu_night");
