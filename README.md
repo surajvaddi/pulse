@@ -23,6 +23,14 @@ npm run dev:web
 npm run dev:api
 ```
 
+Seeded demo users:
+
+- `user_priya`: employee self-schedule, open shifts, swaps, timecards, copilot.
+- `user_maya`: employee counterparty for Priya's swap.
+- `user_jordan_manager`: ICU/ED unit manager for approvals and staffing risk.
+- `user_payroll`: payroll admin for timecard exceptions.
+- `user_admin`: system admin for audit, integrations, evals, and tool-call review.
+
 Default local URLs:
 
 - Web: `http://localhost:3000`
@@ -37,6 +45,7 @@ The API binds to `127.0.0.1` by default for local development. Set `API_HOST` if
 npm run typecheck
 npm run lint
 npm run test
+npm run test:demo
 npm run build
 ```
 
@@ -149,6 +158,7 @@ Phase 10 verification status:
 - `spec.md`: full product specification.
 - `plan.md`: architecture and product roadmap.
 - `implement.md`: phase-by-phase Goal Mode execution guide.
+- `DEMO.md`: repeatable MVP demo script and readiness checklist.
 
 ## Safety Boundaries
 

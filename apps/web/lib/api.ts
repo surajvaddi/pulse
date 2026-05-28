@@ -62,6 +62,17 @@ export type AuditLog = {
   createdAt: string;
 };
 
+export type AIToolCall = {
+  id: string;
+  userId: string;
+  toolName: string;
+  inputJson: Record<string, unknown>;
+  outputJson?: Record<string, unknown>;
+  status: string;
+  riskLevel: string;
+  createdAt: string;
+};
+
 export type Notification = {
   id: string;
   recipientUserId: string;

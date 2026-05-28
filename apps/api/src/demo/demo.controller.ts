@@ -1,13 +1,15 @@
-import { ForbiddenException, Controller, Get, Inject, Param } from "@nestjs/common";
+import { ForbiddenException, Controller, Get, Inject, Param, Post } from "@nestjs/common";
 
 import { CurrentSession } from "../auth/session.decorator";
 import type { DemoSession } from "../auth/demo-users";
 import { PermissionService } from "../auth/permission.service";
 import {
+  demoAIToolCalls,
   demoAuditLogs,
   demoEmployeeByUserId,
   demoSchedules,
-  demoTimecardExceptions
+  demoTimecardExceptions,
+  resetDemoWorkflowState
 } from "./demo-data";
 
 @Controller("demo")
@@ -72,6 +74,39 @@ export class DemoController {
     );
 
     return demoAuditLogs;
+  }
+
+  @Get("ai-tool-calls")
+  aiToolCalls(@CurrentSession() session: DemoSession) {
+    this.assertAllowed(
+      session,
+      this.permissions.hasPermission(session, "ai:admin", {
+        type: "ORG",
+        organizationId: session.organizationId
+      })
+    );
+
+    return demoAIToolCalls;
+  }
+
+  @Post("reset")
+  reset(@CurrentSession() session: DemoSession) {
+    this.assertAllowed(
+      session,
+      this.permissions.hasPermission(session, "audit:read", {
+        type: "ORG",
+        organizationId: session.organizationId
+      })
+    );
+
+    resetDemoWorkflowState();
+    return {
+      status: "RESET",
+      swaps: 0,
+      approvals: 0,
+      auditLogs: demoAuditLogs.length,
+      aiToolCalls: demoAIToolCalls.length
+    };
   }
 
   private assertAllowed(session: DemoSession, allowed: boolean): void {

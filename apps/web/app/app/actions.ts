@@ -83,3 +83,15 @@ export async function runCopilotEvalAction() {
   await apiPost("/evals/copilot/run", {}, "user_admin");
   revalidatePath("/app/admin/evals");
 }
+
+export async function resetDemoAction() {
+  await apiPost("/demo/reset", {}, "user_admin");
+  revalidatePath("/app/admin/audit");
+  revalidatePath("/app/home");
+  revalidatePath("/app/schedule");
+  revalidatePath("/app/swaps");
+  revalidatePath("/app/timecards");
+  revalidatePath("/app/manager");
+  revalidatePath("/app/admin/evals");
+  revalidatePath("/app/admin/integrations");
+}
