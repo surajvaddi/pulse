@@ -8,7 +8,8 @@
     "build": "nest build",
     "typecheck": "tsc --noEmit",
     "lint": "eslint \"src/**/*.ts\"",
-    "test": "tsx src/auth/permission.e2e.ts"
+    "test": "tsx src/auth/permission.e2e.ts",
+    "test:demo": "tsx src/demo/demo-flow.e2e.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.0",

@@ -153,6 +153,14 @@ Phase 10 verification status:
 - Admin eval dashboard displays unsafe action attempt rate, tool selection accuracy, answer signal coverage, pass counts, and per-task findings.
 - API e2e checks cover task listing, eval execution, zero unsafe action attempts, blocked timecard behavior, and run persistence.
 
+Phase 11 verification status:
+
+- `DEMO.md` documents seeded users, reset instructions, the primary demo flow, and the readiness quality gate.
+- Demo reset endpoint restores repeatable workflow state without database edits.
+- Admin audit page displays audit logs, AI tool calls, blocked tool count, and demo reset controls.
+- App-level loading, error, forbidden, keyboard focus, and reduced-motion states are implemented.
+- `npm run test:demo` executes the full MVP demo path: reset, schedule lookup, swap, counterparty accept, manager approval, notifications, blocked AI action, eval run, integration sync, and audit verification.
+
 ## Source Documents
 
 - `spec.md`: full product specification.
