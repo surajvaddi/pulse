@@ -29,6 +29,8 @@ Default local URLs:
 - API: `http://localhost:4000`
 - API health: `http://localhost:4000/health`
 
+The API binds to `127.0.0.1` by default for local development. Set `API_HOST` if your deployment target needs a different bind address.
+
 ## Quality Checks
 
 ```bash
@@ -37,6 +39,16 @@ npm run lint
 npm run test
 npm run build
 ```
+
+Phase 0 verification status:
+
+- TypeScript typecheck: passing.
+- ESLint: passing.
+- Test script: passing as compile checks until dedicated tests land.
+- Production build: passing.
+- API health endpoint: verified at `/health`.
+- Docker Compose runtime: pending local Docker availability; this environment does not have `docker` installed.
+- Security audit: no high or critical advisories; current Next/PostCSS advisory is moderate and requires a breaking downgrade from npm's suggested fix.
 
 ## Source Documents
 
