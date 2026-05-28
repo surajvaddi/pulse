@@ -78,6 +78,10 @@ Each production workflow should follow this sequence:
 
 Controllers should remain thin. Services own policy decisions and workflow orchestration. Repositories own persistence details.
 
+The timeclock workflow is the first migrated boundary. Local demos use the in-memory adapter by
+default, while `WORKFLOW_PERSISTENCE=prisma` routes clock-in/out event reads and writes through
+Prisma-backed `TimecardEvent` records seeded by `npm run db:seed`.
+
 ## CI Quality Gate
 
 Every production branch should pass:

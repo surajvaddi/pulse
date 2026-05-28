@@ -26,6 +26,8 @@ const ids = {
   shiftMayaSaturday: "shift_maya_saturday_icu_day",
   shiftOpenIcuNight: "shift_open_icu_night",
   staffingReqIcuNight: "staffing_icu_night_req",
+  timecardLateClockIn: "timecard_event_priya_late_clock_in",
+  timecardClockOut: "timecard_event_priya_clock_out",
   timecardLate: "timecard_exception_late_priya",
   conversation: "ai_convo_priya_demo",
   toolCall: "ai_tool_call_schedule_lookup",
@@ -443,12 +445,22 @@ async function main() {
   await prisma.timecardEvent.createMany({
     data: [
       {
+        id: ids.timecardLateClockIn,
         employeeId: ids.empPriya,
         shiftId: ids.shiftPriyaFriday,
         eventType: "CLOCK_IN",
         occurredAt: new Date("2026-05-29T23:17:00.000Z"),
         source: "MOBILE",
         status: "FLAGGED"
+      },
+      {
+        id: ids.timecardClockOut,
+        employeeId: ids.empPriya,
+        shiftId: ids.shiftPriyaFriday,
+        eventType: "CLOCK_OUT",
+        occurredAt: new Date("2026-05-30T11:03:00.000Z"),
+        source: "MOBILE",
+        status: "NORMAL"
       }
     ],
     skipDuplicates: true
