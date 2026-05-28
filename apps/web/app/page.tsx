@@ -1,9 +1,4 @@
-const demoMilestones = [
-  "Employee schedule lookup",
-  "Shift swap request with policy checks",
-  "Manager approval and notifications",
-  "Audit trail and AI tool-call review"
-];
+import Link from "next/link";
 
 export default function HomePage() {
   return (
@@ -25,7 +20,9 @@ export default function HomePage() {
         }}
       >
         <strong style={{ fontSize: 20 }}>PulseShift</strong>
-        <span style={{ color: "var(--muted)", fontSize: 14 }}>Phase 0 scaffold</span>
+        <Link href="/app/home" style={{ color: "var(--accent-strong)", fontWeight: 700 }}>
+          Open app
+        </Link>
       </header>
 
       <section
@@ -44,35 +41,9 @@ export default function HomePage() {
             Scheduling workflows with scoped AI assistance.
           </h1>
           <p style={{ color: "var(--muted)", fontSize: 18, lineHeight: 1.6, margin: 0 }}>
-            PulseShift will combine deterministic shift operations, policy checks, approval
-            routing, notifications, audit logs, and a permission-aware copilot.
+            PulseShift combines deterministic shift operations, policy checks, approval routing,
+            notifications, audit logs, and a permission-aware copilot.
           </p>
-        </div>
-
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-            gap: 12
-          }}
-        >
-          {demoMilestones.map((milestone) => (
-            <div
-              key={milestone}
-              style={{
-                minHeight: 96,
-                padding: 18,
-                border: "1px solid var(--border)",
-                borderRadius: 8,
-                background: "var(--panel)",
-                display: "flex",
-                alignItems: "end",
-                fontWeight: 700
-              }}
-            >
-              {milestone}
-            </div>
-          ))}
         </div>
       </section>
     </main>
