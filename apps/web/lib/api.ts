@@ -114,6 +114,44 @@ export type CredentialWarning = {
   expiresAt: string | null;
 };
 
+export type IntegrationConnection = {
+  id: string;
+  system: string;
+  displayName: string;
+  status: string;
+  direction: string;
+  lastSyncAt: string | null;
+  nextSyncAt: string | null;
+  recordTypes: string[];
+};
+
+export type IntegrationSyncRun = {
+  id: string;
+  integrationId: string;
+  status: string;
+  startedAt: string;
+  finishedAt: string;
+  imported: number;
+  exported: number;
+  skipped: number;
+  failed: number;
+  summary: string;
+};
+
+export type IntegrationImportPreview = {
+  integrationId: string;
+  totalRows: number;
+  acceptedRows: number;
+  rejectedRows: number;
+  rows: Array<{
+    rowNumber: number;
+    externalId: string;
+    recordType: string;
+    status: string;
+    message: string;
+  }>;
+};
+
 export const demoUsers: Array<{ id: DemoUserId; label: string; role: string }> = [
   { id: "user_priya", label: "Priya Raman", role: "Employee" },
   { id: "user_maya", label: "Maya Shah", role: "Employee" },

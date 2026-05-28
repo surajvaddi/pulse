@@ -5,6 +5,7 @@ import {
   Bot,
   CalendarDays,
   Clock3,
+  Cable,
   Home,
   LayoutDashboard,
   ReceiptText,
@@ -23,6 +24,7 @@ const navItems = [
   { href: "/app/staffing-gaps", label: "Staffing", icon: ShieldAlert },
   { href: "/app/staff", label: "Staff", icon: Users },
   { href: "/app/manager", label: "Manager", icon: LayoutDashboard },
+  { href: "/app/admin/integrations", label: "Integrations", icon: Cable },
   { href: "/app/copilot", label: "Copilot", icon: Bot }
 ];
 

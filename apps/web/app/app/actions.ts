@@ -71,3 +71,10 @@ export async function resolveTimecardAction(formData: FormData) {
   revalidatePath("/app/timecards");
   revalidatePath("/app/manager");
 }
+
+export async function runIntegrationSyncAction(formData: FormData) {
+  const integrationId = String(formData.get("integrationId"));
+  const direction = String(formData.get("direction") ?? "BIDIRECTIONAL");
+  await apiPost(`/integrations/${integrationId}/sync`, { direction }, "user_admin");
+  revalidatePath("/app/admin/integrations");
+}
