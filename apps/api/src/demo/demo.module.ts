@@ -12,6 +12,12 @@ import { PolicyEngineService } from "./policy-engine.service";
 import { SchedulingWorkflowController } from "./scheduling-workflow.controller";
 import { SchedulingWorkflowService } from "./scheduling-workflow.service";
 import { TimeclockController } from "./timeclock.controller";
+import {
+  InMemoryTimeclockRepository,
+  PrismaTimeclockRepository,
+  TimeclockRepositoryProvider
+} from "./timeclock.repository";
+import { TimeclockService } from "./timeclock.service";
 
 @Module({
   imports: [AuthModule],
@@ -25,6 +31,14 @@ import { TimeclockController } from "./timeclock.controller";
     EvalController,
     TimeclockController
   ],
-  providers: [SchedulingWorkflowService, PolicyEngineService, CopilotService]
+  providers: [
+    SchedulingWorkflowService,
+    PolicyEngineService,
+    CopilotService,
+    TimeclockService,
+    InMemoryTimeclockRepository,
+    PrismaTimeclockRepository,
+    TimeclockRepositoryProvider
+  ]
 })
 export class DemoModule {}

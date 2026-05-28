@@ -10,6 +10,7 @@
     "rootDir": "./src",
     "paths": {
       "@pulseshift/domain": ["../../packages/domain/src/index.ts"],
+      "@pulseshift/db": ["../../packages/db/src/index.ts"],
       "@pulseshift/evals": ["../../packages/evals/src/index.ts"],
       "@pulseshift/integrations": ["../../packages/integrations/src/index.ts"]
     }

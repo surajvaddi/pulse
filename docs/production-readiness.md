@@ -19,6 +19,7 @@ Required variables:
 - `NEXT_PUBLIC_API_BASE_URL`: web-to-API URL.
 - `NEXT_PUBLIC_APP_URL`: public web URL for invite/auth redirects.
 - `ENABLE_DEMO_AUTH`: `true` only for local/demo environments; set to `false` for staging and production.
+- `WORKFLOW_PERSISTENCE`: `memory` for the local MVP demo, `prisma` for database-backed workflow state.
 - `OPENAI_API_KEY` or `AI_GATEWAY_API_KEY`: LLM provider key.
 
 Never expose service-role keys to the browser. Never reuse staging credentials in production.
@@ -42,6 +43,7 @@ Hosted setup:
    - `/onboarding/organization`
 5. Store Supabase anon/service-role/JWT settings in the deployment secret store.
 6. Set `ENABLE_DEMO_AUTH=false` outside local demos so requests require Supabase bearer tokens.
+7. Set `WORKFLOW_PERSISTENCE=prisma` in staging and production so workflow writes survive API restarts.
 
 ## Prisma Commands
 
