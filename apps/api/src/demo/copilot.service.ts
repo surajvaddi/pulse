@@ -1,4 +1,4 @@
-import { ForbiddenException, Injectable } from "@nestjs/common";
+import { ForbiddenException, Inject, Injectable } from "@nestjs/common";
 
 import type { DemoSession } from "../auth/demo-users";
 import { PermissionService } from "../auth/permission.service";
@@ -22,7 +22,7 @@ const tools: ToolDefinition[] = [
 
 @Injectable()
 export class CopilotService {
-  constructor(private readonly permissions: PermissionService) {}
+  constructor(@Inject(PermissionService) private readonly permissions: PermissionService) {}
 
   handleMessage(session: DemoSession, message: string) {
     const normalized = message.toLowerCase();

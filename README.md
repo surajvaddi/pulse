@@ -109,6 +109,15 @@ Phase 6 verification status:
 - Server action revalidation provides the initial live-update foundation for notification and workflow views.
 - API e2e checks cover notification listing and read-state mutation.
 
+Phase 7 verification status:
+
+- Copilot API accepts messages and routes schedule lookup, swap preview, staffing gap, and timecard prompts.
+- Tool registry classifies read-only, low-risk write, approval-required, and blocked tools.
+- AI tool calls are logged with status and risk level.
+- Unsafe direct timecard edit requests are blocked and routed to a correction-request explanation.
+- Copilot UI posts prompts and displays answer mode, answer text, tool name, risk level, and status.
+- Admin-scoped tool-call listing is covered by API e2e checks.
+
 ## Source Documents
 
 - `spec.md`: full product specification.

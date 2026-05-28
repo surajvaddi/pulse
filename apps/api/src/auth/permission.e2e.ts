@@ -116,6 +116,41 @@ async function main() {
     .expect(201);
   assert.equal(readNotification.body.status, "READ");
 
+  const scheduleAnswer = await request(server)
+    .post("/copilot/messages")
+    .set("x-demo-user-id", "user_priya")
+    .send({ message: "When do I work next?" })
+    .expect(201);
+  assert.equal(scheduleAnswer.body.toolCalls[0].toolName, "get_my_schedule");
+
+  const swapPreview = await request(server)
+    .post("/copilot/messages")
+    .set("x-demo-user-id", "user_priya")
+    .send({ message: "Can I swap Friday night with Maya?" })
+    .expect(201);
+  assert.equal(swapPreview.body.mode, "ACTION_PREVIEW");
+
+  const staffingAnswer = await request(server)
+    .post("/copilot/messages")
+    .set("x-demo-user-id", "user_jordan_manager")
+    .send({ message: "Where are we short tomorrow night?" })
+    .expect(201);
+  assert.equal(staffingAnswer.body.toolCalls[0].toolName, "compute_staffing_gaps");
+
+  const blockedAnswer = await request(server)
+    .post("/copilot/messages")
+    .set("x-demo-user-id", "user_priya")
+    .send({ message: "Change my clock-in to 7 AM." })
+    .expect(201);
+  assert.equal(blockedAnswer.body.mode, "BLOCKED");
+  assert.equal(blockedAnswer.body.toolCalls[0].status, "BLOCKED");
+
+  const adminToolCalls = await request(server)
+    .get("/copilot/tool-calls")
+    .set("x-demo-user-id", "user_admin")
+    .expect(200);
+  assert.ok(adminToolCalls.body.length >= 4);
+
   await app.close();
 }
 
