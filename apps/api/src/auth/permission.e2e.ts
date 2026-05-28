@@ -103,6 +103,19 @@ async function main() {
   assert.ok(auditActions.includes("shift.claim.approval_requested"));
   assert.ok(auditActions.includes("swap.manager_approved"));
 
+  const managerNotifications = await request(server)
+    .get("/notifications")
+    .set("x-demo-user-id", "user_jordan_manager")
+    .expect(200);
+  assert.ok(managerNotifications.body.length >= 1);
+  const firstNotificationId = managerNotifications.body[0].id;
+  const readNotification = await request(server)
+    .post(`/notifications/${firstNotificationId}/read`)
+    .set("x-demo-user-id", "user_jordan_manager")
+    .send({})
+    .expect(201);
+  assert.equal(readNotification.body.status, "READ");
+
   await app.close();
 }
 
