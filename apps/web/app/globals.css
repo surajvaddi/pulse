@@ -264,6 +264,7 @@ h1 {
 
 .command-button,
 .tab-button {
+  width: 100%;
   min-height: 38px;
   border: 1px solid var(--border);
   border-radius: 8px;

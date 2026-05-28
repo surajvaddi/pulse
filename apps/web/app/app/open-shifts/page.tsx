@@ -1,6 +1,7 @@
 import { ShieldCheck } from "lucide-react";
 
 import { apiGet, type DemoShift } from "@/lib/api";
+import { claimOpenShiftAction } from "../actions";
 
 export default async function OpenShiftsPage() {
   const shifts = await apiGet<DemoShift[]>("/demo/schedule/unit/unit_icu", "user_jordan_manager");
@@ -33,11 +34,16 @@ export default async function OpenShiftsPage() {
             <p>ICU</p>
             <strong>{shift.title}</strong>
             <span>Requires ACLS and ICU Qualified</span>
-            <button className="command-button">Claim shift</button>
+            <form action={claimOpenShiftAction}>
+              <input type="hidden" name="shiftId" value={shift.id} />
+              <input type="hidden" name="userId" value="user_priya" />
+              <button className="command-button" type="submit">
+                Claim shift
+              </button>
+            </form>
           </article>
         ))}
       </div>
     </section>
   );
 }
-

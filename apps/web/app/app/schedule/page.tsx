@@ -1,6 +1,7 @@
 import { MessageSquare, RefreshCw, Send, CalendarPlus } from "lucide-react";
 
 import { apiGet, type DemoShift } from "@/lib/api";
+import { createSwapAction } from "../actions";
 
 function formatShiftTime(value: string) {
   return new Intl.DateTimeFormat("en-US", {
@@ -55,9 +56,12 @@ export default async function SchedulePage() {
               <span>Unit: ICU</span>
               <span>Required: ACLS, ICU Qualified</span>
               <div className="action-row">
-                <button className="command-button">
-                  <RefreshCw size={16} /> Request Swap
-                </button>
+                <form action={createSwapAction}>
+                  <input type="hidden" name="originalShiftId" value={selectedShift.id} />
+                  <button className="command-button" type="submit">
+                    <RefreshCw size={16} /> Request Swap
+                  </button>
+                </form>
                 <button className="command-button">
                   <MessageSquare size={16} /> Message Manager
                 </button>
@@ -77,4 +81,3 @@ export default async function SchedulePage() {
     </section>
   );
 }
-

@@ -39,6 +39,17 @@ export type TimecardException = {
   explanation: string;
 };
 
+export type DemoSwap = {
+  id: string;
+  requesterUserId: string;
+  proposedUserId: string;
+  originalShiftId: string;
+  unitId: string;
+  status: string;
+  riskFlags: string[];
+  timeline: string[];
+};
+
 export const demoUsers: Array<{ id: DemoUserId; label: string; role: string }> = [
   { id: "user_priya", label: "Priya Raman", role: "Employee" },
   { id: "user_maya", label: "Maya Shah", role: "Employee" },
@@ -52,6 +63,28 @@ export async function apiGet<T>(path: string, userId: DemoUserId = "user_priya")
     headers: {
       "x-demo-user-id": userId
     },
+    cache: "no-store"
+  });
+
+  if (!response.ok) {
+    throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+  }
+
+  return (await response.json()) as T;
+}
+
+export async function apiPost<T>(
+  path: string,
+  body: Record<string, unknown> = {},
+  userId: DemoUserId = "user_priya"
+): Promise<T> {
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-demo-user-id": userId
+    },
+    body: JSON.stringify(body),
     cache: "no-store"
   });
 
