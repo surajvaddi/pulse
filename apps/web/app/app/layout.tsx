@@ -1,6 +1,15 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { Bell, Bot, CalendarDays, Clock3, Home, LayoutDashboard, Users } from "lucide-react";
+import {
+  Bell,
+  Bot,
+  CalendarDays,
+  Clock3,
+  Home,
+  LayoutDashboard,
+  ReceiptText,
+  Users
+} from "lucide-react";
 
 import { demoUsers } from "@/lib/api";
 
@@ -9,6 +18,7 @@ const navItems = [
   { href: "/app/schedule", label: "Schedule", icon: CalendarDays },
   { href: "/app/open-shifts", label: "Open Shifts", icon: Clock3 },
   { href: "/app/swaps", label: "Swaps", icon: Users },
+  { href: "/app/timecards", label: "Timecards", icon: ReceiptText },
   { href: "/app/manager", label: "Manager", icon: LayoutDashboard },
   { href: "/app/copilot", label: "Copilot", icon: Bot }
 ];
@@ -47,9 +57,9 @@ export default function AppLayout({ children }: { children: ReactNode }) {
             </select>
           </div>
           <div className="profile-strip">
-            <button className="icon-button" aria-label="Notifications">
+            <Link className="icon-button" aria-label="Notifications" href="/app/notifications">
               <Bell size={18} />
-            </button>
+            </Link>
             <select aria-label="Demo user" defaultValue="user_priya">
               {demoUsers.map((user) => (
                 <option key={user.id} value={user.id}>
@@ -77,4 +87,3 @@ export default function AppLayout({ children }: { children: ReactNode }) {
     </div>
   );
 }
-
