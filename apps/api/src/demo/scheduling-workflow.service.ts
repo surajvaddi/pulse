@@ -1,4 +1,10 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import {
+  BadRequestException,
+  ForbiddenException,
+  Inject,
+  Injectable,
+  NotFoundException
+} from "@nestjs/common";
 
 import type { DemoSession } from "../auth/demo-users";
 import { PermissionService } from "../auth/permission.service";
@@ -14,7 +20,7 @@ import {
 
 @Injectable()
 export class SchedulingWorkflowService {
-  constructor(private readonly permissions: PermissionService) {}
+  constructor(@Inject(PermissionService) private readonly permissions: PermissionService) {}
 
   claimOpenShift(session: DemoSession, shiftId: string) {
     const shift = demoSchedules.find((candidate) => candidate.id === shiftId);

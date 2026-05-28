@@ -80,6 +80,16 @@ Phase 3 verification status:
 - Full workspace typecheck, lint, and test: passing.
 - Production build: passing with the API running for dynamic server-rendered pages.
 
+Phase 4 verification status:
+
+- Open shift claim endpoint: implemented with safe assignment or approval routing.
+- Swap request endpoint: implemented with self-scope ownership validation.
+- Counterparty accept/decline endpoint: implemented and restricted to proposed employee.
+- Manager approve/deny endpoint: implemented and restricted to scoped unit manager.
+- Approved swap mutates the schedule only after counterparty and manager approval.
+- Web actions: schedule swap request, open-shift claim, Maya accept, and manager approval are wired.
+- API e2e checks cover claim approval routing, forbidden employee approval, counterparty acceptance, manager approval, and schedule reassignment.
+
 ## Source Documents
 
 - `spec.md`: full product specification.

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post } from "@nestjs/common";
+import { Body, Controller, Get, Inject, Param, Post } from "@nestjs/common";
 
 import type { DemoSession } from "../auth/demo-users";
 import { CurrentSession } from "../auth/session.decorator";
@@ -6,7 +6,7 @@ import { SchedulingWorkflowService } from "./scheduling-workflow.service";
 
 @Controller("workflows")
 export class SchedulingWorkflowController {
-  constructor(private readonly workflows: SchedulingWorkflowService) {}
+  constructor(@Inject(SchedulingWorkflowService) private readonly workflows: SchedulingWorkflowService) {}
 
   @Get("swaps")
   listSwaps(@CurrentSession() session: DemoSession) {
