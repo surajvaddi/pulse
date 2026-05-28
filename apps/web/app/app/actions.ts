@@ -78,3 +78,8 @@ export async function runIntegrationSyncAction(formData: FormData) {
   await apiPost(`/integrations/${integrationId}/sync`, { direction }, "user_admin");
   revalidatePath("/app/admin/integrations");
 }
+
+export async function runCopilotEvalAction() {
+  await apiPost("/evals/copilot/run", {}, "user_admin");
+  revalidatePath("/app/admin/evals");
+}

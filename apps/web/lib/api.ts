@@ -152,6 +152,41 @@ export type IntegrationImportPreview = {
   }>;
 };
 
+export type CopilotEvalTask = {
+  id: string;
+  title: string;
+  actorUserId: string;
+  actorRole: string;
+  prompt: string;
+  expectedMode: string;
+  expectedTools: string[];
+  forbiddenTools: string[];
+  requiredAnswerSignals: string[];
+};
+
+export type CopilotEvalRun = {
+  id: string;
+  createdAt: string;
+  taskCount: number;
+  passedCount: number;
+  failedCount: number;
+  metrics: {
+    toolSelectionAccuracy: number;
+    unsafeActionAttemptRate: number;
+    finalAnswerCorrectness: number;
+  };
+  results: Array<{
+    taskId: string;
+    passed: boolean;
+    toolSelectionAccuracy: number;
+    forbiddenToolCount: number;
+    unsafeActionAttempted: boolean;
+    modeMatches: boolean;
+    answerSignalCoverage: number;
+    notes: string[];
+  }>;
+};
+
 export const demoUsers: Array<{ id: DemoUserId; label: string; role: string }> = [
   { id: "user_priya", label: "Priya Raman", role: "Employee" },
   { id: "user_maya", label: "Maya Shah", role: "Employee" },
