@@ -1,27 +1,45 @@
 import { CalendarDays, Clock3, ShieldCheck } from "lucide-react";
 
-const cards = [
-  {
-    title: "Next Shift",
-    value: "ICU RN Night",
-    detail: "Fri, May 29, 7 PM to 7 AM",
-    icon: CalendarDays
-  },
-  {
-    title: "Pending Requests",
-    value: "No active swaps",
-    detail: "Start from a shift detail when ready",
-    icon: Clock3
-  },
-  {
-    title: "Policy Status",
-    value: "Scoped access active",
-    detail: "Only self schedule data is visible",
-    icon: ShieldCheck
-  }
-];
+import { apiGet, type DemoShift, type TimecardException } from "@/lib/api";
 
-export default function HomePage() {
+function formatShiftDate(value: string) {
+  return new Intl.DateTimeFormat("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    hour: "numeric"
+  }).format(new Date(value));
+}
+
+export default async function HomePage() {
+  const [shifts, exceptions] = await Promise.all([
+    apiGet<DemoShift[]>("/demo/schedule/me"),
+    apiGet<TimecardException[]>("/demo/timecards/exceptions")
+  ]);
+  const nextShift = shifts[0];
+  const exception = exceptions[0];
+
+  const cards = [
+    {
+      title: "Next Shift",
+      value: nextShift?.title ?? "No upcoming shifts",
+      detail: nextShift ? formatShiftDate(nextShift.startsAt) : "Nothing visible for this user",
+      icon: CalendarDays
+    },
+    {
+      title: "Pending Requests",
+      value: "No active swaps",
+      detail: "Start from a shift detail when ready",
+      icon: Clock3
+    },
+    {
+      title: "Timecard Exceptions",
+      value: exception?.type.replaceAll("_", " ") ?? "None",
+      detail: exception?.explanation ?? "No open exceptions",
+      icon: ShieldCheck
+    }
+  ];
+
   return (
     <section className="page-stack">
       <div>
@@ -48,4 +66,3 @@ export default function HomePage() {
     </section>
   );
 }
-

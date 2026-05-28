@@ -16,6 +16,29 @@ export type SessionSummary = {
   permissions: string[];
 };
 
+export type DemoShift = {
+  id: string;
+  employeeId?: string;
+  userId?: string;
+  unitId: string;
+  facilityId: string;
+  title: string;
+  startsAt: string;
+  endsAt: string;
+  status: string;
+};
+
+export type TimecardException = {
+  id: string;
+  employeeId: string;
+  userId: string;
+  unitId: string;
+  type: string;
+  severity: string;
+  status: string;
+  explanation: string;
+};
+
 export const demoUsers: Array<{ id: DemoUserId; label: string; role: string }> = [
   { id: "user_priya", label: "Priya Raman", role: "Employee" },
   { id: "user_maya", label: "Maya Shah", role: "Employee" },
@@ -38,4 +61,3 @@ export async function apiGet<T>(path: string, userId: DemoUserId = "user_priya")
 
   return (await response.json()) as T;
 }
-
