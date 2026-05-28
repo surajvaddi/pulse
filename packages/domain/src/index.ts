@@ -1,3 +1,5 @@
+import { z } from "zod";
+
 export const PULSESHIFT_PRODUCT = "PulseShift";
 
 export type PhaseHealth = {
@@ -5,4 +7,406 @@ export type PhaseHealth = {
   status: "ok";
   phase: string;
 };
+
+export const UserStatusSchema = z.enum(["INVITED", "ACTIVE", "SUSPENDED", "DEACTIVATED"]);
+export type UserStatus = z.infer<typeof UserStatusSchema>;
+
+export const OrganizationStatusSchema = z.enum(["ACTIVE", "SUSPENDED", "TRIAL"]);
+export type OrganizationStatus = z.infer<typeof OrganizationStatusSchema>;
+
+export const FacilityStatusSchema = z.enum(["ACTIVE", "INACTIVE"]);
+export type FacilityStatus = z.infer<typeof FacilityStatusSchema>;
+
+export const UnitTypeSchema = z.enum([
+  "ICU",
+  "ED",
+  "MED_SURG",
+  "OR",
+  "PEDIATRICS",
+  "RADIOLOGY",
+  "LAB",
+  "OTHER"
+]);
+export type UnitType = z.infer<typeof UnitTypeSchema>;
+
+export const EmploymentTypeSchema = z.enum([
+  "FULL_TIME",
+  "PART_TIME",
+  "PER_DIEM",
+  "CONTRACT",
+  "AGENCY"
+]);
+export type EmploymentType = z.infer<typeof EmploymentTypeSchema>;
+
+export const EmployeeStatusSchema = z.enum(["ACTIVE", "ON_LEAVE", "TERMINATED"]);
+export type EmployeeStatus = z.infer<typeof EmployeeStatusSchema>;
+
+export const CertificationStatusSchema = z.enum(["PENDING", "VERIFIED", "EXPIRED", "REVOKED"]);
+export type CertificationStatus = z.infer<typeof CertificationStatusSchema>;
+
+export const ShiftStatusSchema = z.enum([
+  "DRAFT",
+  "OPEN",
+  "ASSIGNED",
+  "PUBLISHED",
+  "IN_PROGRESS",
+  "COMPLETED",
+  "CANCELLED"
+]);
+export type ShiftStatus = z.infer<typeof ShiftStatusSchema>;
+
+export const ShiftSourceSchema = z.enum(["MANUAL", "TEMPLATE", "IMPORT", "AI_DRAFT", "INTEGRATION"]);
+export type ShiftSource = z.infer<typeof ShiftSourceSchema>;
+
+export const AvailabilityTypeSchema = z.enum(["AVAILABLE", "UNAVAILABLE", "PREFERRED", "AVOID"]);
+export type AvailabilityType = z.infer<typeof AvailabilityTypeSchema>;
+
+export const RequestStatusSchema = z.enum([
+  "DRAFT",
+  "SUBMITTED",
+  "PENDING_COUNTERPARTY",
+  "PENDING_MANAGER",
+  "APPROVED",
+  "DENIED",
+  "CANCELLED",
+  "EXPIRED"
+]);
+export type RequestStatus = z.infer<typeof RequestStatusSchema>;
+
+export const TimecardEventTypeSchema = z.enum([
+  "CLOCK_IN",
+  "CLOCK_OUT",
+  "BREAK_START",
+  "BREAK_END"
+]);
+export type TimecardEventType = z.infer<typeof TimecardEventTypeSchema>;
+
+export const TimecardExceptionTypeSchema = z.enum([
+  "EARLY_CLOCK_IN",
+  "LATE_CLOCK_IN",
+  "MISSED_CLOCK_OUT",
+  "UNSCHEDULED_CLOCK_IN",
+  "MISSED_BREAK",
+  "OVERTIME_RISK",
+  "LOCATION_MISMATCH"
+]);
+export type TimecardExceptionType = z.infer<typeof TimecardExceptionTypeSchema>;
+
+export const SeveritySchema = z.enum(["LOW", "MEDIUM", "HIGH", "CRITICAL"]);
+export type Severity = z.infer<typeof SeveritySchema>;
+
+export const ApprovalTypeSchema = z.enum([
+  "SHIFT_SWAP",
+  "SHIFT_ASSIGNMENT",
+  "OVERTIME_OVERRIDE",
+  "TIMECARD_CORRECTION",
+  "CREDENTIAL_OVERRIDE",
+  "SCHEDULE_PUBLISH"
+]);
+export type ApprovalType = z.infer<typeof ApprovalTypeSchema>;
+
+export const ApprovalStatusSchema = z.enum(["PENDING", "APPROVED", "DENIED", "CANCELLED", "EXPIRED"]);
+export type ApprovalStatus = z.infer<typeof ApprovalStatusSchema>;
+
+export const NotificationChannelSchema = z.enum([
+  "IN_APP",
+  "EMAIL",
+  "SMS",
+  "PUSH",
+  "SLACK",
+  "TEAMS"
+]);
+export type NotificationChannel = z.infer<typeof NotificationChannelSchema>;
+
+export const NotificationStatusSchema = z.enum([
+  "QUEUED",
+  "SENT",
+  "DELIVERED",
+  "FAILED",
+  "READ"
+]);
+export type NotificationStatus = z.infer<typeof NotificationStatusSchema>;
+
+export const ToolRiskLevelSchema = z.enum([
+  "READ_ONLY",
+  "LOW_RISK_WRITE",
+  "APPROVAL_REQUIRED",
+  "BLOCKED"
+]);
+export type ToolRiskLevel = z.infer<typeof ToolRiskLevelSchema>;
+
+export const AIToolCallStatusSchema = z.enum([
+  "PROPOSED",
+  "AUTHORIZED",
+  "EXECUTED",
+  "BLOCKED",
+  "FAILED"
+]);
+export type AIToolCallStatus = z.infer<typeof AIToolCallStatusSchema>;
+
+export const ActorTypeSchema = z.enum(["USER", "AI_AGENT", "SYSTEM", "INTEGRATION"]);
+export type ActorType = z.infer<typeof ActorTypeSchema>;
+
+export const PermissionSchema = z.enum([
+  "schedule:read:self",
+  "schedule:read:unit",
+  "schedule:read:facility",
+  "schedule:write:draft",
+  "schedule:publish",
+  "shift:claim",
+  "shift:release",
+  "shift:swap:create",
+  "shift:swap:approve",
+  "shift:assign",
+  "shift:assign:override",
+  "availability:read:self",
+  "availability:write:self",
+  "availability:read:unit",
+  "pto:create:self",
+  "pto:approve",
+  "timecard:read:self",
+  "timecard:read:unit",
+  "timecard:resolve",
+  "payroll:export",
+  "credential:read",
+  "credential:write",
+  "notification:send:unit",
+  "notification:send:facility",
+  "audit:read",
+  "integration:manage",
+  "user:manage",
+  "ai:use",
+  "ai:admin"
+]);
+export type Permission = z.infer<typeof PermissionSchema>;
+
+export const AccountRoleSchema = z.enum([
+  "ORGANIZATION_OWNER",
+  "SYSTEM_ADMIN",
+  "WORKFORCE_ADMIN",
+  "UNIT_MANAGER",
+  "CHARGE_NURSE",
+  "EMPLOYEE",
+  "FLOAT_POOL_COORDINATOR",
+  "PAYROLL_ADMIN",
+  "CREDENTIALING_ADMIN",
+  "COMPLIANCE_AUDITOR",
+  "EXECUTIVE_VIEWER",
+  "EXTERNAL_AGENCY_ADMIN",
+  "AI_AGENT_SERVICE"
+]);
+export type AccountRole = z.infer<typeof AccountRoleSchema>;
+
+export const ScopeSchema = z.discriminatedUnion("type", [
+  z.object({ type: z.literal("SELF") }),
+  z.object({ type: z.literal("UNIT"), unitIds: z.array(z.string()).min(1) }),
+  z.object({ type: z.literal("FACILITY"), facilityIds: z.array(z.string()).min(1) }),
+  z.object({ type: z.literal("ORG"), organizationId: z.string() })
+]);
+export type Scope = z.infer<typeof ScopeSchema>;
+
+export const PermissionGrantSchema = z.object({
+  permission: PermissionSchema,
+  scope: ScopeSchema
+});
+export type PermissionGrant = z.infer<typeof PermissionGrantSchema>;
+
+export const RolePermissionMap = {
+  ORGANIZATION_OWNER: [
+    "audit:read",
+    "integration:manage",
+    "user:manage",
+    "ai:admin",
+    "ai:use"
+  ],
+  SYSTEM_ADMIN: ["integration:manage", "user:manage", "ai:admin", "ai:use"],
+  WORKFORCE_ADMIN: [
+    "schedule:read:facility",
+    "schedule:write:draft",
+    "schedule:publish",
+    "shift:assign",
+    "shift:assign:override",
+    "notification:send:facility",
+    "ai:use"
+  ],
+  UNIT_MANAGER: [
+    "schedule:read:unit",
+    "shift:swap:approve",
+    "shift:assign",
+    "notification:send:unit",
+    "timecard:read:unit",
+    "ai:use"
+  ],
+  CHARGE_NURSE: ["schedule:read:unit", "notification:send:unit", "ai:use"],
+  EMPLOYEE: [
+    "schedule:read:self",
+    "shift:claim",
+    "shift:release",
+    "shift:swap:create",
+    "availability:read:self",
+    "availability:write:self",
+    "pto:create:self",
+    "timecard:read:self",
+    "ai:use"
+  ],
+  FLOAT_POOL_COORDINATOR: [
+    "schedule:read:facility",
+    "shift:assign",
+    "availability:read:unit",
+    "credential:read",
+    "ai:use"
+  ],
+  PAYROLL_ADMIN: ["timecard:read:unit", "timecard:resolve", "payroll:export", "ai:use"],
+  CREDENTIALING_ADMIN: ["credential:read", "credential:write", "ai:use"],
+  COMPLIANCE_AUDITOR: ["audit:read", "ai:use"],
+  EXECUTIVE_VIEWER: ["schedule:read:facility", "ai:use"],
+  EXTERNAL_AGENCY_ADMIN: ["schedule:read:self", "shift:claim", "ai:use"],
+  AI_AGENT_SERVICE: ["ai:use"]
+} satisfies Record<AccountRole, Permission[]>;
+
+const IsoDateTimeSchema = z.string().datetime();
+const JsonRecordSchema = z.record(z.string(), z.unknown());
+
+export const OrganizationSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  timezone: z.string(),
+  status: OrganizationStatusSchema,
+  defaultPolicySetId: z.string().optional(),
+  createdAt: IsoDateTimeSchema,
+  updatedAt: IsoDateTimeSchema
+});
+export type Organization = z.infer<typeof OrganizationSchema>;
+
+export const FacilitySchema = z.object({
+  id: z.string(),
+  organizationId: z.string(),
+  name: z.string(),
+  address: z.string().optional(),
+  timezone: z.string(),
+  status: FacilityStatusSchema
+});
+export type Facility = z.infer<typeof FacilitySchema>;
+
+export const UnitSchema = z.object({
+  id: z.string(),
+  facilityId: z.string(),
+  name: z.string(),
+  unitType: UnitTypeSchema,
+  managerUserIds: z.array(z.string()),
+  defaultStaffingPolicyId: z.string().optional(),
+  status: FacilityStatusSchema
+});
+export type Unit = z.infer<typeof UnitSchema>;
+
+export const UserSchema = z.object({
+  id: z.string(),
+  organizationId: z.string(),
+  email: z.string().email(),
+  phone: z.string().optional(),
+  displayName: z.string(),
+  authProvider: z.enum(["PASSWORD", "GOOGLE", "MICROSOFT", "SAML", "OIDC"]),
+  status: UserStatusSchema,
+  lastLoginAt: IsoDateTimeSchema.optional()
+});
+export type User = z.infer<typeof UserSchema>;
+
+export const EmployeeProfileSchema = z.object({
+  id: z.string(),
+  userId: z.string().optional(),
+  organizationId: z.string(),
+  employeeNumber: z.string(),
+  legalName: z.string(),
+  preferredName: z.string().optional(),
+  primaryFacilityId: z.string(),
+  primaryUnitId: z.string(),
+  employmentType: EmploymentTypeSchema,
+  roleId: z.string(),
+  managerUserId: z.string().optional(),
+  status: EmployeeStatusSchema,
+  hireDate: z.string().date().optional()
+});
+export type EmployeeProfile = z.infer<typeof EmployeeProfileSchema>;
+
+export const ShiftSchema = z.object({
+  id: z.string(),
+  organizationId: z.string(),
+  facilityId: z.string(),
+  unitId: z.string(),
+  templateId: z.string().optional(),
+  roleRequiredId: z.string(),
+  certificationRequiredIds: z.array(z.string()),
+  startAt: IsoDateTimeSchema,
+  endAt: IsoDateTimeSchema,
+  assignedEmployeeId: z.string().optional(),
+  status: ShiftStatusSchema,
+  source: ShiftSourceSchema,
+  riskFlags: z.array(z.string())
+});
+export type Shift = z.infer<typeof ShiftSchema>;
+
+export const ShiftSwapRequestSchema = z.object({
+  id: z.string(),
+  requesterEmployeeId: z.string(),
+  originalShiftId: z.string(),
+  proposedEmployeeId: z.string().optional(),
+  proposedShiftId: z.string().optional(),
+  unitId: z.string(),
+  status: RequestStatusSchema,
+  riskFlags: z.array(z.string()),
+  createdBy: z.enum(["EMPLOYEE", "MANAGER", "AI_ASSISTED"]),
+  managerApprovalRequired: z.boolean()
+});
+export type ShiftSwapRequest = z.infer<typeof ShiftSwapRequestSchema>;
+
+export const PolicyDecisionSchema = z.object({
+  id: z.string(),
+  action: z.string(),
+  allowed: z.boolean(),
+  requiresApproval: z.boolean(),
+  riskFlags: z.array(z.string()),
+  blockingReasons: z.array(z.string()),
+  warnings: z.array(z.string())
+});
+export type PolicyDecision = z.infer<typeof PolicyDecisionSchema>;
+
+export const NotificationSchema = z.object({
+  id: z.string(),
+  recipientUserId: z.string(),
+  channel: NotificationChannelSchema,
+  type: z.string(),
+  status: NotificationStatusSchema,
+  payload: JsonRecordSchema
+});
+export type Notification = z.infer<typeof NotificationSchema>;
+
+export const AIToolCallSchema = z.object({
+  id: z.string(),
+  conversationId: z.string(),
+  userId: z.string(),
+  toolName: z.string(),
+  inputJson: JsonRecordSchema,
+  outputJson: JsonRecordSchema.optional(),
+  status: AIToolCallStatusSchema,
+  riskLevel: ToolRiskLevelSchema,
+  policyDecisionId: z.string().optional(),
+  createdAt: IsoDateTimeSchema
+});
+export type AIToolCall = z.infer<typeof AIToolCallSchema>;
+
+export const AuditLogSchema = z.object({
+  id: z.string(),
+  organizationId: z.string(),
+  actorUserId: z.string().optional(),
+  actorType: ActorTypeSchema,
+  action: z.string(),
+  objectType: z.string(),
+  objectId: z.string(),
+  before: JsonRecordSchema.optional(),
+  after: JsonRecordSchema.optional(),
+  reason: z.string().optional(),
+  ipAddress: z.string().optional(),
+  createdAt: IsoDateTimeSchema
+});
+export type AuditLog = z.infer<typeof AuditLogSchema>;
 
