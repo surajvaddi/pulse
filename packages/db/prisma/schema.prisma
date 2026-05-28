@@ -1,0 +1,649 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum OrganizationStatus {
+  ACTIVE
+  SUSPENDED
+  TRIAL
+}
+
+enum FacilityStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum UnitType {
+  ICU
+  ED
+  MED_SURG
+  OR
+  PEDIATRICS
+  RADIOLOGY
+  LAB
+  OTHER
+}
+
+enum AuthProvider {
+  PASSWORD
+  GOOGLE
+  MICROSOFT
+  SAML
+  OIDC
+}
+
+enum UserStatus {
+  INVITED
+  ACTIVE
+  SUSPENDED
+  DEACTIVATED
+}
+
+enum AccountRole {
+  ORGANIZATION_OWNER
+  SYSTEM_ADMIN
+  WORKFORCE_ADMIN
+  UNIT_MANAGER
+  CHARGE_NURSE
+  EMPLOYEE
+  FLOAT_POOL_COORDINATOR
+  PAYROLL_ADMIN
+  CREDENTIALING_ADMIN
+  COMPLIANCE_AUDITOR
+  EXECUTIVE_VIEWER
+  EXTERNAL_AGENCY_ADMIN
+  AI_AGENT_SERVICE
+}
+
+enum EmploymentType {
+  FULL_TIME
+  PART_TIME
+  PER_DIEM
+  CONTRACT
+  AGENCY
+}
+
+enum EmployeeStatus {
+  ACTIVE
+  ON_LEAVE
+  TERMINATED
+}
+
+enum CertificationStatus {
+  PENDING
+  VERIFIED
+  EXPIRED
+  REVOKED
+}
+
+enum ShiftStatus {
+  DRAFT
+  OPEN
+  ASSIGNED
+  PUBLISHED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum ShiftSource {
+  MANUAL
+  TEMPLATE
+  IMPORT
+  AI_DRAFT
+  INTEGRATION
+}
+
+enum AvailabilityType {
+  AVAILABLE
+  UNAVAILABLE
+  PREFERRED
+  AVOID
+}
+
+enum AvailabilityStatus {
+  ACTIVE
+  EXPIRED
+  CANCELLED
+}
+
+enum SwapStatus {
+  DRAFT
+  PENDING_COUNTERPARTY
+  PENDING_MANAGER
+  APPROVED
+  DENIED
+  CANCELLED
+  EXPIRED
+}
+
+enum ApprovalType {
+  SHIFT_SWAP
+  SHIFT_ASSIGNMENT
+  OVERTIME_OVERRIDE
+  TIMECARD_CORRECTION
+  CREDENTIAL_OVERRIDE
+  SCHEDULE_PUBLISH
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  DENIED
+  CANCELLED
+  EXPIRED
+}
+
+enum TimecardEventType {
+  CLOCK_IN
+  CLOCK_OUT
+  BREAK_START
+  BREAK_END
+}
+
+enum TimecardEventSource {
+  MOBILE
+  BADGE
+  KIOSK
+  IMPORT
+  MANUAL
+}
+
+enum TimecardEventStatus {
+  NORMAL
+  FLAGGED
+  CORRECTED
+  VOIDED
+}
+
+enum TimecardExceptionType {
+  EARLY_CLOCK_IN
+  LATE_CLOCK_IN
+  MISSED_CLOCK_OUT
+  UNSCHEDULED_CLOCK_IN
+  MISSED_BREAK
+  OVERTIME_RISK
+  LOCATION_MISMATCH
+}
+
+enum ExceptionSeverity {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum TimecardExceptionStatus {
+  OPEN
+  EMPLOYEE_RESPONDED
+  MANAGER_REVIEW
+  RESOLVED
+  DISMISSED
+}
+
+enum NotificationChannel {
+  IN_APP
+  EMAIL
+  SMS
+  PUSH
+  SLACK
+  TEAMS
+}
+
+enum NotificationType {
+  SHIFT_ASSIGNED
+  SHIFT_UPDATED
+  SWAP_REQUESTED
+  SWAP_APPROVED
+  SWAP_DENIED
+  OPEN_SHIFT_AVAILABLE
+  TIMECARD_EXCEPTION
+  STAFFING_RISK
+  APPROVAL_REQUIRED
+}
+
+enum NotificationStatus {
+  QUEUED
+  SENT
+  DELIVERED
+  FAILED
+  READ
+}
+
+enum AIContextType {
+  SELF_SERVICE
+  MANAGER_OPS
+  PAYROLL
+  ADMIN
+}
+
+enum ConversationStatus {
+  ACTIVE
+  CLOSED
+}
+
+enum AIToolCallStatus {
+  PROPOSED
+  AUTHORIZED
+  EXECUTED
+  BLOCKED
+  FAILED
+}
+
+enum ToolRiskLevel {
+  READ_ONLY
+  LOW_RISK_WRITE
+  APPROVAL_REQUIRED
+  BLOCKED
+}
+
+enum ActorType {
+  USER
+  AI_AGENT
+  SYSTEM
+  INTEGRATION
+}
+
+model Organization {
+  id                 String             @id @default(cuid())
+  name               String
+  timezone           String
+  status             OrganizationStatus @default(TRIAL)
+  defaultPolicySetId String?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  facilities         Facility[]
+  users              User[]
+  employeeProfiles   EmployeeProfile[]
+  workforceRoles     WorkforceRole[]
+  certifications     Certification[]
+  shifts             Shift[]
+  approvalRequests   ApprovalRequest[]
+  aiConversations    AIConversation[]
+  auditLogs          AuditLog[]
+
+  @@map("organizations")
+}
+
+model Facility {
+  id             String           @id @default(cuid())
+  organizationId String
+  organization   Organization     @relation(fields: [organizationId], references: [id])
+  name           String
+  address        String?
+  timezone       String
+  status         FacilityStatus   @default(ACTIVE)
+  units          Unit[]
+  employees      EmployeeProfile[] @relation("PrimaryFacility")
+  shifts         Shift[]
+
+  @@map("facilities")
+}
+
+model Unit {
+  id                      String                @id @default(cuid())
+  facilityId              String
+  facility                Facility              @relation(fields: [facilityId], references: [id])
+  name                    String
+  unitType                UnitType
+  managerUserIds          String[]
+  defaultStaffingPolicyId String?
+  status                  FacilityStatus        @default(ACTIVE)
+  employees               EmployeeProfile[]     @relation("PrimaryUnit")
+  shiftTemplates          ShiftTemplate[]
+  shifts                  Shift[]
+  staffingRequirements    StaffingRequirement[]
+  swapRequests            ShiftSwapRequest[]
+
+  @@map("units")
+}
+
+model User {
+  id                   String             @id @default(cuid())
+  organizationId       String
+  organization         Organization       @relation(fields: [organizationId], references: [id])
+  email                String             @unique
+  phone                String?
+  displayName          String
+  authProvider         AuthProvider       @default(PASSWORD)
+  status               UserStatus         @default(INVITED)
+  lastLoginAt          DateTime?
+  roles                UserRole[]
+  employeeProfile      EmployeeProfile?
+  notifications        Notification[]
+  aiConversations      AIConversation[]
+  aiToolCalls          AIToolCall[]
+  requestedApprovals   ApprovalRequest[]  @relation("RequestedApprovals")
+  assignedApprovals    ApprovalRequest[]  @relation("AssignedApprovals")
+  auditLogs            AuditLog[]
+
+  @@map("users")
+}
+
+model UserRole {
+  id             String      @id @default(cuid())
+  userId         String
+  user           User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role           AccountRole
+  scope          Json
+  permissions    String[]
+  createdAt      DateTime    @default(now())
+
+  @@unique([userId, role])
+  @@map("user_roles")
+}
+
+model EmployeeProfile {
+  id                     String                  @id @default(cuid())
+  userId                 String?                 @unique
+  user                   User?                   @relation(fields: [userId], references: [id])
+  organizationId         String
+  organization           Organization            @relation(fields: [organizationId], references: [id])
+  employeeNumber         String
+  legalName              String
+  preferredName          String?
+  primaryFacilityId      String
+  primaryFacility        Facility                @relation("PrimaryFacility", fields: [primaryFacilityId], references: [id])
+  primaryUnitId          String
+  primaryUnit            Unit                    @relation("PrimaryUnit", fields: [primaryUnitId], references: [id])
+  employmentType         EmploymentType
+  roleId                 String
+  role                   WorkforceRole           @relation(fields: [roleId], references: [id])
+  managerUserId          String?
+  status                 EmployeeStatus          @default(ACTIVE)
+  hireDate               DateTime?
+  certifications         EmployeeCertification[]
+  shifts                 Shift[]
+  availabilityWindows    AvailabilityWindow[]
+  requestedSwaps         ShiftSwapRequest[]      @relation("RequesterSwaps")
+  proposedSwaps          ShiftSwapRequest[]      @relation("ProposedSwaps")
+  timecardEvents         TimecardEvent[]
+  timecardExceptions     TimecardException[]
+
+  @@unique([organizationId, employeeNumber])
+  @@map("employee_profiles")
+}
+
+model WorkforceRole {
+  id             String                @id @default(cuid())
+  organizationId String
+  organization   Organization          @relation(fields: [organizationId], references: [id])
+  name           String
+  description    String?
+  employees      EmployeeProfile[]
+  shiftTemplates ShiftTemplate[]
+  shifts         Shift[]
+  requirements   StaffingRequirement[]
+
+  @@unique([organizationId, name])
+  @@map("workforce_roles")
+}
+
+model Certification {
+  id              String                  @id @default(cuid())
+  organizationId  String
+  organization    Organization            @relation(fields: [organizationId], references: [id])
+  name            String
+  code            String?
+  expires         Boolean                 @default(true)
+  employees       EmployeeCertification[]
+
+  @@unique([organizationId, name])
+  @@map("certifications")
+}
+
+model EmployeeCertification {
+  id                 String              @id @default(cuid())
+  employeeId         String
+  employee           EmployeeProfile     @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  certificationId    String
+  certification      Certification       @relation(fields: [certificationId], references: [id])
+  status             CertificationStatus @default(PENDING)
+  issuedAt           DateTime?
+  expiresAt          DateTime?
+  verifiedByUserId   String?
+
+  @@unique([employeeId, certificationId])
+  @@map("employee_certifications")
+}
+
+model ShiftTemplate {
+  id                       String        @id @default(cuid())
+  unitId                   String
+  unit                     Unit          @relation(fields: [unitId], references: [id])
+  name                     String
+  startLocalTime           String
+  endLocalTime             String
+  durationMinutes          Int
+  roleRequiredId           String
+  roleRequired             WorkforceRole @relation(fields: [roleRequiredId], references: [id])
+  certificationRequiredIds String[]
+  defaultBreakMinutes      Int?
+  shifts                   Shift[]
+
+  @@map("shift_templates")
+}
+
+model Shift {
+  id                       String             @id @default(cuid())
+  organizationId           String
+  organization             Organization       @relation(fields: [organizationId], references: [id])
+  facilityId               String
+  facility                 Facility           @relation(fields: [facilityId], references: [id])
+  unitId                   String
+  unit                     Unit               @relation(fields: [unitId], references: [id])
+  templateId               String?
+  template                 ShiftTemplate?     @relation(fields: [templateId], references: [id])
+  roleRequiredId           String
+  roleRequired             WorkforceRole      @relation(fields: [roleRequiredId], references: [id])
+  certificationRequiredIds String[]
+  startAt                  DateTime
+  endAt                    DateTime
+  assignedEmployeeId       String?
+  assignedEmployee         EmployeeProfile?   @relation(fields: [assignedEmployeeId], references: [id])
+  status                   ShiftStatus
+  source                   ShiftSource
+  riskFlags                String[]
+  swapRequests             ShiftSwapRequest[]
+  timecardEvents           TimecardEvent[]
+  timecardExceptions       TimecardException[]
+
+  @@index([unitId, startAt])
+  @@index([assignedEmployeeId, startAt])
+  @@map("shifts")
+}
+
+model AvailabilityWindow {
+  id             String             @id @default(cuid())
+  employeeId     String
+  employee       EmployeeProfile    @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  type           AvailabilityType
+  startAt        DateTime
+  endAt          DateTime
+  recurrenceRule String?
+  reason         String?
+  status         AvailabilityStatus @default(ACTIVE)
+
+  @@index([employeeId, startAt])
+  @@map("availability_windows")
+}
+
+model ShiftSwapRequest {
+  id                      String           @id @default(cuid())
+  requesterEmployeeId     String
+  requesterEmployee       EmployeeProfile  @relation("RequesterSwaps", fields: [requesterEmployeeId], references: [id])
+  originalShiftId         String
+  originalShift           Shift            @relation(fields: [originalShiftId], references: [id])
+  proposedEmployeeId      String?
+  proposedEmployee        EmployeeProfile? @relation("ProposedSwaps", fields: [proposedEmployeeId], references: [id])
+  proposedShiftId         String?
+  unitId                  String
+  unit                    Unit             @relation(fields: [unitId], references: [id])
+  status                  SwapStatus
+  riskFlags               String[]
+  createdBy               String
+  managerApprovalRequired Boolean
+  createdAt               DateTime         @default(now())
+  updatedAt               DateTime         @updatedAt
+
+  @@index([requesterEmployeeId])
+  @@index([proposedEmployeeId])
+  @@map("shift_swap_requests")
+}
+
+model ApprovalRequest {
+  id                String         @id @default(cuid())
+  organizationId    String
+  organization      Organization   @relation(fields: [organizationId], references: [id])
+  requestedByUserId String
+  requestedByUser   User           @relation("RequestedApprovals", fields: [requestedByUserId], references: [id])
+  approverUserId    String?
+  approverUser      User?          @relation("AssignedApprovals", fields: [approverUserId], references: [id])
+  approvalType      ApprovalType
+  targetObjectType  String
+  targetObjectId    String
+  status            ApprovalStatus @default(PENDING)
+  riskFlags         String[]
+  decisionReason    String?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  @@index([approverUserId, status])
+  @@map("approval_requests")
+}
+
+model StaffingRequirement {
+  id                       String        @id @default(cuid())
+  unitId                   String
+  unit                     Unit          @relation(fields: [unitId], references: [id])
+  roleId                   String
+  role                     WorkforceRole @relation(fields: [roleId], references: [id])
+  certificationRequiredIds String[]
+  startAt                  DateTime
+  endAt                    DateTime
+  minRequired              Int
+  idealRequired            Int?
+  source                   String
+
+  @@index([unitId, startAt])
+  @@map("staffing_requirements")
+}
+
+model TimecardEvent {
+  id          String              @id @default(cuid())
+  employeeId  String
+  employee    EmployeeProfile     @relation(fields: [employeeId], references: [id])
+  shiftId     String?
+  shift       Shift?              @relation(fields: [shiftId], references: [id])
+  eventType   TimecardEventType
+  occurredAt  DateTime
+  source      TimecardEventSource
+  status      TimecardEventStatus @default(NORMAL)
+
+  @@index([employeeId, occurredAt])
+  @@map("timecard_events")
+}
+
+model TimecardException {
+  id            String                  @id @default(cuid())
+  employeeId    String
+  employee      EmployeeProfile         @relation(fields: [employeeId], references: [id])
+  shiftId       String?
+  shift         Shift?                  @relation(fields: [shiftId], references: [id])
+  exceptionType TimecardExceptionType
+  severity      ExceptionSeverity
+  status        TimecardExceptionStatus @default(OPEN)
+  explanation   String?
+  createdAt     DateTime                @default(now())
+  updatedAt     DateTime                @updatedAt
+
+  @@index([employeeId, status])
+  @@map("timecard_exceptions")
+}
+
+model Notification {
+  id              String              @id @default(cuid())
+  recipientUserId String
+  recipientUser   User                @relation(fields: [recipientUserId], references: [id])
+  channel         NotificationChannel
+  type            NotificationType
+  status          NotificationStatus  @default(QUEUED)
+  payload         Json
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  @@index([recipientUserId, status])
+  @@map("notifications")
+}
+
+model AIConversation {
+  id             String             @id @default(cuid())
+  organizationId String
+  organization   Organization       @relation(fields: [organizationId], references: [id])
+  userId         String
+  user           User               @relation(fields: [userId], references: [id])
+  contextType    AIContextType
+  status         ConversationStatus @default(ACTIVE)
+  createdAt      DateTime           @default(now())
+  messages       AIMessage[]
+  toolCalls      AIToolCall[]
+
+  @@index([userId, status])
+  @@map("ai_conversations")
+}
+
+model AIMessage {
+  id             String         @id @default(cuid())
+  conversationId String
+  conversation   AIConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role           String
+  content        String
+  createdAt      DateTime       @default(now())
+
+  @@map("ai_messages")
+}
+
+model AIToolCall {
+  id               String           @id @default(cuid())
+  conversationId   String
+  conversation     AIConversation   @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  userId           String
+  user             User             @relation(fields: [userId], references: [id])
+  toolName         String
+  inputJson        Json
+  outputJson       Json?
+  status           AIToolCallStatus
+  riskLevel        ToolRiskLevel
+  policyDecisionId String?
+  createdAt        DateTime         @default(now())
+
+  @@index([conversationId])
+  @@index([toolName])
+  @@map("ai_tool_calls")
+}
+
+model AuditLog {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  actorUserId    String?
+  actorUser      User?        @relation(fields: [actorUserId], references: [id])
+  actorType      ActorType
+  action         String
+  objectType     String
+  objectId       String
+  before         Json?
+  after          Json?
+  reason         String?
+  ipAddress      String?
+  createdAt      DateTime     @default(now())
+
+  @@index([organizationId, createdAt])
+  @@index([objectType, objectId])
+  @@map("audit_logs")
+}

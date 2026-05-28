@@ -11,3 +11,4 @@ coverage/
 *.tsbuildinfo
 apps/api/prisma/generated/
 packages/db/prisma/generated/
+packages/db/src/generated/
