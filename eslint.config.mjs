@@ -7,6 +7,7 @@ export default tseslint.config(
       "node_modules/**",
       "dist/**",
       "**/.next/**",
+      "**/generated/**",
       "coverage/**",
       "**/next-env.d.ts"
     ]
