@@ -94,7 +94,20 @@ export const demoTimecardExceptions = [
   }
 ];
 
-export const demoAuditLogs = [
+export type DemoAuditLogRecord = {
+  id: string;
+  organizationId: string;
+  actorUserId?: string;
+  actorType: "USER" | "AI_AGENT" | "SYSTEM" | "INTEGRATION";
+  action: string;
+  objectType: string;
+  objectId: string;
+  reason?: string;
+  after?: Record<string, unknown>;
+  createdAt: string;
+};
+
+export const demoAuditLogs: DemoAuditLogRecord[] = [
   {
     id: "audit_seed_demo",
     organizationId: "org_pulseshift_demo",
@@ -105,6 +118,36 @@ export const demoAuditLogs = [
     createdAt: "2026-05-27T00:00:00.000Z"
   }
 ];
+
+export function appendDemoAuditLog(input: {
+  actorUserId?: string;
+  actorType: "USER" | "AI_AGENT" | "SYSTEM" | "INTEGRATION";
+  action: string;
+  objectType: string;
+  objectId: string;
+  reason?: string;
+  after?: Record<string, unknown>;
+}) {
+  const record: DemoAuditLogRecord = {
+    id: `audit_${demoAuditLogs.length + 1}`,
+    organizationId: "org_pulseshift_demo",
+    actorType: input.actorType,
+    action: input.action,
+    objectType: input.objectType,
+    objectId: input.objectId,
+    createdAt: new Date().toISOString()
+  };
+  if (input.actorUserId) {
+    record.actorUserId = input.actorUserId;
+  }
+  if (input.reason) {
+    record.reason = input.reason;
+  }
+  if (input.after) {
+    record.after = input.after;
+  }
+  demoAuditLogs.push(record);
+}
 
 export const demoNotifications: Array<{
   id: string;
@@ -132,6 +175,7 @@ export const demoNotifications: Array<{
 export function resetDemoWorkflowState() {
   demoSwaps.splice(0, demoSwaps.length);
   demoApprovals.splice(0, demoApprovals.length);
+  demoAuditLogs.splice(1, demoAuditLogs.length - 1);
 
   const priyaShift = demoSchedules.find((shift) => shift.id === "shift_priya_friday_icu_night");
   if (priyaShift) {
