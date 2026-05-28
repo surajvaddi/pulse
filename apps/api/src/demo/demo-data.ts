@@ -3,7 +3,46 @@ export const demoEmployeeByUserId = new Map<string, string>([
   ["user_maya", "emp_maya"]
 ]);
 
-export const demoSchedules = [
+export type DemoShiftRecord = {
+  id: string;
+  employeeId?: string;
+  userId?: string;
+  unitId: string;
+  facilityId: string;
+  title: string;
+  startsAt: string;
+  endsAt: string;
+  status: "OPEN" | "PUBLISHED" | "ASSIGNED";
+  riskFlags?: string[];
+};
+
+export type DemoSwapRecord = {
+  id: string;
+  requesterEmployeeId: string;
+  requesterUserId: string;
+  originalShiftId: string;
+  proposedEmployeeId: string;
+  proposedUserId: string;
+  unitId: string;
+  status: "PENDING_COUNTERPARTY" | "PENDING_MANAGER" | "APPROVED" | "DENIED" | "CANCELLED";
+  riskFlags: string[];
+  managerApprovalRequired: boolean;
+  timeline: string[];
+};
+
+export type DemoApprovalRecord = {
+  id: string;
+  approvalType: "SHIFT_SWAP" | "SHIFT_ASSIGNMENT";
+  requestedByUserId: string;
+  approverUserId?: string;
+  targetObjectType: string;
+  targetObjectId: string;
+  status: "PENDING" | "APPROVED" | "DENIED";
+  riskFlags: string[];
+  decisionReason?: string;
+};
+
+export const demoSchedules: DemoShiftRecord[] = [
   {
     id: "shift_priya_friday_icu_night",
     employeeId: "emp_priya",
@@ -33,9 +72,14 @@ export const demoSchedules = [
     title: "ICU RN Night Open",
     startsAt: "2026-05-31T23:00:00.000Z",
     endsAt: "2026-06-01T11:00:00.000Z",
-    status: "OPEN"
+    status: "OPEN",
+    riskFlags: ["STAFFING_GAP"]
   }
 ];
+
+export const demoSwaps: DemoSwapRecord[] = [];
+
+export const demoApprovals: DemoApprovalRecord[] = [];
 
 export const demoTimecardExceptions = [
   {
@@ -62,3 +106,44 @@ export const demoAuditLogs = [
   }
 ];
 
+export const demoNotifications: Array<{
+  id: string;
+  recipientUserId: string;
+  type: string;
+  status: "QUEUED" | "READ";
+  payload: Record<string, string>;
+}> = [
+  {
+    id: "notification_staffing_risk_icu",
+    recipientUserId: "user_jordan_manager",
+    type: "STAFFING_RISK",
+    status: "QUEUED",
+    payload: { shiftId: "shift_open_icu_night" }
+  },
+  {
+    id: "notification_timecard_late_priya",
+    recipientUserId: "user_priya",
+    type: "TIMECARD_EXCEPTION",
+    status: "QUEUED",
+    payload: { exceptionId: "timecard_exception_late_priya" }
+  }
+];
+
+export function resetDemoWorkflowState() {
+  demoSwaps.splice(0, demoSwaps.length);
+  demoApprovals.splice(0, demoApprovals.length);
+
+  const priyaShift = demoSchedules.find((shift) => shift.id === "shift_priya_friday_icu_night");
+  if (priyaShift) {
+    priyaShift.employeeId = "emp_priya";
+    priyaShift.userId = "user_priya";
+    priyaShift.status = "PUBLISHED";
+  }
+
+  const openShift = demoSchedules.find((shift) => shift.id === "shift_open_icu_night");
+  if (openShift) {
+    delete openShift.employeeId;
+    delete openShift.userId;
+    openShift.status = "OPEN";
+  }
+}
