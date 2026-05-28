@@ -127,3 +127,51 @@ Phase 10: Add the LLM evaluation harness, synthetic datasets, model runner inter
 
 Phase 11: Harden the MVP demo, improve accessibility and responsive layouts, add end-to-end tests, document setup, and record a repeatable demo script.
 
+Phase 12: Establish the production platform foundation with Supabase as the primary hosted PostgreSQL target, Prisma as the application ORM, production environment conventions, CI quality gates, and a migration strategy from in-memory demo state to database-backed services.
+
+Phase 13: Replace demo-header authentication with Supabase Auth, add real account sessions, login/logout, password recovery, invite acceptance, and organization-invite onboarding for workforce members.
+
+Phase 14: Move core workflows from in-memory demo state to Prisma-backed persistence for schedules, swaps, approvals, notifications, audit logs, AI tool calls, integrations, eval runs, staff, credentials, and timecards.
+
+Phase 15: Build full SaaS administration for organizations, facilities, units, users, roles, workforce roles, invitations, account suspension, and tenant-scoped access control.
+
+Phase 16: Redesign the operational UI around role-specific workflows for employees, managers, payroll/admin users, and system administrators, with concise explanations for every workflow state, policy flag, AI action, approval, and integration status.
+
+Phase 17: Persist notifications, add communication preferences, and introduce realtime or near-realtime updates for approvals, swaps, schedule changes, staffing gaps, and notification reads.
+
+Phase 18: Integrate a real OpenAI-compatible LLM gateway behind the existing tool permission, policy, preview, approval, audit, and evaluation boundaries.
+
+Phase 19: Add production security and HIPAA-ready controls while continuing to exclude PHI: secure session handling, CORS allowlists, rate limits, structured logs, audit retention, access reviews, incident response docs, backup/restore docs, and dependency audit policy.
+
+Phase 20: Prepare production deployment and launch readiness with staging/production environment docs, migration runbooks, smoke tests, release checklists, rollback plans, monitoring, and removal or strict gating of demo-only affordances.
+
+## Production Readiness Interfaces
+
+The production phases should add these durable interfaces and contracts:
+
+- `User.supabaseAuthId` maps Supabase Auth identities to application users while preserving app-owned IDs, roles, scopes, employee profiles, and audit relations.
+- Invitation records should store organization, email, role, scope, token hash, status, inviter, expiration, and acceptance timestamps.
+- Auth/session responses should include user, organization, employee profile, roles, scopes, permissions, and feature flags.
+- Organization admin APIs should cover users, roles, facilities, units, invites, suspension/reactivation, and role assignment.
+- LLM metadata should be persisted for conversations and tool calls: provider, model, latency, tokens, estimated cost, safety status, and blocked-action reason.
+
+## Production Readiness Test Strategy
+
+The production phases should add and maintain these gates:
+
+- Unit tests for Supabase JWT verification, permission loading, invite token validation, role/scope mapping, and policy decisions.
+- API e2e tests for login/session, invite acceptance, forbidden cross-organization access, employee schedule visibility, manager unit scope, swap lifecycle, audit writes, notification reads, and admin user management.
+- Prisma service tests for transactional workflow correctness, especially swap approval, schedule reassignment, approval updates, notifications, and audit writes.
+- UI smoke tests for login, onboarding, role-specific dashboards, account controls, admin invite flow, and production empty/error/forbidden states.
+- LLM eval tests for expected tool selection, blocked payroll edits, unauthorized schedule access, approval-required actions, audit persistence, and zero unsafe action attempts on blocked tasks.
+- Staging smoke tests for login, invite acceptance, schedule read, swap workflow, approval workflow, notification read, audit view, integration sync, copilot blocked action, and eval suite execution.
+
+## Production Readiness Assumptions
+
+- Supabase is the production auth provider and primary hosted PostgreSQL provider.
+- Prisma remains the ORM and the backend API remains the source of truth for workflow mutations.
+- Supabase client usage should support auth/session and optional realtime, not bypass backend permission and policy checks.
+- The first production target is full SaaS-capable with invite-first onboarding for workforce members.
+- The product continues to exclude patient records and PHI.
+- Real LLM integration is included in the production-readiness roadmap, but every mutation remains backend-tool-gated.
+- Security scope combines production baseline controls with HIPAA-ready documentation and operational practices, without claiming formal compliance certification until the required legal/vendor process is complete.
