@@ -59,6 +59,17 @@ Phase 1 verification status:
 - Seed script typecheck/lint: passing.
 - Seed execution and migrations: pending a reachable local PostgreSQL server. This environment does not have Docker installed and nothing is listening at `localhost:5432`.
 
+Phase 2 verification status:
+
+- Demo auth middleware and `/auth/me`: passing with `x-demo-user-id`.
+- RBAC/ABAC permission service: covered by API e2e checks.
+- Employee self-schedule access: passing.
+- Employee unit schedule denial: passing with HTTP 403.
+- Unit manager scoped schedule access: passing.
+- Payroll timecard exception access: passing.
+- Payroll audit denial and admin audit access: passing.
+- Full workspace typecheck, lint, test, and build: passing.
+
 ## Source Documents
 
 - `spec.md`: full product specification.
