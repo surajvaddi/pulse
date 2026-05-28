@@ -356,6 +356,7 @@ Build:
 - Timecard page and exception detail:
   - current pay period
   - clock events
+  - employee clock-in and clock-out actions
   - exceptions
   - explanation
   - employee correction note
@@ -383,6 +384,8 @@ Build:
 Acceptance gate:
 
 - Timecard exception explanation works for employee and payroll flows.
+- Employee can clock in and clock out from the timecard page.
+- Clock-in and clock-out writes create auditable timecard events without allowing direct edits to prior events.
 - Credential changes can create future staffing risk.
 - Staffing gaps compute from requirements and assigned shifts.
 - Candidate search respects qualifications, availability, overtime risk, and scope.
@@ -651,6 +654,7 @@ Build:
   - eval runs
   - staff directory
   - credentials
+  - clock-in/out events
   - timecard exceptions
 - Preserve existing API behavior while changing the persistence layer.
 - Implement repository/service classes for each workflow boundary instead of querying Prisma directly from controllers.

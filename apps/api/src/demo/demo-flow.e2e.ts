@@ -29,6 +29,20 @@ async function main() {
     .expect(200);
   assert.equal(scheduleBefore.body[0].id, "shift_priya_friday_icu_night");
 
+  const clockIn = await request(server)
+    .post("/timeclock/clock-in")
+    .set("x-demo-user-id", "user_priya")
+    .send({ shiftId: "shift_priya_friday_icu_night", occurredAt: "2026-05-30T22:55:00.000Z" })
+    .expect(201);
+  assert.equal(clockIn.body.status, "CLOCKED_IN");
+
+  const clockOut = await request(server)
+    .post("/timeclock/clock-out")
+    .set("x-demo-user-id", "user_priya")
+    .send({ occurredAt: "2026-05-31T11:02:00.000Z" })
+    .expect(201);
+  assert.equal(clockOut.body.status, "CLOCKED_OUT");
+
   const swapCreate = await request(server)
     .post("/workflows/swaps")
     .set("x-demo-user-id", "user_priya")
@@ -89,6 +103,8 @@ async function main() {
     .set("x-demo-user-id", "user_admin")
     .expect(200);
   const auditActions = audit.body.map((log: { action: string }) => log.action);
+  assert.ok(auditActions.includes("timecard.clock_in"));
+  assert.ok(auditActions.includes("timecard.clock_out"));
   assert.ok(auditActions.includes("swap.manager_approved"));
   assert.ok(auditActions.includes("integration.sync_completed"));
 

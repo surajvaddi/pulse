@@ -97,6 +97,40 @@ export const demoTimecardExceptions = [
   }
 ];
 
+export type DemoTimecardEventRecord = {
+  id: string;
+  employeeId: string;
+  userId: string;
+  shiftId?: string;
+  eventType: "CLOCK_IN" | "CLOCK_OUT" | "BREAK_START" | "BREAK_END";
+  occurredAt: string;
+  source: "MOBILE" | "BADGE" | "KIOSK" | "IMPORT" | "MANUAL";
+  status: "NORMAL" | "FLAGGED" | "CORRECTED" | "VOIDED";
+};
+
+export const demoTimecardEvents: DemoTimecardEventRecord[] = [
+  {
+    id: "timecard_event_priya_late_clock_in",
+    employeeId: "emp_priya",
+    userId: "user_priya",
+    shiftId: "shift_priya_friday_icu_night",
+    eventType: "CLOCK_IN",
+    occurredAt: "2026-05-29T23:17:00.000Z",
+    source: "MOBILE",
+    status: "FLAGGED"
+  },
+  {
+    id: "timecard_event_priya_clock_out",
+    employeeId: "emp_priya",
+    userId: "user_priya",
+    shiftId: "shift_priya_friday_icu_night",
+    eventType: "CLOCK_OUT",
+    occurredAt: "2026-05-30T11:03:00.000Z",
+    source: "MOBILE",
+    status: "NORMAL"
+  }
+];
+
 export const demoCredentials = [
   {
     employeeId: "emp_priya",
@@ -323,6 +357,25 @@ export function resetDemoWorkflowState() {
   demoCopilotEvalRuns.splice(0, demoCopilotEvalRuns.length);
   demoAuditLogs.splice(1, demoAuditLogs.length - 1);
   demoIntegrationSyncRuns.splice(1, demoIntegrationSyncRuns.length - 1);
+  demoTimecardEvents.splice(0, demoTimecardEvents.length, {
+    id: "timecard_event_priya_late_clock_in",
+    employeeId: "emp_priya",
+    userId: "user_priya",
+    shiftId: "shift_priya_friday_icu_night",
+    eventType: "CLOCK_IN",
+    occurredAt: "2026-05-29T23:17:00.000Z",
+    source: "MOBILE",
+    status: "FLAGGED"
+  }, {
+    id: "timecard_event_priya_clock_out",
+    employeeId: "emp_priya",
+    userId: "user_priya",
+    shiftId: "shift_priya_friday_icu_night",
+    eventType: "CLOCK_OUT",
+    occurredAt: "2026-05-30T11:03:00.000Z",
+    source: "MOBILE",
+    status: "NORMAL"
+  });
 
   const priyaShift = demoSchedules.find((shift) => shift.id === "shift_priya_friday_icu_night");
   if (priyaShift) {

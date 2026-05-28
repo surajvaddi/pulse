@@ -198,6 +198,7 @@ async function main() {
           "availability:read:self",
           "availability:write:self",
           "timecard:read:self",
+          "timecard:write:self",
           "ai:use"
         ]
       },
@@ -205,7 +206,13 @@ async function main() {
         userId: ids.userMaya,
         role: "EMPLOYEE",
         scope: { type: "SELF" },
-        permissions: ["schedule:read:self", "shift:swap:create", "timecard:read:self", "ai:use"]
+        permissions: [
+          "schedule:read:self",
+          "shift:swap:create",
+          "timecard:read:self",
+          "timecard:write:self",
+          "ai:use"
+        ]
       },
       {
         userId: ids.userJordan,

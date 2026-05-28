@@ -72,6 +72,23 @@ export async function resolveTimecardAction(formData: FormData) {
   revalidatePath("/app/manager");
 }
 
+export async function clockInAction(formData: FormData) {
+  const shiftId = String(formData.get("shiftId") ?? "");
+  await apiPost(
+    "/timeclock/clock-in",
+    shiftId ? { shiftId } : {},
+    "user_priya"
+  );
+  revalidatePath("/app/timecards");
+  revalidatePath("/app/home");
+}
+
+export async function clockOutAction(_formData: FormData) {
+  await apiPost("/timeclock/clock-out", {}, "user_priya");
+  revalidatePath("/app/timecards");
+  revalidatePath("/app/home");
+}
+
 export async function runIntegrationSyncAction(formData: FormData) {
   const integrationId = String(formData.get("integrationId"));
   const direction = String(formData.get("direction") ?? "BIDIRECTIONAL");

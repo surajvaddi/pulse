@@ -39,6 +39,25 @@ export type TimecardException = {
   explanation: string;
 };
 
+export type TimecardEvent = {
+  id: string;
+  employeeId: string;
+  userId: string;
+  shiftId?: string;
+  eventType: "CLOCK_IN" | "CLOCK_OUT" | "BREAK_START" | "BREAK_END";
+  occurredAt: string;
+  source: string;
+  status: string;
+};
+
+export type TimeclockStatus = {
+  employeeId: string;
+  status: "CLOCKED_IN" | "CLOCKED_OUT";
+  currentShiftId: string | null;
+  currentShiftTitle: string | null;
+  lastEvent: TimecardEvent | null;
+};
+
 export type DemoSwap = {
   id: string;
   requesterUserId: string;

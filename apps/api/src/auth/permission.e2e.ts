@@ -43,6 +43,46 @@ async function main() {
     .expect(200);
   assert.equal(payrollExceptions.body[0].id, "timecard_exception_late_priya");
 
+  const initialClockStatus = await request(server)
+    .get("/timeclock/status")
+    .set("x-demo-user-id", "user_priya")
+    .expect(200);
+  assert.equal(initialClockStatus.body.status, "CLOCKED_OUT");
+
+  await request(server)
+    .post("/timeclock/clock-in")
+    .set("x-demo-user-id", "user_jordan_manager")
+    .send({})
+    .expect(403);
+
+  const clockIn = await request(server)
+    .post("/timeclock/clock-in")
+    .set("x-demo-user-id", "user_priya")
+    .send({ shiftId: "shift_priya_friday_icu_night", occurredAt: "2026-05-30T22:55:00.000Z" })
+    .expect(201);
+  assert.equal(clockIn.body.status, "CLOCKED_IN");
+  assert.equal(clockIn.body.event.eventType, "CLOCK_IN");
+
+  await request(server)
+    .post("/timeclock/clock-in")
+    .set("x-demo-user-id", "user_priya")
+    .send({})
+    .expect(400);
+
+  const clockOut = await request(server)
+    .post("/timeclock/clock-out")
+    .set("x-demo-user-id", "user_priya")
+    .send({ occurredAt: "2026-05-31T11:02:00.000Z" })
+    .expect(201);
+  assert.equal(clockOut.body.status, "CLOCKED_OUT");
+  assert.equal(clockOut.body.event.eventType, "CLOCK_OUT");
+
+  const timeclockEvents = await request(server)
+    .get("/timeclock/events")
+    .set("x-demo-user-id", "user_priya")
+    .expect(200);
+  assert.ok(timeclockEvents.body.length >= 4);
+
   await request(server)
     .get("/demo/audit")
     .set("x-demo-user-id", "user_payroll")
@@ -102,6 +142,8 @@ async function main() {
   const auditActions = auditAfterWorkflow.body.map((log: { action: string }) => log.action);
   assert.ok(auditActions.includes("shift.claim.approval_requested"));
   assert.ok(auditActions.includes("swap.manager_approved"));
+  assert.ok(auditActions.includes("timecard.clock_in"));
+  assert.ok(auditActions.includes("timecard.clock_out"));
 
   const managerNotifications = await request(server)
     .get("/notifications")

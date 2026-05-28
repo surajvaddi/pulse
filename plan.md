@@ -4,7 +4,7 @@
 
 PulseShift is a healthcare workforce scheduling copilot and Kronos-style replacement prototype. It combines a deterministic scheduling backend with a permission-aware AI interface so nurses, managers, schedulers, payroll admins, and workforce operators can ask natural-language questions and safely trigger scheduling workflows.
 
-The MVP should avoid patient records and PHI entirely. It should model workforce operations only: employees, facilities, units, schedules, open shifts, shift swaps, approvals, staffing gaps, timecard exceptions, notifications, audit logs, and AI tool-call records.
+The MVP should avoid patient records and PHI entirely. It should model workforce operations only: employees, facilities, units, schedules, open shifts, shift swaps, approvals, staffing gaps, time clock events, timecard exceptions, notifications, audit logs, and AI tool-call records.
 
 The first build target is the MVP demo path:
 
@@ -54,7 +54,7 @@ MVP in scope:
 - Demo authentication and seeded users.
 - RBAC plus ABAC permission scope.
 - Organization, facility, unit, user, employee, workforce role, certification, shift template, shift, availability, shift swap request, approval request, notification, AI conversation, AI tool call, and audit log models.
-- Employee home, schedule, open shifts, swap center, timecard exception shell, manager dashboard, staffing gaps, notifications, copilot, and admin audit/tool-call views.
+- Employee home, schedule, open shifts, swap center, clock-in/out and timecard exception shell, manager dashboard, staffing gaps, notifications, copilot, and admin audit/tool-call views.
 - Open shift claim workflow.
 - Shift swap workflow with counterpart and manager approval.
 - Policy engine checks for availability, overlap, role, certification, expired credential, overtime, rest period, manager approval, unit scope, locked schedule, and locked pay period.
@@ -131,7 +131,7 @@ Phase 12: Establish the production platform foundation with Supabase as the prim
 
 Phase 13: Replace demo-header authentication with Supabase Auth, add real account sessions, login/logout, password recovery, invite acceptance, and organization-invite onboarding for workforce members.
 
-Phase 14: Move core workflows from in-memory demo state to Prisma-backed persistence for schedules, swaps, approvals, notifications, audit logs, AI tool calls, integrations, eval runs, staff, credentials, and timecards.
+Phase 14: Move core workflows from in-memory demo state to Prisma-backed persistence for schedules, swaps, approvals, notifications, audit logs, AI tool calls, integrations, eval runs, staff, credentials, clock-in/out events, and timecards.
 
 Phase 15: Build full SaaS administration for organizations, facilities, units, users, roles, workforce roles, invitations, account suspension, and tenant-scoped access control.
 

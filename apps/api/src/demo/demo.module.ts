@@ -11,6 +11,7 @@ import { OperationsController } from "./operations.controller";
 import { PolicyEngineService } from "./policy-engine.service";
 import { SchedulingWorkflowController } from "./scheduling-workflow.controller";
 import { SchedulingWorkflowService } from "./scheduling-workflow.service";
+import { TimeclockController } from "./timeclock.controller";
 
 @Module({
   imports: [AuthModule],
@@ -21,7 +22,8 @@ import { SchedulingWorkflowService } from "./scheduling-workflow.service";
     CopilotController,
     OperationsController,
     IntegrationController,
-    EvalController
+    EvalController,
+    TimeclockController
   ],
   providers: [SchedulingWorkflowService, PolicyEngineService, CopilotService]
 })

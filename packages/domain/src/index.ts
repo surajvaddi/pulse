@@ -166,6 +166,7 @@ export const PermissionSchema = z.enum([
   "pto:approve",
   "timecard:read:self",
   "timecard:read:unit",
+  "timecard:write:self",
   "timecard:resolve",
   "payroll:export",
   "credential:read",
@@ -247,6 +248,7 @@ export const RolePermissionMap = {
     "availability:write:self",
     "pto:create:self",
     "timecard:read:self",
+    "timecard:write:self",
     "ai:use"
   ],
   FLOAT_POOL_COORDINATOR: [
@@ -409,4 +411,3 @@ export const AuditLogSchema = z.object({
   createdAt: IsoDateTimeSchema
 });
 export type AuditLog = z.infer<typeof AuditLogSchema>;
-

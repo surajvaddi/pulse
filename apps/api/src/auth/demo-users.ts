@@ -38,6 +38,7 @@ export const demoSessions: DemoSession[] = [
       { permission: "availability:read:self", scope: selfScope },
       { permission: "availability:write:self", scope: selfScope },
       { permission: "timecard:read:self", scope: selfScope },
+      { permission: "timecard:write:self", scope: selfScope },
       { permission: "ai:use", scope: selfScope }
     ]
   },
@@ -51,6 +52,7 @@ export const demoSessions: DemoSession[] = [
       { permission: "schedule:read:self", scope: selfScope },
       { permission: "shift:swap:create", scope: selfScope },
       { permission: "timecard:read:self", scope: selfScope },
+      { permission: "timecard:write:self", scope: selfScope },
       { permission: "ai:use", scope: selfScope }
     ]
   },
