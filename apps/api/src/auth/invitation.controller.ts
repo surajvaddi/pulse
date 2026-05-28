@@ -1,38 +1,22 @@
-import { randomBytes, createHash } from "node:crypto";
-import { Body, Controller, ForbiddenException, Get, Inject, Param, Post } from "@nestjs/common";
+import { Body, Controller, ForbiddenException, Get, Inject, Param, Post, Req } from "@nestjs/common";
+import type { Request } from "express";
 import type { AccountRole, Scope } from "@pulseshift/domain";
 
 import type { DemoSession } from "./demo-users";
+import { InvitationService } from "./invitation.service";
 import { PermissionService } from "./permission.service";
 import { CurrentSession } from "./session.decorator";
-
-type DemoInvitation = {
-  id: string;
-  organizationId: string;
-  email: string;
-  role: AccountRole;
-  scope: Scope;
-  tokenHash: string;
-  status: "PENDING" | "ACCEPTED" | "EXPIRED" | "REVOKED";
-  invitedByUserId: string;
-  acceptedByUserId?: string;
-  expiresAt: string;
-  acceptedAt?: string;
-  createdAt: string;
-};
-
-const demoInvitations: DemoInvitation[] = [];
-
-function hashToken(token: string) {
-  return createHash("sha256").update(token).digest("hex");
-}
+import type { SupabaseJwtClaims } from "./supabase-jwt.service";
 
 @Controller()
 export class InvitationController {
-  constructor(@Inject(PermissionService) private readonly permissions: PermissionService) {}
+  constructor(
+    @Inject(PermissionService) private readonly permissions: PermissionService,
+    @Inject(InvitationService) private readonly invitations: InvitationService
+  ) {}
 
   @Post("users/invite")
-  inviteUser(
+  async inviteUser(
     @CurrentSession() session: DemoSession,
     @Body()
     body: {
@@ -43,60 +27,38 @@ export class InvitationController {
     }
   ) {
     this.assertUserAdmin(session);
-    const token = randomBytes(24).toString("base64url");
-    const invitation: DemoInvitation = {
-      id: `invite_${demoInvitations.length + 1}`,
+    const invitation = {
       organizationId: session.organizationId,
       email: body.email ?? "new.employee@example.com",
       role: body.role ?? "EMPLOYEE",
       scope: body.scope ?? { type: "SELF" },
-      tokenHash: hashToken(token),
-      status: "PENDING",
-      invitedByUserId: session.userId,
-      expiresAt: body.expiresAt ?? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-      createdAt: new Date().toISOString()
+      invitedByUserId: session.userId
     };
-    demoInvitations.push(invitation);
-    return {
-      ...this.publicInvitation(invitation),
-      token,
-      acceptUrl: `/invite/accept?token=${token}`
-    };
+    return this.invitations.createInvitation(
+      body.expiresAt ? { ...invitation, expiresAt: body.expiresAt } : invitation
+    );
   }
 
   @Get("invitations/:token")
-  getInvitation(@Param("token") token: string) {
-    const invitation = this.findPendingInvitation(token);
-    return this.publicInvitation(invitation);
+  async getInvitation(@Param("token") token: string) {
+    return this.invitations.getPublicInvitation(token);
   }
 
   @Post("invitations/:token/accept")
-  acceptInvitation(
-    @CurrentSession() session: DemoSession,
-    @Param("token") token: string
-  ) {
-    const invitation = this.findPendingInvitation(token);
-    invitation.status = "ACCEPTED";
-    invitation.acceptedAt = new Date().toISOString();
-    invitation.acceptedByUserId = session.userId;
-    return {
-      ...this.publicInvitation(invitation),
-      nextStep: "/onboarding/profile"
-    };
-  }
-
-  private findPendingInvitation(token: string) {
-    const tokenHash = hashToken(token);
-    const invitation = demoInvitations.find((candidate) => candidate.tokenHash === tokenHash);
-    if (!invitation || invitation.status !== "PENDING" || new Date(invitation.expiresAt) < new Date()) {
-      throw new ForbiddenException("Invitation is invalid or expired");
+  async acceptInvitation(
+    @CurrentSession() session: DemoSession | undefined,
+    @Param("token") token: string,
+    @Req()
+    request: Request & {
+      supabaseClaims?: SupabaseJwtClaims;
     }
-    return invitation;
-  }
-
-  private publicInvitation(invitation: DemoInvitation) {
-    const { tokenHash: _tokenHash, ...safeInvitation } = invitation;
-    return safeInvitation;
+  ) {
+    const invitation = {
+      token,
+      ...(session ? { session } : {}),
+      ...(request.supabaseClaims ? { claims: request.supabaseClaims } : {})
+    };
+    return this.invitations.acceptInvitation(invitation);
   }
 
   private assertUserAdmin(session: DemoSession) {

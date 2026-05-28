@@ -1,14 +1,25 @@
 import { Inject, Injectable, type NestMiddleware } from "@nestjs/common";
 import type { NextFunction, Request, Response } from "express";
 
-import { findDemoSession, findDemoSessionBySupabaseAuthId } from "./demo-users";
+import { AuthSessionService } from "./auth-session.service";
+import { findDemoSession } from "./demo-users";
 import { SupabaseJwtService } from "./supabase-jwt.service";
 
 @Injectable()
 export class DemoAuthMiddleware implements NestMiddleware {
-  constructor(@Inject(SupabaseJwtService) private readonly supabaseJwt: SupabaseJwtService) {}
+  constructor(
+    @Inject(SupabaseJwtService) private readonly supabaseJwt: SupabaseJwtService,
+    @Inject(AuthSessionService) private readonly sessions: AuthSessionService
+  ) {}
 
-  use(request: Request & { session?: ReturnType<typeof findDemoSession> }, response: Response, next: NextFunction) {
+  async use(
+    request: Request & {
+      session?: ReturnType<typeof findDemoSession>;
+      supabaseClaims?: ReturnType<SupabaseJwtService["verifyBearerToken"]>;
+    },
+    response: Response,
+    next: NextFunction
+  ) {
     if (process.env.ENABLE_DEMO_AUTH !== "false") {
       const requestedUser = request.header("x-demo-user-id");
       request.session = findDemoSession(requestedUser);
@@ -16,9 +27,23 @@ export class DemoAuthMiddleware implements NestMiddleware {
       return;
     }
 
+    if (request.method === "GET" && (request.path === "/health" || request.path.startsWith("/invitations/"))) {
+      next();
+      return;
+    }
+
     try {
       const claims = this.supabaseJwt.verifyBearerToken(request.header("authorization"));
-      request.session = findDemoSessionBySupabaseAuthId(claims.sub);
+      request.supabaseClaims = claims;
+      try {
+        request.session = await this.sessions.loadSupabaseSession(claims);
+      } catch (error) {
+        if (request.method === "POST" && request.path.startsWith("/invitations/")) {
+          next();
+          return;
+        }
+        throw error;
+      }
       next();
     } catch (error) {
       response.status(401).json({
