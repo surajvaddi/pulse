@@ -142,6 +142,7 @@ async function main() {
         id: ids.userPriya,
         organizationId: ids.org,
         email: "priya.nurse@example.com",
+        supabaseAuthId: "supabase_user_priya",
         displayName: "Priya Raman",
         phone: "+15555550100",
         authProvider: "PASSWORD",
@@ -151,6 +152,7 @@ async function main() {
         id: ids.userMaya,
         organizationId: ids.org,
         email: "maya.shah@example.com",
+        supabaseAuthId: "supabase_user_maya",
         displayName: "Maya Shah",
         phone: "+15555550101",
         authProvider: "PASSWORD",
@@ -160,6 +162,7 @@ async function main() {
         id: ids.userJordan,
         organizationId: ids.org,
         email: "jordan.manager@example.com",
+        supabaseAuthId: "supabase_user_jordan_manager",
         displayName: "Jordan Lee",
         authProvider: "PASSWORD",
         status: "ACTIVE"
@@ -168,6 +171,7 @@ async function main() {
         id: ids.userPayroll,
         organizationId: ids.org,
         email: "payroll@example.com",
+        supabaseAuthId: "supabase_user_payroll",
         displayName: "Sam Payroll",
         authProvider: "PASSWORD",
         status: "ACTIVE"
@@ -176,6 +180,7 @@ async function main() {
         id: ids.userAdmin,
         organizationId: ids.org,
         email: "admin@example.com",
+        supabaseAuthId: "supabase_user_admin",
         displayName: "Alex Admin",
         authProvider: "PASSWORD",
         status: "ACTIVE"

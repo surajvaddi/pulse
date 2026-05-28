@@ -2,6 +2,7 @@ import type { AccountRole, PermissionGrant, Scope } from "@pulseshift/domain";
 
 export type DemoSession = {
   userId: string;
+  supabaseAuthId?: string;
   organizationId: string;
   displayName: string;
   email: string;
@@ -26,6 +27,7 @@ const selfScope: Scope = {
 export const demoSessions: DemoSession[] = [
   {
     userId: "user_priya",
+    supabaseAuthId: "supabase_user_priya",
     organizationId: "org_pulseshift_demo",
     displayName: "Priya Raman",
     email: "priya.nurse@example.com",
@@ -44,6 +46,7 @@ export const demoSessions: DemoSession[] = [
   },
   {
     userId: "user_maya",
+    supabaseAuthId: "supabase_user_maya",
     organizationId: "org_pulseshift_demo",
     displayName: "Maya Shah",
     email: "maya.shah@example.com",
@@ -58,6 +61,7 @@ export const demoSessions: DemoSession[] = [
   },
   {
     userId: "user_jordan_manager",
+    supabaseAuthId: "supabase_user_jordan_manager",
     organizationId: "org_pulseshift_demo",
     displayName: "Jordan Lee",
     email: "jordan.manager@example.com",
@@ -73,6 +77,7 @@ export const demoSessions: DemoSession[] = [
   },
   {
     userId: "user_payroll",
+    supabaseAuthId: "supabase_user_payroll",
     organizationId: "org_pulseshift_demo",
     displayName: "Sam Payroll",
     email: "payroll@example.com",
@@ -86,6 +91,7 @@ export const demoSessions: DemoSession[] = [
   },
   {
     userId: "user_admin",
+    supabaseAuthId: "supabase_user_admin",
     organizationId: "org_pulseshift_demo",
     displayName: "Alex Admin",
     email: "admin@example.com",
@@ -105,6 +111,14 @@ export function findDemoSession(userId: string | undefined): DemoSession {
     demoSessions.find((candidate) => candidate.userId === userId) ?? demoSessions.at(0);
   if (!session) {
     throw new Error("No demo sessions are configured");
+  }
+  return session;
+}
+
+export function findDemoSessionBySupabaseAuthId(supabaseAuthId: string | undefined): DemoSession {
+  const session = demoSessions.find((candidate) => candidate.supabaseAuthId === supabaseAuthId);
+  if (!session) {
+    throw new Error("Supabase auth user is not linked to an active PulseShift user");
   }
   return session;
 }

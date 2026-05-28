@@ -45,6 +45,13 @@ enum UserStatus {
   DEACTIVATED
 }
 
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+  REVOKED
+}
+
 enum AccountRole {
   ORGANIZATION_OWNER
   SYSTEM_ADMIN
@@ -266,6 +273,7 @@ model Organization {
   approvalRequests   ApprovalRequest[]
   aiConversations    AIConversation[]
   auditLogs          AuditLog[]
+  invitations        Invitation[]
 
   @@map("organizations")
 }
@@ -308,6 +316,7 @@ model User {
   organizationId       String
   organization         Organization       @relation(fields: [organizationId], references: [id])
   email                String             @unique
+  supabaseAuthId       String?            @unique
   phone                String?
   displayName          String
   authProvider         AuthProvider       @default(PASSWORD)
@@ -321,8 +330,33 @@ model User {
   requestedApprovals   ApprovalRequest[]  @relation("RequestedApprovals")
   assignedApprovals    ApprovalRequest[]  @relation("AssignedApprovals")
   auditLogs            AuditLog[]
+  sentInvitations      Invitation[]       @relation("InvitedByUser")
+  acceptedInvitations  Invitation[]       @relation("AcceptedByUser")
 
   @@map("users")
+}
+
+model Invitation {
+  id               String           @id @default(cuid())
+  organizationId   String
+  organization     Organization     @relation(fields: [organizationId], references: [id])
+  email            String
+  role             AccountRole
+  scope            Json
+  tokenHash        String           @unique
+  status           InvitationStatus @default(PENDING)
+  invitedByUserId  String
+  invitedByUser    User             @relation("InvitedByUser", fields: [invitedByUserId], references: [id])
+  acceptedByUserId String?
+  acceptedByUser   User?            @relation("AcceptedByUser", fields: [acceptedByUserId], references: [id])
+  expiresAt        DateTime
+  acceptedAt       DateTime?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  @@index([organizationId, status])
+  @@index([email, status])
+  @@map("invitations")
 }
 
 model UserRole {

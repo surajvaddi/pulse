@@ -11,6 +11,9 @@ export type PhaseHealth = {
 export const UserStatusSchema = z.enum(["INVITED", "ACTIVE", "SUSPENDED", "DEACTIVATED"]);
 export type UserStatus = z.infer<typeof UserStatusSchema>;
 
+export const InvitationStatusSchema = z.enum(["PENDING", "ACCEPTED", "EXPIRED", "REVOKED"]);
+export type InvitationStatus = z.infer<typeof InvitationStatusSchema>;
+
 export const OrganizationStatusSchema = z.enum(["ACTIVE", "SUSPENDED", "TRIAL"]);
 export type OrganizationStatus = z.infer<typeof OrganizationStatusSchema>;
 
@@ -305,6 +308,7 @@ export const UserSchema = z.object({
   id: z.string(),
   organizationId: z.string(),
   email: z.string().email(),
+  supabaseAuthId: z.string().optional(),
   phone: z.string().optional(),
   displayName: z.string(),
   authProvider: z.enum(["PASSWORD", "GOOGLE", "MICROSOFT", "SAML", "OIDC"]),
@@ -312,6 +316,33 @@ export const UserSchema = z.object({
   lastLoginAt: IsoDateTimeSchema.optional()
 });
 export type User = z.infer<typeof UserSchema>;
+
+export const InvitationSchema = z.object({
+  id: z.string(),
+  organizationId: z.string(),
+  email: z.string().email(),
+  role: AccountRoleSchema,
+  scope: ScopeSchema,
+  status: InvitationStatusSchema,
+  invitedByUserId: z.string(),
+  acceptedByUserId: z.string().optional(),
+  expiresAt: IsoDateTimeSchema,
+  acceptedAt: IsoDateTimeSchema.optional(),
+  createdAt: IsoDateTimeSchema,
+  updatedAt: IsoDateTimeSchema
+});
+export type Invitation = z.infer<typeof InvitationSchema>;
+
+export const AuthSessionSummarySchema = z.object({
+  user: UserSchema,
+  organization: OrganizationSchema,
+  employeeProfile: z.unknown().optional(),
+  roles: z.array(AccountRoleSchema),
+  scopes: z.array(ScopeSchema),
+  permissions: z.array(PermissionSchema),
+  featureFlags: z.record(z.string(), z.boolean())
+});
+export type AuthSessionSummary = z.infer<typeof AuthSessionSummarySchema>;
 
 export const EmployeeProfileSchema = z.object({
   id: z.string(),
