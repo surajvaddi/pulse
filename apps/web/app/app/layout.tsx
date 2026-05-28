@@ -10,6 +10,7 @@ import {
   Home,
   LayoutDashboard,
   ListChecks,
+  LogOut,
   ReceiptText,
   ShieldAlert,
   Users
@@ -68,6 +69,9 @@ export default function AppLayout({ children }: { children: ReactNode }) {
           <div className="profile-strip">
             <Link className="icon-button" aria-label="Notifications" href="/app/notifications">
               <Bell size={18} />
+            </Link>
+            <Link className="icon-button" aria-label="Sign out" href="/logout">
+              <LogOut size={18} />
             </Link>
             <select aria-label="Demo user" defaultValue="user_priya">
               {demoUsers.map((user) => (

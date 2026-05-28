@@ -54,6 +54,49 @@ input {
   padding: 0 12px;
 }
 
+.auth-shell {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 32px min(5vw, 64px);
+}
+
+.auth-panel {
+  width: min(100%, 980px);
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(300px, 420px);
+  gap: 24px;
+  align-items: start;
+}
+
+.auth-copy,
+.auth-form {
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 22px;
+}
+
+.auth-copy {
+  display: grid;
+  gap: 14px;
+}
+
+.auth-copy p {
+  color: var(--muted);
+  line-height: 1.6;
+  margin: 0;
+}
+
+.auth-form {
+  display: grid;
+  gap: 12px;
+}
+
+.auth-form label {
+  font-weight: 800;
+}
+
 .app-shell {
   min-height: 100vh;
   display: grid;
@@ -406,6 +449,10 @@ h1 {
   }
 
   .prompt-form {
+    grid-template-columns: 1fr;
+  }
+
+  .auth-panel {
     grid-template-columns: 1fr;
   }
 

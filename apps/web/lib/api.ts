@@ -16,6 +16,23 @@ export type SessionSummary = {
   permissions: string[];
 };
 
+export type Invitation = {
+  id: string;
+  organizationId: string;
+  email: string;
+  role: string;
+  scope: Record<string, unknown>;
+  status: "PENDING" | "ACCEPTED" | "EXPIRED" | "REVOKED";
+  invitedByUserId: string;
+  acceptedByUserId?: string;
+  expiresAt: string;
+  acceptedAt?: string;
+  createdAt: string;
+  acceptUrl?: string;
+  token?: string;
+  nextStep?: string;
+};
+
 export type DemoShift = {
   id: string;
   employeeId?: string;
