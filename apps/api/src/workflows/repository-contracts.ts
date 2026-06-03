@@ -57,12 +57,13 @@ export interface SwapRepository {
   }): Promise<DemoSwapRecord[]>;
   findSwap(organizationId: string, swapId: string): Promise<DemoSwapRecord | null>;
   createSwap(input: Omit<DemoSwapRecord, "id">): Promise<DemoSwapRecord>;
-  updateSwapStatus(input: {
+  acceptSwap(input: {
     organizationId: string;
     swapId: string;
-    status: DemoSwapRecord["status"];
-    timelineEntry: string;
   }): Promise<DemoSwapRecord>;
+  declineSwap(input: { organizationId: string; swapId: string }): Promise<DemoSwapRecord>;
+  approveSwap(input: { organizationId: string; swapId: string }): Promise<DemoSwapRecord>;
+  denySwap(input: { organizationId: string; swapId: string }): Promise<DemoSwapRecord>;
 }
 
 export interface ApprovalRepository {
@@ -238,4 +239,3 @@ export interface SqlReportingRepository {
     params: TParams
   ): Promise<TResult[]>;
 }
-

@@ -17,6 +17,11 @@ import {
 import { ScheduleService } from "./schedule.service";
 import { SchedulingWorkflowController } from "./scheduling-workflow.controller";
 import { SchedulingWorkflowService } from "./scheduling-workflow.service";
+import {
+  InMemorySwapRepository,
+  PrismaSwapRepository,
+  SwapRepositoryProvider
+} from "./swap.repository";
 import { TimeclockController } from "./timeclock.controller";
 import {
   InMemoryTimeclockRepository,
@@ -45,6 +50,9 @@ import { TimeclockService } from "./timeclock.service";
     PrismaScheduleRepository,
     ScheduleRepositoryProvider,
     ScheduleService,
+    InMemorySwapRepository,
+    PrismaSwapRepository,
+    SwapRepositoryProvider,
     TimeclockService,
     InMemoryTimeclockRepository,
     PrismaTimeclockRepository,
