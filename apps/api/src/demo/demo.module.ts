@@ -6,7 +6,13 @@ import { CopilotService } from "./copilot.service";
 import { DemoController } from "./demo.controller";
 import { EvalController } from "./eval.controller";
 import { IntegrationController } from "./integration.controller";
+import {
+  InMemoryNotificationRepository,
+  NotificationRepositoryProvider,
+  PrismaNotificationRepository
+} from "./notification.repository";
 import { NotificationController } from "./notification.controller";
+import { NotificationService } from "./notification.service";
 import { OperationsController } from "./operations.controller";
 import { PolicyEngineService } from "./policy-engine.service";
 import {
@@ -50,6 +56,10 @@ import { TimeclockService } from "./timeclock.service";
     PrismaScheduleRepository,
     ScheduleRepositoryProvider,
     ScheduleService,
+    NotificationService,
+    InMemoryNotificationRepository,
+    PrismaNotificationRepository,
+    NotificationRepositoryProvider,
     InMemorySwapRepository,
     PrismaSwapRepository,
     SwapRepositoryProvider,

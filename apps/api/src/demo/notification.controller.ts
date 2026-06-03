@@ -1,14 +1,16 @@
-import { Body, Controller, Get, Param, Post } from "@nestjs/common";
+import { Body, Controller, Get, Inject, Param, Post } from "@nestjs/common";
 
 import type { DemoSession } from "../auth/demo-users";
 import { CurrentSession } from "../auth/session.decorator";
-import { demoNotifications } from "./demo-data";
+import { NotificationService } from "./notification.service";
 
 @Controller("notifications")
 export class NotificationController {
+  constructor(@Inject(NotificationService) private readonly notifications: NotificationService) {}
+
   @Get()
   list(@CurrentSession() session: DemoSession) {
-    return demoNotifications.filter((notification) => notification.recipientUserId === session.userId);
+    return this.notifications.listForSession(session);
   }
 
   @Post(":notificationId/read")
@@ -17,13 +19,6 @@ export class NotificationController {
     @Param("notificationId") notificationId: string,
     @Body() _body: Record<string, never>
   ) {
-    const notification = demoNotifications.find(
-      (candidate) =>
-        candidate.id === notificationId && candidate.recipientUserId === session.userId
-    );
-    if (notification) {
-      notification.status = "READ";
-    }
-    return notification ?? { id: notificationId, status: "NOT_FOUND" };
+    return this.notifications.markRead(session, notificationId);
   }
 }

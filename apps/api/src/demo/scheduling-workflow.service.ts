@@ -11,9 +11,9 @@ import { PermissionService } from "../auth/permission.service";
 import {
   appendDemoAuditLog,
   demoApprovals,
-  demoNotifications,
   type DemoApprovalRecord
 } from "./demo-data";
+import { NotificationService } from "./notification.service";
 import { PolicyEngineService } from "./policy-engine.service";
 import { ScheduleRepositoryProvider } from "./schedule.repository";
 import { SwapRepositoryProvider } from "./swap.repository";
@@ -24,7 +24,8 @@ export class SchedulingWorkflowService {
     @Inject(PermissionService) private readonly permissions: PermissionService,
     @Inject(PolicyEngineService) private readonly policy: PolicyEngineService,
     @Inject(ScheduleRepositoryProvider) private readonly schedules: ScheduleRepositoryProvider,
-    @Inject(SwapRepositoryProvider) private readonly swaps: SwapRepositoryProvider
+    @Inject(SwapRepositoryProvider) private readonly swaps: SwapRepositoryProvider,
+    @Inject(NotificationService) private readonly notifications: NotificationService
   ) {}
 
   async claimOpenShift(session: DemoSession, shiftId: string) {
@@ -65,7 +66,7 @@ export class SchedulingWorkflowService {
         status: "PENDING",
         riskFlags: policyDecision.riskFlags
       });
-      this.queueNotification("user_jordan_manager", "APPROVAL_REQUIRED", { approvalId: approval.id });
+      await this.queueNotification(session.organizationId, "user_jordan_manager", "APPROVAL_REQUIRED", { approvalId: approval.id });
       appendDemoAuditLog({
         actorUserId: session.userId,
         actorType: "USER",
@@ -80,7 +81,7 @@ export class SchedulingWorkflowService {
     shift.employeeId = employeeId;
     shift.userId = session.userId;
     shift.status = "ASSIGNED";
-    this.queueNotification(session.userId, "SHIFT_ASSIGNED", { shiftId });
+    await this.queueNotification(session.organizationId, session.userId, "SHIFT_ASSIGNED", { shiftId });
     appendDemoAuditLog({
       actorUserId: session.userId,
       actorType: "USER",
@@ -131,7 +132,7 @@ export class SchedulingWorkflowService {
       managerApprovalRequired: policyDecision.requiresApproval,
       timeline: ["Created", "Waiting for counterparty"]
     });
-    this.queueNotification(proposedUserId, "SWAP_REQUESTED", { swapId: swap.id });
+    await this.queueNotification(session.organizationId, proposedUserId, "SWAP_REQUESTED", { swapId: swap.id });
     appendDemoAuditLog({
       actorUserId: session.userId,
       actorType: "USER",
@@ -157,7 +158,7 @@ export class SchedulingWorkflowService {
         organizationId: session.organizationId,
         swapId
       });
-      this.queueNotification(swap.requesterUserId, "SWAP_DENIED", { swapId });
+      await this.queueNotification(session.organizationId, swap.requesterUserId, "SWAP_DENIED", { swapId });
       appendDemoAuditLog({
         actorUserId: session.userId,
         actorType: "USER",
@@ -182,7 +183,7 @@ export class SchedulingWorkflowService {
       status: "PENDING",
       riskFlags: acceptedSwap.riskFlags
     });
-    this.queueNotification("user_jordan_manager", "APPROVAL_REQUIRED", { approvalId: approval.id });
+    await this.queueNotification(session.organizationId, "user_jordan_manager", "APPROVAL_REQUIRED", { approvalId: approval.id });
     appendDemoAuditLog({
       actorUserId: session.userId,
       actorType: "USER",
@@ -223,8 +224,8 @@ export class SchedulingWorkflowService {
       if (reason) {
         approval.decisionReason = reason;
       }
-      this.queueNotification(swap.requesterUserId, "SWAP_DENIED", { swapId });
-      this.queueNotification(swap.proposedUserId, "SWAP_DENIED", { swapId });
+      await this.queueNotification(session.organizationId, swap.requesterUserId, "SWAP_DENIED", { swapId });
+      await this.queueNotification(session.organizationId, swap.proposedUserId, "SWAP_DENIED", { swapId });
       appendDemoAuditLog({
         actorUserId: session.userId,
         actorType: "USER",
@@ -259,8 +260,8 @@ export class SchedulingWorkflowService {
     if (reason) {
       approval.decisionReason = reason;
     }
-    this.queueNotification(swap.requesterUserId, "SWAP_APPROVED", { swapId });
-    this.queueNotification(swap.proposedUserId, "SWAP_APPROVED", { swapId });
+    await this.queueNotification(session.organizationId, swap.requesterUserId, "SWAP_APPROVED", { swapId });
+    await this.queueNotification(session.organizationId, swap.proposedUserId, "SWAP_APPROVED", { swapId });
     appendDemoAuditLog({
       actorUserId: session.userId,
       actorType: "USER",
@@ -329,12 +330,16 @@ export class SchedulingWorkflowService {
     }
   }
 
-  private queueNotification(recipientUserId: string, type: string, payload: Record<string, string>) {
-    demoNotifications.push({
-      id: `notification_${demoNotifications.length + 1}`,
+  private queueNotification(
+    organizationId: string,
+    recipientUserId: string,
+    type: string,
+    payload: Record<string, string>
+  ) {
+    return this.notifications.create({
+      organizationId,
       recipientUserId,
       type,
-      status: "QUEUED",
       payload
     });
   }
