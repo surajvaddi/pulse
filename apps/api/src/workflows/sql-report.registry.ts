@@ -26,6 +26,17 @@ export type EmployeeScheduleReportRow = {
   status: string;
 };
 
+export type TimecardExceptionsReportRow = {
+  exceptionId: string;
+  employeeId: string;
+  userId: string | null;
+  unitId: string;
+  type: string;
+  severity: string;
+  status: string;
+  createdAt: Date;
+};
+
 export type SqlReportColumn = {
   key: string;
   type: "string" | "number" | "boolean" | "datetime" | "string[]";
@@ -75,6 +86,7 @@ const reportSchemas = {
 
 type StaffingGapsReportParams = z.infer<typeof reportSchemas.staffing>;
 type EmployeeScheduleReportParams = z.infer<typeof reportSchemas.schedule>;
+type TimecardExceptionsReportParams = z.infer<typeof reportSchemas.timecard>;
 
 function notImplementedReport(name: SqlReportName) {
   return async (_context: SqlReportContext, _params: Record<string, unknown>) => {
@@ -132,6 +144,34 @@ async function runEmployeeScheduleReport(
       AND (${params.startsAt ?? null}::timestamptz IS NULL OR s."startAt" >= ${params.startsAt ?? null}::timestamptz)
       AND (${params.endsAt ?? null}::timestamptz IS NULL OR s."endAt" <= ${params.endsAt ?? null}::timestamptz)
     ORDER BY s."startAt" ASC, s.id ASC
+    LIMIT ${effectiveLimit}
+  `);
+}
+
+async function runTimecardExceptionsReport(
+  context: SqlReportContext,
+  params: TimecardExceptionsReportParams
+): Promise<TimecardExceptionsReportRow[]> {
+  const effectiveLimit = Math.min(context.limit, 250);
+  return prisma.$queryRaw<TimecardExceptionsReportRow[]>(Prisma.sql`
+    SELECT
+      te.id AS "exceptionId",
+      te."employeeId" AS "employeeId",
+      ep."userId" AS "userId",
+      ep."primaryUnitId" AS "unitId",
+      te."exceptionType" AS "type",
+      te.severity AS "severity",
+      te.status AS "status",
+      te."createdAt" AS "createdAt"
+    FROM timecard_exceptions te
+    INNER JOIN employee_profiles ep ON ep.id = te."employeeId"
+    WHERE ep."organizationId" = ${context.organizationId}
+      AND (${params.userId ?? null}::text IS NULL OR ep."userId" = ${params.userId ?? null})
+      AND (${params.unitId ?? null}::text IS NULL OR ep."primaryUnitId" = ${params.unitId ?? null})
+      AND (${params.status ?? null}::text IS NULL OR te.status = ${params.status ?? null})
+      AND (${params.startsAt ?? null}::timestamptz IS NULL OR te."createdAt" >= ${params.startsAt ?? null}::timestamptz)
+      AND (${params.endsAt ?? null}::timestamptz IS NULL OR te."createdAt" <= ${params.endsAt ?? null}::timestamptz)
+    ORDER BY te."createdAt" DESC, te.id ASC
     LIMIT ${effectiveLimit}
   `);
 }
@@ -200,6 +240,7 @@ export const sqlReportRegistry = [
     maxRows: 250,
     timeoutMs: 1500,
     parameterSchema: reportSchemas.timecard,
+    run: runTimecardExceptionsReport,
     resultColumns: [
       { key: "exceptionId", type: "string" },
       { key: "employeeId", type: "string" },

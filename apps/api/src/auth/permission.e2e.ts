@@ -52,6 +52,16 @@ async function main() {
     endsAt: "2026-06-02T00:00:00.000Z"
   });
   assert.throws(() => scheduleReport?.validateParams({ query: "select * from employee_profiles" }));
+  const timecardReport = getSqlReportDefinition("get_timecard_exceptions_report");
+  assert.equal(timecardReport?.requiredPermission, "timecard:read:unit");
+  assert.deepEqual(timecardReport?.validateParams({
+    unitId: "unit_icu",
+    status: "OPEN"
+  }), {
+    unitId: "unit_icu",
+    status: "OPEN"
+  });
+  assert.throws(() => timecardReport?.validateParams({ sql: "select * from timecard_exceptions" }));
 
   const employeeSchedule = await request(server)
     .get("/demo/schedule/me")
