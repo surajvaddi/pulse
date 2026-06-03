@@ -5,16 +5,17 @@ import type { DemoSession } from "../auth/demo-users";
 import { PermissionService } from "../auth/permission.service";
 import {
   demoAIToolCalls,
-  demoAuditLogs,
   demoTimecardExceptions,
   resetDemoWorkflowState
 } from "./demo-data";
+import { AuditService } from "./audit.service";
 import { ScheduleService } from "./schedule.service";
 
 @Controller("demo")
 export class DemoController {
   constructor(
     @Inject(PermissionService) private readonly permissions: PermissionService,
+    @Inject(AuditService) private readonly auditLogs: AuditService,
     @Inject(ScheduleService) private readonly schedules: ScheduleService
   ) {}
 
@@ -58,7 +59,7 @@ export class DemoController {
       })
     );
 
-    return demoAuditLogs;
+    return this.auditLogs.list(session.organizationId);
   }
 
   @Get("ai-tool-calls")
@@ -75,7 +76,7 @@ export class DemoController {
   }
 
   @Post("reset")
-  reset(@CurrentSession() session: DemoSession) {
+  async reset(@CurrentSession() session: DemoSession) {
     if (process.env.ENABLE_DEMO_RESET === "false") {
       throw new ForbiddenException("Demo reset is disabled in this environment");
     }
@@ -89,11 +90,12 @@ export class DemoController {
     );
 
     resetDemoWorkflowState();
+    const auditLogs = await this.auditLogs.list(session.organizationId);
     return {
       status: "RESET",
       swaps: 0,
       approvals: 0,
-      auditLogs: demoAuditLogs.length,
+      auditLogs: auditLogs.length,
       aiToolCalls: demoAIToolCalls.length
     };
   }

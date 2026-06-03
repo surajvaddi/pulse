@@ -1,6 +1,12 @@
 import { Module } from "@nestjs/common";
 
 import { AuthModule } from "../auth/auth.module";
+import {
+  AuditRepositoryProvider,
+  InMemoryAuditRepository,
+  PrismaAuditRepository
+} from "./audit.repository";
+import { AuditService } from "./audit.service";
 import { CopilotController } from "./copilot.controller";
 import { CopilotService } from "./copilot.service";
 import { DemoController } from "./demo.controller";
@@ -52,6 +58,10 @@ import { TimeclockService } from "./timeclock.service";
     SchedulingWorkflowService,
     PolicyEngineService,
     CopilotService,
+    AuditService,
+    InMemoryAuditRepository,
+    PrismaAuditRepository,
+    AuditRepositoryProvider,
     InMemoryScheduleRepository,
     PrismaScheduleRepository,
     ScheduleRepositoryProvider,

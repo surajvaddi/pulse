@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post } from "@nestjs/common";
+import { Body, Controller, Get, Inject, Param, Post } from "@nestjs/common";
 import {
   createCsvImportPreview,
   createMockWorkforceAdapter,
@@ -9,7 +9,6 @@ import {
 import type { DemoSession } from "../auth/demo-users";
 import { CurrentSession } from "../auth/session.decorator";
 import {
-  appendDemoAuditLog,
   demoCsvImportRows,
   demoIntegrationConnections,
   demoIntegrationSyncRuns,
@@ -17,9 +16,12 @@ import {
   demoStaffDirectory,
   demoTimecardExceptions
 } from "./demo-data";
+import { AuditService } from "./audit.service";
 
 @Controller("integrations")
 export class IntegrationController {
+  constructor(@Inject(AuditService) private readonly auditLogs: AuditService) {}
+
   @Get()
   connections(): IntegrationConnection[] {
     return demoIntegrationConnections as IntegrationConnection[];
@@ -106,7 +108,8 @@ export class IntegrationController {
     demoIntegrationSyncRuns.push(run);
     integration.lastSyncAt = run.finishedAt;
 
-    appendDemoAuditLog({
+    await this.auditLogs.append({
+      organizationId: session.organizationId,
       actorUserId: session.userId,
       actorType: "INTEGRATION",
       action: "integration.sync_completed",

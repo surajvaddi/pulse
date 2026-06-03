@@ -2,14 +2,16 @@ import { BadRequestException, ForbiddenException, Inject, Injectable } from "@ne
 
 import type { DemoSession } from "../auth/demo-users";
 import { PermissionService } from "../auth/permission.service";
-import { appendDemoAuditLog, type DemoTimecardEventRecord } from "./demo-data";
+import { AuditService } from "./audit.service";
+import { type DemoTimecardEventRecord } from "./demo-data";
 import { TimeclockRepositoryProvider } from "./timeclock.repository";
 
 @Injectable()
 export class TimeclockService {
   constructor(
     @Inject(PermissionService) private readonly permissions: PermissionService,
-    @Inject(TimeclockRepositoryProvider) private readonly repositories: TimeclockRepositoryProvider
+    @Inject(TimeclockRepositoryProvider) private readonly repositories: TimeclockRepositoryProvider,
+    @Inject(AuditService) private readonly auditLogs: AuditService
   ) {}
 
   async status(session: DemoSession) {
@@ -45,7 +47,8 @@ export class TimeclockService {
     }
 
     const event = await this.recordEvent(session, "CLOCK_IN", body.occurredAt, body.shiftId);
-    appendDemoAuditLog({
+    await this.auditLogs.append({
+      organizationId: session.organizationId,
       actorUserId: session.userId,
       actorType: "USER",
       action: "timecard.clock_in",
@@ -69,7 +72,8 @@ export class TimeclockService {
       body.occurredAt,
       currentStatus.currentShiftId ?? undefined
     );
-    appendDemoAuditLog({
+    await this.auditLogs.append({
+      organizationId: session.organizationId,
       actorUserId: session.userId,
       actorType: "USER",
       action: "timecard.clock_out",

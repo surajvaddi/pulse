@@ -1,17 +1,19 @@
-import { Body, Controller, Get, Param, Post } from "@nestjs/common";
+import { Body, Controller, Get, Inject, Param, Post } from "@nestjs/common";
 
 import type { DemoSession } from "../auth/demo-users";
 import { CurrentSession } from "../auth/session.decorator";
 import {
-  appendDemoAuditLog,
   demoCredentials,
   demoSchedules,
   demoStaffDirectory,
   demoTimecardExceptions
 } from "./demo-data";
+import { AuditService } from "./audit.service";
 
 @Controller("operations")
 export class OperationsController {
+  constructor(@Inject(AuditService) private readonly auditLogs: AuditService) {}
+
   @Get("staffing/gaps")
   staffingGaps(@CurrentSession() _session: DemoSession) {
     const openShift = demoSchedules.find((shift) => shift.id === "shift_open_icu_night");
@@ -67,7 +69,7 @@ export class OperationsController {
   }
 
   @Post("timecards/exceptions/:exceptionId/resolve")
-  resolveTimecard(
+  async resolveTimecard(
     @CurrentSession() session: DemoSession,
     @Param("exceptionId") exceptionId: string,
     @Body() body: { resolution?: string }
@@ -77,7 +79,8 @@ export class OperationsController {
       return { status: "NOT_FOUND", exceptionId };
     }
     exception.status = "RESOLVED";
-    appendDemoAuditLog({
+    await this.auditLogs.append({
+      organizationId: session.organizationId,
       actorUserId: session.userId,
       actorType: "USER",
       action: "timecard.exception_resolved",

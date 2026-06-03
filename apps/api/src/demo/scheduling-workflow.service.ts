@@ -8,11 +8,8 @@ import {
 
 import type { DemoSession } from "../auth/demo-users";
 import { PermissionService } from "../auth/permission.service";
-import {
-  appendDemoAuditLog,
-  demoApprovals,
-  type DemoApprovalRecord
-} from "./demo-data";
+import { demoApprovals, type DemoApprovalRecord } from "./demo-data";
+import { AuditService } from "./audit.service";
 import { NotificationService } from "./notification.service";
 import { PolicyEngineService } from "./policy-engine.service";
 import { ScheduleRepositoryProvider } from "./schedule.repository";
@@ -25,7 +22,8 @@ export class SchedulingWorkflowService {
     @Inject(PolicyEngineService) private readonly policy: PolicyEngineService,
     @Inject(ScheduleRepositoryProvider) private readonly schedules: ScheduleRepositoryProvider,
     @Inject(SwapRepositoryProvider) private readonly swaps: SwapRepositoryProvider,
-    @Inject(NotificationService) private readonly notifications: NotificationService
+    @Inject(NotificationService) private readonly notifications: NotificationService,
+    @Inject(AuditService) private readonly auditLogs: AuditService
   ) {}
 
   async claimOpenShift(session: DemoSession, shiftId: string) {
@@ -66,8 +64,11 @@ export class SchedulingWorkflowService {
         status: "PENDING",
         riskFlags: policyDecision.riskFlags
       });
-      await this.queueNotification(session.organizationId, "user_jordan_manager", "APPROVAL_REQUIRED", { approvalId: approval.id });
-      appendDemoAuditLog({
+      await this.queueNotification(session.organizationId, "user_jordan_manager", "APPROVAL_REQUIRED", {
+        approvalId: approval.id
+      });
+      await this.auditLogs.append({
+        organizationId: session.organizationId,
         actorUserId: session.userId,
         actorType: "USER",
         action: "shift.claim.approval_requested",
@@ -82,7 +83,8 @@ export class SchedulingWorkflowService {
     shift.userId = session.userId;
     shift.status = "ASSIGNED";
     await this.queueNotification(session.organizationId, session.userId, "SHIFT_ASSIGNED", { shiftId });
-    appendDemoAuditLog({
+    await this.auditLogs.append({
+      organizationId: session.organizationId,
       actorUserId: session.userId,
       actorType: "USER",
       action: "shift.claim.assigned",
@@ -133,7 +135,8 @@ export class SchedulingWorkflowService {
       timeline: ["Created", "Waiting for counterparty"]
     });
     await this.queueNotification(session.organizationId, proposedUserId, "SWAP_REQUESTED", { swapId: swap.id });
-    appendDemoAuditLog({
+    await this.auditLogs.append({
+      organizationId: session.organizationId,
       actorUserId: session.userId,
       actorType: "USER",
       action: "swap.created",
@@ -159,7 +162,8 @@ export class SchedulingWorkflowService {
         swapId
       });
       await this.queueNotification(session.organizationId, swap.requesterUserId, "SWAP_DENIED", { swapId });
-      appendDemoAuditLog({
+      await this.auditLogs.append({
+        organizationId: session.organizationId,
         actorUserId: session.userId,
         actorType: "USER",
         action: "swap.counterparty_declined",
@@ -183,8 +187,11 @@ export class SchedulingWorkflowService {
       status: "PENDING",
       riskFlags: acceptedSwap.riskFlags
     });
-    await this.queueNotification(session.organizationId, "user_jordan_manager", "APPROVAL_REQUIRED", { approvalId: approval.id });
-    appendDemoAuditLog({
+    await this.queueNotification(session.organizationId, "user_jordan_manager", "APPROVAL_REQUIRED", {
+      approvalId: approval.id
+    });
+    await this.auditLogs.append({
+      organizationId: session.organizationId,
       actorUserId: session.userId,
       actorType: "USER",
       action: "swap.counterparty_accepted",
@@ -226,7 +233,8 @@ export class SchedulingWorkflowService {
       }
       await this.queueNotification(session.organizationId, swap.requesterUserId, "SWAP_DENIED", { swapId });
       await this.queueNotification(session.organizationId, swap.proposedUserId, "SWAP_DENIED", { swapId });
-      appendDemoAuditLog({
+      await this.auditLogs.append({
+        organizationId: session.organizationId,
         actorUserId: session.userId,
         actorType: "USER",
         action: "swap.manager_denied",
@@ -262,7 +270,8 @@ export class SchedulingWorkflowService {
     }
     await this.queueNotification(session.organizationId, swap.requesterUserId, "SWAP_APPROVED", { swapId });
     await this.queueNotification(session.organizationId, swap.proposedUserId, "SWAP_APPROVED", { swapId });
-    appendDemoAuditLog({
+    await this.auditLogs.append({
+      organizationId: session.organizationId,
       actorUserId: session.userId,
       actorType: "USER",
       action: "swap.manager_approved",
