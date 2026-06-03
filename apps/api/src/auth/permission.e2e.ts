@@ -5,6 +5,12 @@ import { Test } from "@nestjs/testing";
 import request from "supertest";
 
 import { AppModule } from "../app.module";
+import {
+  assertRolePageMatrixComplete,
+  productionPages,
+  productionRoles,
+  rolePageMatrix
+} from "../admin/role-page-matrix";
 import { resetDemoWorkflowState } from "../demo/demo-data";
 import {
   assertSqlReportRegistrySafe,
@@ -24,6 +30,12 @@ async function main() {
   await app.init();
 
   const server = app.getHttpServer();
+
+  assert.equal(assertRolePageMatrixComplete(), true);
+  assert.equal(Object.keys(rolePageMatrix).length, productionRoles.length);
+  assert.equal(Object.keys(rolePageMatrix.EMPLOYEE).length, productionPages.length);
+  assert.deepEqual(rolePageMatrix.EMPLOYEE.timecards.visibleActions, ["clock_in", "clock_out"]);
+  assert.ok(rolePageMatrix.SYSTEM_ADMIN.admin_users.hiddenActions.includes("raw_permission_entry"));
 
   assert.deepEqual(listSqlReports(), [
     "get_staffing_gaps_report",
