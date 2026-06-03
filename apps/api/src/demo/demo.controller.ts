@@ -6,41 +6,26 @@ import { PermissionService } from "../auth/permission.service";
 import {
   demoAIToolCalls,
   demoAuditLogs,
-  demoEmployeeByUserId,
-  demoSchedules,
   demoTimecardExceptions,
   resetDemoWorkflowState
 } from "./demo-data";
+import { ScheduleService } from "./schedule.service";
 
 @Controller("demo")
 export class DemoController {
-  constructor(@Inject(PermissionService) private readonly permissions: PermissionService) {}
+  constructor(
+    @Inject(PermissionService) private readonly permissions: PermissionService,
+    @Inject(ScheduleService) private readonly schedules: ScheduleService
+  ) {}
 
   @Get("schedule/me")
   mySchedule(@CurrentSession() session: DemoSession) {
-    this.assertAllowed(
-      session,
-      this.permissions.hasPermission(session, "schedule:read:self", {
-        type: "SELF",
-        userId: session.userId
-      })
-    );
-
-    const employeeId = demoEmployeeByUserId.get(session.userId);
-    return demoSchedules.filter((shift) => shift.employeeId === employeeId);
+    return this.schedules.mySchedule(session);
   }
 
   @Get("schedule/unit/:unitId")
   unitSchedule(@CurrentSession() session: DemoSession, @Param("unitId") unitId: string) {
-    this.assertAllowed(
-      session,
-      this.permissions.hasPermission(session, "schedule:read:unit", {
-        type: "UNIT",
-        unitId
-      })
-    );
-
-    return demoSchedules.filter((shift) => shift.unitId === unitId);
+    return this.schedules.unitSchedule(session, unitId);
   }
 
   @Get("timecards/exceptions")

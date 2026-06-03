@@ -14,6 +14,7 @@ import {
   PrismaScheduleRepository,
   ScheduleRepositoryProvider
 } from "./schedule.repository";
+import { ScheduleService } from "./schedule.service";
 import { SchedulingWorkflowController } from "./scheduling-workflow.controller";
 import { SchedulingWorkflowService } from "./scheduling-workflow.service";
 import { TimeclockController } from "./timeclock.controller";
@@ -43,6 +44,7 @@ import { TimeclockService } from "./timeclock.service";
     InMemoryScheduleRepository,
     PrismaScheduleRepository,
     ScheduleRepositoryProvider,
+    ScheduleService,
     TimeclockService,
     InMemoryTimeclockRepository,
     PrismaTimeclockRepository,
