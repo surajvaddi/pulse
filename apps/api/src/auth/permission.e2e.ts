@@ -6,6 +6,13 @@ import request from "supertest";
 
 import { AppModule } from "../app.module";
 import {
+  AdminAuditReasonSchema,
+  InvitationMutationSchema,
+  RoleAssignmentSchema,
+  UserStatusMutationSchema,
+  assertAdminContractsSafe
+} from "../admin/admin-contracts";
+import {
   assertRolePageMatrixComplete,
   productionPages,
   productionRoles,
@@ -36,6 +43,13 @@ async function main() {
   assert.equal(Object.keys(rolePageMatrix.EMPLOYEE).length, productionPages.length);
   assert.deepEqual(rolePageMatrix.EMPLOYEE.timecards.visibleActions, ["clock_in", "clock_out"]);
   assert.ok(rolePageMatrix.SYSTEM_ADMIN.admin_users.hiddenActions.includes("raw_permission_entry"));
+  assert.equal(assertAdminContractsSafe(), true);
+  assert.deepEqual(AdminAuditReasonSchema.parse({ reason: "Required production audit reason" }), {
+    reason: "Required production audit reason"
+  });
+  assert.equal(UserStatusMutationSchema.parse({ status: "SUSPENDED", reason: "Policy review" }).status, "SUSPENDED");
+  assert.throws(() => RoleAssignmentSchema.parse({ userId: "user", role: "EMPLOYEE", permissions: [] }));
+  assert.throws(() => InvitationMutationSchema.parse({ email: "bad", role: "EMPLOYEE", scope: { type: "SELF" }, reason: "Invite" }));
 
   assert.deepEqual(listSqlReports(), [
     "get_staffing_gaps_report",
