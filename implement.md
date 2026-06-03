@@ -670,6 +670,23 @@ Build:
 - Make all workflow writes append audit records.
 - Move demo reset to local/staging-only tooling; do not expose destructive reset in production.
 - Add seed data that recreates the current MVP demo path in the database.
+- Add a dedicated SQL reporting/tooling layer for read-heavy dashboard and LLM tools:
+  - predefined SQL only
+  - no model-authored SQL
+  - no free-form SQL text input
+  - typed parameter objects
+  - mandatory organization scope injected by the server
+  - permission checks before query execution
+  - result limits
+  - query timeout configuration
+  - audit/tool-call metadata for LLM use
+- Implement initial predefined SQL reports:
+  - `get_staffing_gaps_report`
+  - `get_employee_schedule_report`
+  - `get_timecard_exceptions_report`
+  - `get_credential_expiry_report`
+  - `get_audit_activity_report`
+- Keep write workflows on Prisma/service methods, not SQL reporting tools.
 
 Acceptance gate:
 
@@ -678,6 +695,9 @@ Acceptance gate:
 - Swap approval cannot partially update schedule state if any transaction step fails.
 - All current API e2e tests pass against Prisma-backed services.
 - Production mode has no public destructive reset endpoint.
+- LLM-facing SQL tools expose only named reports with concrete SQL definitions and typed parameters.
+- Any attempt to pass arbitrary SQL text is impossible at the API/tool contract level.
+- Reporting queries enforce tenant isolation, permission checks, row limits, and timeouts.
 
 Verification:
 
@@ -686,6 +706,11 @@ run Prisma migration
 run db seed
 run repository unit tests
 run transaction failure tests for swap approval
+run SQL report unit tests for each predefined query
+run SQL report tenant-isolation tests
+run SQL report parameter validation tests
+run SQL report result-limit tests
+review EXPLAIN plans for high-traffic reports
 run API e2e tests
 run MVP demo-flow e2e test
 restart API and verify persisted workflow state
@@ -862,7 +887,10 @@ Build:
   - embeddings if RAG is enabled
   - moderation/safety checks
 - Replace deterministic copilot routing with real provider calls while keeping backend tool execution deterministic.
+- Route read-heavy LLM data access through the dedicated SQL reporting/tooling layer only when a matching predefined report exists.
 - Keep all tools typed, permission-checked, policy-checked, previewed, approval-gated, and audited.
+- Prohibit arbitrary SQL generation in prompts, tool schemas, API routes, and backend executors.
+- Ensure the LLM can request only named SQL-backed tools with typed parameters, never raw SQL text.
 - Persist conversation and tool-call metadata:
   - provider
   - model
@@ -878,7 +906,8 @@ Build:
   - no unauthorized schedule access
   - no silent writes
   - no permission edits
-  - no audit deletion
+- no audit deletion
+- no SQL writing, editing, or execution by the model
 - Expand eval dashboard to compare deterministic baseline and real model behavior.
 - Fail staging/CI eval gates if blocked tasks produce unsafe action attempts.
 
@@ -886,6 +915,7 @@ Acceptance gate:
 
 - Copilot can answer current schedule, swap, staffing, and timecard prompts through real LLM calls.
 - Real LLM cannot execute a backend mutation except through authorized tools.
+- Real LLM cannot execute arbitrary SQL and can only call predefined SQL-backed reporting tools.
 - Blocked direct timecard mutation still returns a blocked response.
 - AI tool calls persist with provider/model/token/cost metadata.
 - Eval unsafe action attempt rate remains zero for blocked tasks.
@@ -895,6 +925,8 @@ Verification:
 ```text
 run AI gateway unit tests with mocked provider responses
 run tool validation tests
+run SQL-backed tool contract tests
+run arbitrary-SQL refusal/absence tests
 run copilot API e2e tests
 run LLM eval suite against mock provider fixtures
 run optional live-provider smoke test when API key is present

@@ -131,7 +131,7 @@ Phase 12: Establish the production platform foundation with Supabase as the prim
 
 Phase 13: Replace demo-header authentication with Supabase Auth, add real account sessions, login/logout, password recovery, invite acceptance, and organization-invite onboarding for workforce members.
 
-Phase 14: Move core workflows from in-memory demo state to Prisma-backed persistence for schedules, swaps, approvals, notifications, audit logs, AI tool calls, integrations, eval runs, staff, credentials, clock-in/out events, and timecards.
+Phase 14: Move core workflows from in-memory demo state to Prisma-backed persistence for schedules, swaps, approvals, notifications, audit logs, AI tool calls, integrations, eval runs, staff, credentials, clock-in/out events, and timecards. Add a dedicated SQL reporting/tooling layer for predefined, optimized, read-only reporting queries that can be safely used by dashboards and LLM tools without allowing model-authored SQL.
 
 Phase 15: Build full SaaS administration for organizations, facilities, units, users, roles, workforce roles, invitations, account suspension, and tenant-scoped access control.
 
@@ -154,6 +154,7 @@ The production phases should add these durable interfaces and contracts:
 - Auth/session responses should include user, organization, employee profile, roles, scopes, permissions, and feature flags.
 - Organization admin APIs should cover users, roles, facilities, units, invites, suspension/reactivation, and role assignment.
 - LLM metadata should be persisted for conversations and tool calls: provider, model, latency, tokens, estimated cost, safety status, and blocked-action reason.
+- SQL reporting tools should be implemented as concrete, named backend functions with fixed SQL text, typed parameters, mandatory tenant/org scope injection, result limits, query timeouts, and audit metadata. The LLM must never generate, edit, concatenate, or execute arbitrary SQL.
 
 ## Production Readiness Test Strategy
 
@@ -162,6 +163,7 @@ The production phases should add and maintain these gates:
 - Unit tests for Supabase JWT verification, permission loading, invite token validation, role/scope mapping, and policy decisions.
 - API e2e tests for login/session, invite acceptance, forbidden cross-organization access, employee schedule visibility, manager unit scope, swap lifecycle, audit writes, notification reads, and admin user management.
 - Prisma service tests for transactional workflow correctness, especially swap approval, schedule reassignment, approval updates, notifications, and audit writes.
+- SQL reporting tests for every predefined query: tenant isolation, parameter validation, result limits, timeout behavior, explain-plan review where practical, and denial of arbitrary SQL inputs.
 - UI smoke tests for login, onboarding, role-specific dashboards, account controls, admin invite flow, and production empty/error/forbidden states.
 - LLM eval tests for expected tool selection, blocked payroll edits, unauthorized schedule access, approval-required actions, audit persistence, and zero unsafe action attempts on blocked tasks.
 - Staging smoke tests for login, invite acceptance, schedule read, swap workflow, approval workflow, notification read, audit view, integration sync, copilot blocked action, and eval suite execution.
@@ -170,6 +172,7 @@ The production phases should add and maintain these gates:
 
 - Supabase is the production auth provider and primary hosted PostgreSQL provider.
 - Prisma remains the ORM and the backend API remains the source of truth for workflow mutations.
+- Direct SQL is allowed only inside the dedicated reporting/tooling layer for predefined read-only queries; mutations remain behind application services, policy checks, approvals, and audit writes.
 - Supabase client usage should support auth/session and optional realtime, not bypass backend permission and policy checks.
 - The first production target is full SaaS-capable with invite-first onboarding for workforce members.
 - The product continues to exclude patient records and PHI.

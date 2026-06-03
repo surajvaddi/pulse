@@ -96,6 +96,34 @@ The timeclock workflow is the first migrated boundary. Local demos use the in-me
 default, while `WORKFLOW_PERSISTENCE=prisma` routes clock-in/out event reads and writes through
 Prisma-backed `TimecardEvent` records seeded by `npm run db:seed`.
 
+## SQL Reporting And LLM Tooling
+
+PulseShift should include a dedicated SQL reporting/tooling layer for read-heavy operational
+queries, dashboards, and LLM tools. This layer is intentionally separate from workflow mutation
+services.
+
+Rules:
+
+1. SQL reports are concrete backend functions with fixed SQL definitions.
+2. The LLM must never generate SQL, edit SQL, concatenate SQL, or submit raw SQL text.
+3. Tool contracts expose only named reports with typed parameters.
+4. The server injects organization/tenant scope. The caller cannot override it.
+5. Every report enforces permission checks, row limits, and query timeouts.
+6. LLM-triggered report calls write AI tool-call metadata and audit-relevant context.
+7. Workflow writes remain behind Prisma-backed services, policy checks, approvals, and audit writes.
+
+Initial report candidates:
+
+- `get_staffing_gaps_report(unitId, startAt, endAt)`
+- `get_employee_schedule_report(employeeId, startAt, endAt)`
+- `get_timecard_exceptions_report(unitId, status, startAt, endAt)`
+- `get_credential_expiry_report(unitId, expiresBefore)`
+- `get_audit_activity_report(actorUserId, action, startAt, endAt)`
+
+Each report should have tests for tenant isolation, parameter validation, bounded result size,
+timeout behavior, and expected query shape. High-traffic reports should receive EXPLAIN-plan review
+before production rollout.
+
 ## CI Quality Gate
 
 Every production branch should pass:
