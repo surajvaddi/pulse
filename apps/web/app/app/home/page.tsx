@@ -1,6 +1,6 @@
 import { CalendarDays, Clock3, ShieldCheck } from "lucide-react";
 
-import { apiGet, type DemoShift, type TimecardException } from "@/lib/api";
+import { apiGet, type DemoShift, type SessionSummary, type TimecardException } from "@/lib/api";
 
 function formatShiftDate(value: string) {
   return new Intl.DateTimeFormat("en-US", {
@@ -12,12 +12,14 @@ function formatShiftDate(value: string) {
 }
 
 export default async function HomePage() {
-  const [shifts, exceptions] = await Promise.all([
+  const [session, shifts, exceptions] = await Promise.all([
+    apiGet<SessionSummary>("/auth/me"),
     apiGet<DemoShift[]>("/demo/schedule/me"),
     apiGet<TimecardException[]>("/demo/timecards/exceptions")
   ]);
   const nextShift = shifts[0];
   const exception = exceptions[0];
+  const firstName = session.displayName.split(" ").at(0) ?? session.displayName;
 
   const cards = [
     {
@@ -44,7 +46,7 @@ export default async function HomePage() {
     <section className="page-stack">
       <div>
         <p className="eyebrow">Employee Home</p>
-        <h1>Good morning, Priya</h1>
+        <h1>Good morning, {firstName}</h1>
       </div>
       <div className="dashboard-grid">
         {cards.map((card) => {

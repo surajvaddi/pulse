@@ -1,10 +1,6 @@
 import Link from "next/link";
 
-import { demoAuthEnabled } from "@/lib/api";
-
 export default function HomePage() {
-  const appHref = demoAuthEnabled ? "/app/home" : "/login";
-
   return (
     <main
       style={{
@@ -24,7 +20,7 @@ export default function HomePage() {
         }}
       >
         <strong style={{ fontSize: 20 }}>PulseShift</strong>
-        <Link href={appHref} style={{ color: "var(--accent-strong)", fontWeight: 700 }}>
+        <Link href="/login" style={{ color: "var(--accent-strong)", fontWeight: 700 }}>
           Open app
         </Link>
       </header>
