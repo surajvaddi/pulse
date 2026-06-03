@@ -1,10 +1,20 @@
 import { z } from "zod";
+import { Prisma, prisma } from "@pulseshift/db";
 
 import type {
   SqlReportContext,
   SqlReportDefinition,
   SqlReportName
 } from "./repository-contracts";
+
+export type StaffingGapsReportRow = {
+  unitId: string;
+  role: string;
+  requiredCount: number;
+  assignedCount: number;
+  gapCount: number;
+  severity: string;
+};
 
 export type SqlReportColumn = {
   key: string;
@@ -53,10 +63,39 @@ const reportSchemas = {
   }).strict()
 };
 
+type StaffingGapsReportParams = z.infer<typeof reportSchemas.staffing>;
+
 function notImplementedReport(name: SqlReportName) {
   return async (_context: SqlReportContext, _params: Record<string, unknown>) => {
     throw new Error(`${name} is registered but not implemented yet`);
   };
+}
+
+async function runStaffingGapsReport(
+  context: SqlReportContext,
+  params: StaffingGapsReportParams
+): Promise<StaffingGapsReportRow[]> {
+  const effectiveLimit = Math.min(context.limit, 100);
+  return prisma.$queryRaw<StaffingGapsReportRow[]>(Prisma.sql`
+    SELECT
+      s."unitId" AS "unitId",
+      wr.name AS "role",
+      COUNT(*)::int AS "requiredCount",
+      0::int AS "assignedCount",
+      COUNT(*)::int AS "gapCount",
+      CASE
+        WHEN COUNT(*) >= 2 THEN 'CRITICAL'
+        ELSE 'HIGH'
+      END AS "severity"
+    FROM shifts s
+    INNER JOIN workforce_roles wr ON wr.id = s."roleRequiredId"
+    WHERE s."organizationId" = ${context.organizationId}
+      AND s.status = 'OPEN'
+      AND (${params.unitId ?? null}::text IS NULL OR s."unitId" = ${params.unitId ?? null})
+    GROUP BY s."unitId", wr.name
+    ORDER BY "gapCount" DESC, s."unitId" ASC, wr.name ASC
+    LIMIT ${effectiveLimit}
+  `);
 }
 
 function defineReport<TParams extends Record<string, unknown>, TResult>(input: {
@@ -67,6 +106,7 @@ function defineReport<TParams extends Record<string, unknown>, TResult>(input: {
   timeoutMs: number;
   parameterSchema: z.ZodType<TParams>;
   resultColumns: SqlReportColumn[];
+  run?: RegisteredSqlReport<TParams, TResult>["run"];
 }): RegisteredSqlReport<TParams, TResult> {
   const objectSchema = input.parameterSchema as unknown as z.ZodObject<z.ZodRawShape>;
   const parameterKeys = Object.keys(objectSchema.shape);
@@ -76,7 +116,7 @@ function defineReport<TParams extends Record<string, unknown>, TResult>(input: {
     validateParams(params: unknown) {
       return input.parameterSchema.parse(params);
     },
-    run: notImplementedReport(input.name)
+    run: input.run ?? notImplementedReport(input.name)
   };
 }
 
@@ -88,6 +128,7 @@ export const sqlReportRegistry = [
     maxRows: 100,
     timeoutMs: 1500,
     parameterSchema: reportSchemas.staffing,
+    run: runStaffingGapsReport,
     resultColumns: [
       { key: "unitId", type: "string" },
       { key: "role", type: "string" },

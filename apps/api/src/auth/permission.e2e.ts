@@ -8,6 +8,7 @@ import { AppModule } from "../app.module";
 import { resetDemoWorkflowState } from "../demo/demo-data";
 import {
   assertSqlReportRegistrySafe,
+  getSqlReportDefinition,
   listSqlReports,
   sqlReportRegistry
 } from "../workflows/sql-report.registry";
@@ -34,6 +35,11 @@ async function main() {
   assert.equal(assertSqlReportRegistrySafe(), true);
   assert.ok(sqlReportRegistry.every((report) => report.maxRows <= 250));
   assert.ok(sqlReportRegistry.every((report) => report.timeoutMs <= 1500));
+  const staffingReport = getSqlReportDefinition("get_staffing_gaps_report");
+  assert.equal(staffingReport?.requiredPermission, "schedule:read:unit");
+  assert.equal(staffingReport?.maxRows, 100);
+  assert.deepEqual(staffingReport?.validateParams({ unitId: "unit_icu" }), { unitId: "unit_icu" });
+  assert.throws(() => staffingReport?.validateParams({ rawSql: "select * from shifts" }));
 
   const employeeSchedule = await request(server)
     .get("/demo/schedule/me")
