@@ -35,6 +35,7 @@ export type ScheduleQuery = {
 };
 
 export interface ScheduleRepository {
+  findShift(query: { organizationId: string; shiftId: string }): Promise<DemoShiftRecord | null>;
   findMySchedule(query: Required<Pick<ScheduleQuery, "organizationId" | "employeeId">>): Promise<DemoShiftRecord[]>;
   findUnitSchedule(query: Required<Pick<ScheduleQuery, "organizationId" | "unitId">>): Promise<DemoShiftRecord[]>;
   findOpenShifts(query: Pick<ScheduleQuery, "organizationId" | "unitId" | "facilityId">): Promise<DemoShiftRecord[]>;
@@ -64,6 +65,17 @@ export interface SwapRepository {
   declineSwap(input: { organizationId: string; swapId: string }): Promise<DemoSwapRecord>;
   approveSwap(input: { organizationId: string; swapId: string }): Promise<DemoSwapRecord>;
   denySwap(input: { organizationId: string; swapId: string }): Promise<DemoSwapRecord>;
+  approveSwapAndAssignShift(input: {
+    organizationId: string;
+    swapId: string;
+    shiftId: string;
+    employeeId: string;
+    userId: string;
+    status: "ASSIGNED" | "PUBLISHED";
+    approvalId?: string;
+    decisionReason?: string;
+    injectFailureAfterSwapUpdate?: boolean;
+  }): Promise<{ swap: DemoSwapRecord; shift: DemoShiftRecord }>;
 }
 
 export interface ApprovalRepository {

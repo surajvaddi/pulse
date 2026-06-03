@@ -56,6 +56,33 @@ async function main() {
     .send({})
     .expect(201);
 
+  process.env.PULSESHIFT_INJECT_SWAP_APPROVAL_FAILURE = "after_swap_update";
+  await request(server)
+    .post(`/workflows/swaps/${swapCreate.body.id}/approve`)
+    .set("x-demo-user-id", "user_jordan_manager")
+    .send({ reason: "Injected failure rollback check" })
+    .expect(500);
+  delete process.env.PULSESHIFT_INJECT_SWAP_APPROVAL_FAILURE;
+
+  const scheduleAfterFailedApproval = await request(server)
+    .get("/demo/schedule/me")
+    .set("x-demo-user-id", "user_priya")
+    .expect(200);
+  assert.ok(
+    scheduleAfterFailedApproval.body.some(
+      (shift: { id: string }) => shift.id === "shift_priya_friday_icu_night"
+    )
+  );
+
+  const swapsAfterFailedApproval = await request(server)
+    .get("/workflows/swaps")
+    .set("x-demo-user-id", "user_jordan_manager")
+    .expect(200);
+  const pendingSwap = swapsAfterFailedApproval.body.find(
+    (swap: { id: string }) => swap.id === swapCreate.body.id
+  );
+  assert.equal(pendingSwap.status, "PENDING_MANAGER");
+
   const swapApprove = await request(server)
     .post(`/workflows/swaps/${swapCreate.body.id}/approve`)
     .set("x-demo-user-id", "user_jordan_manager")

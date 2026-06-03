@@ -28,7 +28,7 @@ function mapShiftStatus(status: "DRAFT" | "OPEN" | "ASSIGNED" | "PUBLISHED" | "I
   return "OPEN";
 }
 
-function mapPrismaShift(shift: {
+export function mapPrismaShift(shift: {
   id: string;
   assignedEmployeeId: string | null;
   assignedEmployee?: { userId: string | null } | null;
@@ -64,6 +64,10 @@ function mapPrismaShift(shift: {
 
 @Injectable()
 export class InMemoryScheduleRepository implements ScheduleRepository {
+  async findShift(query: { organizationId: string; shiftId: string }) {
+    return demoSchedules.find((shift) => shift.id === query.shiftId) ?? null;
+  }
+
   async findMySchedule(query: { organizationId: string; employeeId: string }) {
     return demoSchedules.filter((shift) => shift.employeeId === query.employeeId);
   }
@@ -111,6 +115,21 @@ export class InMemoryScheduleRepository implements ScheduleRepository {
 
 @Injectable()
 export class PrismaScheduleRepository implements ScheduleRepository {
+  async findShift(query: { organizationId: string; shiftId: string }) {
+    const shift = await prisma.shift.findFirst({
+      where: {
+        id: query.shiftId,
+        organizationId: query.organizationId
+      },
+      include: {
+        assignedEmployee: { select: { userId: true } },
+        roleRequired: { select: { name: true } },
+        unit: { select: { name: true } }
+      }
+    });
+    return shift ? mapPrismaShift(shift) : null;
+  }
+
   async findMySchedule(query: { organizationId: string; employeeId: string }) {
     const shifts = await prisma.shift.findMany({
       where: {

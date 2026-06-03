@@ -1,11 +1,19 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { prisma } from "@pulseshift/db";
 
-import { demoSwaps, type DemoSwapRecord } from "./demo-data";
+import {
+  demoApprovals,
+  demoSchedules,
+  demoSwaps,
+  type DemoShiftRecord,
+  type DemoSwapRecord
+} from "./demo-data";
+import { mapPrismaShift } from "./schedule.repository";
 import type { SwapRepository } from "../workflows/repository-contracts";
 
 type SwapQuery = Parameters<SwapRepository["listSwaps"]>[0];
 type SwapMutationInput = { organizationId: string; swapId: string };
+type SwapApprovalInput = Parameters<SwapRepository["approveSwapAndAssignShift"]>[0];
 type PrismaSwapStatus =
   | "DRAFT"
   | "PENDING_COUNTERPARTY"
@@ -135,6 +143,49 @@ export class InMemorySwapRepository implements SwapRepository {
     return this.updateSwap(input.swapId, "DENIED", ["Manager denied"]);
   }
 
+  async approveSwapAndAssignShift(input: SwapApprovalInput) {
+    const swap = demoSwaps.find((candidate) => candidate.id === input.swapId);
+    const shift = demoSchedules.find((candidate) => candidate.id === input.shiftId);
+    if (!swap) {
+      throw new Error(`Swap request not found: ${input.swapId}`);
+    }
+    if (!shift) {
+      throw new Error(`Schedule shift not found: ${input.shiftId}`);
+    }
+
+    const approval = input.approvalId
+      ? demoApprovals.find((candidate) => candidate.id === input.approvalId)
+      : undefined;
+    const swapSnapshot: DemoSwapRecord = { ...swap, timeline: [...swap.timeline] };
+    const shiftSnapshot: DemoShiftRecord = { ...shift };
+    const approvalSnapshot = approval ? { ...approval } : undefined;
+
+    try {
+      swap.status = "APPROVED";
+      swap.timeline.push("Manager approved", "Schedule updated");
+      if (input.injectFailureAfterSwapUpdate) {
+        throw new Error("Injected swap approval failure after swap update");
+      }
+      shift.employeeId = input.employeeId;
+      shift.userId = input.userId;
+      shift.status = input.status;
+      if (approval) {
+        approval.status = "APPROVED";
+        if (input.decisionReason) {
+          approval.decisionReason = input.decisionReason;
+        }
+      }
+      return { swap, shift };
+    } catch (error) {
+      Object.assign(swap, swapSnapshot);
+      Object.assign(shift, shiftSnapshot);
+      if (approval && approvalSnapshot) {
+        Object.assign(approval, approvalSnapshot);
+      }
+      throw error;
+    }
+  }
+
   private updateSwap(swapId: string, status: DemoSwapRecord["status"], timelineEntries: string[]) {
     const swap = demoSwaps.find((candidate) => candidate.id === swapId);
     if (!swap) {
@@ -212,6 +263,51 @@ export class PrismaSwapRepository implements SwapRepository {
 
   async denySwap(input: SwapMutationInput) {
     return this.updateSwap(input, "DENIED");
+  }
+
+  async approveSwapAndAssignShift(input: SwapApprovalInput) {
+    const result = await prisma.$transaction(async (tx) => {
+      const swap = await tx.shiftSwapRequest.update({
+        where: { id: input.swapId },
+        data: { status: "APPROVED" },
+        include: swapIncludes
+      });
+      if (input.injectFailureAfterSwapUpdate) {
+        throw new Error("Injected swap approval failure after swap update");
+      }
+      if (input.approvalId) {
+        await tx.approvalRequest.updateMany({
+          where: {
+            id: input.approvalId,
+            organizationId: input.organizationId
+          },
+          data: {
+            status: "APPROVED",
+            ...(input.decisionReason ? { decisionReason: input.decisionReason } : {})
+          }
+        });
+      }
+      const shift = await tx.shift.update({
+        where: {
+          id: input.shiftId,
+          organizationId: input.organizationId
+        },
+        data: {
+          assignedEmployeeId: input.employeeId,
+          status: input.status
+        },
+        include: {
+          assignedEmployee: { select: { userId: true } },
+          roleRequired: { select: { name: true } },
+          unit: { select: { name: true } }
+        }
+      });
+      return { swap, shift };
+    });
+    return {
+      swap: mapPrismaSwap(result.swap),
+      shift: mapPrismaShift(result.shift)
+    };
   }
 
   private async updateSwap(input: SwapMutationInput, status: DemoSwapRecord["status"]) {

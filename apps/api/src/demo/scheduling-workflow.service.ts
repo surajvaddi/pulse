@@ -11,24 +11,27 @@ import { PermissionService } from "../auth/permission.service";
 import {
   appendDemoAuditLog,
   demoApprovals,
-  demoEmployeeByUserId,
   demoNotifications,
-  demoSchedules,
-  demoSwaps,
-  type DemoApprovalRecord,
-  type DemoSwapRecord
+  type DemoApprovalRecord
 } from "./demo-data";
 import { PolicyEngineService } from "./policy-engine.service";
+import { ScheduleRepositoryProvider } from "./schedule.repository";
+import { SwapRepositoryProvider } from "./swap.repository";
 
 @Injectable()
 export class SchedulingWorkflowService {
   constructor(
     @Inject(PermissionService) private readonly permissions: PermissionService,
-    @Inject(PolicyEngineService) private readonly policy: PolicyEngineService
+    @Inject(PolicyEngineService) private readonly policy: PolicyEngineService,
+    @Inject(ScheduleRepositoryProvider) private readonly schedules: ScheduleRepositoryProvider,
+    @Inject(SwapRepositoryProvider) private readonly swaps: SwapRepositoryProvider
   ) {}
 
-  claimOpenShift(session: DemoSession, shiftId: string) {
-    const shift = demoSchedules.find((candidate) => candidate.id === shiftId);
+  async claimOpenShift(session: DemoSession, shiftId: string) {
+    const shift = await this.schedules.repository().findShift({
+      organizationId: session.organizationId,
+      shiftId
+    });
     if (!shift) {
       throw new NotFoundException("Open shift not found");
     }
@@ -39,7 +42,7 @@ export class SchedulingWorkflowService {
 
     this.assertPermission(session, "shift:claim", { type: "SELF", userId: session.userId });
 
-    const employeeId = demoEmployeeByUserId.get(session.userId);
+    const employeeId = await this.schedules.repository().employeeIdForUser(session.userId);
     if (!employeeId) {
       throw new BadRequestException("Demo user does not have an employee profile");
     }
@@ -89,10 +92,13 @@ export class SchedulingWorkflowService {
     return { status: "ASSIGNED", shift, policyDecision };
   }
 
-  createSwapRequest(session: DemoSession, originalShiftId: string, proposedUserId = "user_maya") {
+  async createSwapRequest(session: DemoSession, originalShiftId: string, proposedUserId = "user_maya") {
     this.assertPermission(session, "shift:swap:create", { type: "SELF", userId: session.userId });
 
-    const originalShift = demoSchedules.find((shift) => shift.id === originalShiftId);
+    const originalShift = await this.schedules.repository().findShift({
+      organizationId: session.organizationId,
+      shiftId: originalShiftId
+    });
     if (!originalShift) {
       throw new NotFoundException("Original shift not found");
     }
@@ -108,13 +114,12 @@ export class SchedulingWorkflowService {
       });
     }
 
-    const proposedEmployeeId = demoEmployeeByUserId.get(proposedUserId);
+    const proposedEmployeeId = await this.schedules.repository().employeeIdForUser(proposedUserId);
     if (!proposedEmployeeId) {
       throw new BadRequestException("Proposed employee is not available in demo data");
     }
 
-    const swap: DemoSwapRecord = {
-      id: `swap_${demoSwaps.length + 1}`,
+    const swap = await this.swaps.repository().createSwap({
       requesterEmployeeId: originalShift.employeeId ?? "",
       requesterUserId: session.userId,
       originalShiftId,
@@ -125,8 +130,7 @@ export class SchedulingWorkflowService {
       riskFlags: policyDecision.riskFlags,
       managerApprovalRequired: policyDecision.requiresApproval,
       timeline: ["Created", "Waiting for counterparty"]
-    };
-    demoSwaps.push(swap);
+    });
     this.queueNotification(proposedUserId, "SWAP_REQUESTED", { swapId: swap.id });
     appendDemoAuditLog({
       actorUserId: session.userId,
@@ -139,8 +143,8 @@ export class SchedulingWorkflowService {
     return { ...swap, policyDecision };
   }
 
-  respondToSwap(session: DemoSession, swapId: string, decision: "accept" | "decline") {
-    const swap = this.findSwap(swapId);
+  async respondToSwap(session: DemoSession, swapId: string, decision: "accept" | "decline") {
+    const swap = await this.findSwap(session.organizationId, swapId);
     if (swap.proposedUserId !== session.userId) {
       throw new ForbiddenException("Only the proposed counterparty can respond to this swap");
     }
@@ -149,8 +153,10 @@ export class SchedulingWorkflowService {
     }
 
     if (decision === "decline") {
-      swap.status = "DENIED";
-      swap.timeline.push("Counterparty declined");
+      const declinedSwap = await this.swaps.repository().declineSwap({
+        organizationId: session.organizationId,
+        swapId
+      });
       this.queueNotification(swap.requesterUserId, "SWAP_DENIED", { swapId });
       appendDemoAuditLog({
         actorUserId: session.userId,
@@ -158,21 +164,23 @@ export class SchedulingWorkflowService {
         action: "swap.counterparty_declined",
         objectType: "ShiftSwapRequest",
         objectId: swapId,
-        after: { status: swap.status }
+        after: { status: declinedSwap.status }
       });
-      return swap;
+      return declinedSwap;
     }
 
-    swap.status = "PENDING_MANAGER";
-    swap.timeline.push("Counterparty accepted", "Manager approval pending");
+    const acceptedSwap = await this.swaps.repository().acceptSwap({
+      organizationId: session.organizationId,
+      swapId
+    });
     const approval = this.createApproval({
       approvalType: "SHIFT_SWAP",
-      requestedByUserId: swap.requesterUserId,
+      requestedByUserId: acceptedSwap.requesterUserId,
       approverUserId: "user_jordan_manager",
       targetObjectType: "ShiftSwapRequest",
-      targetObjectId: swap.id,
+      targetObjectId: acceptedSwap.id,
       status: "PENDING",
-      riskFlags: swap.riskFlags
+      riskFlags: acceptedSwap.riskFlags
     });
     this.queueNotification("user_jordan_manager", "APPROVAL_REQUIRED", { approvalId: approval.id });
     appendDemoAuditLog({
@@ -181,13 +189,13 @@ export class SchedulingWorkflowService {
       action: "swap.counterparty_accepted",
       objectType: "ShiftSwapRequest",
       objectId: swapId,
-      after: { status: swap.status, approvalId: approval.id }
+      after: { status: acceptedSwap.status, approvalId: approval.id }
     });
-    return { swap, approval };
+    return { swap: acceptedSwap, approval };
   }
 
-  decideSwap(session: DemoSession, swapId: string, decision: "approve" | "deny", reason?: string) {
-    const swap = this.findSwap(swapId);
+  async decideSwap(session: DemoSession, swapId: string, decision: "approve" | "deny", reason?: string) {
+    const swap = await this.findSwap(session.organizationId, swapId);
     this.assertPermission(session, "shift:swap:approve", { type: "UNIT", unitId: swap.unitId });
     if (swap.status !== "PENDING_MANAGER") {
       throw new BadRequestException("Swap is not waiting for manager approval");
@@ -207,8 +215,10 @@ export class SchedulingWorkflowService {
     }
 
     if (decision === "deny") {
-      swap.status = "DENIED";
-      swap.timeline.push("Manager denied");
+      const deniedSwap = await this.swaps.repository().denySwap({
+        organizationId: session.organizationId,
+        swapId
+      });
       approval.status = "DENIED";
       if (reason) {
         approval.decisionReason = reason;
@@ -222,19 +232,29 @@ export class SchedulingWorkflowService {
         objectType: "ShiftSwapRequest",
         objectId: swapId,
         ...(reason ? { reason } : {}),
-        after: { status: swap.status, approvalStatus: approval.status, policyDecision }
+        after: { status: deniedSwap.status, approvalStatus: approval.status, policyDecision }
       });
-      return { swap, approval, policyDecision };
+      return { swap: deniedSwap, approval, policyDecision };
     }
 
-    const shift = demoSchedules.find((candidate) => candidate.id === swap.originalShiftId);
+    const shift = await this.schedules.repository().findShift({
+      organizationId: session.organizationId,
+      shiftId: swap.originalShiftId
+    });
     if (!shift) {
       throw new NotFoundException("Original shift not found");
     }
-    shift.employeeId = swap.proposedEmployeeId;
-    shift.userId = swap.proposedUserId;
-    swap.status = "APPROVED";
-    swap.timeline.push("Manager approved", "Schedule updated");
+    const transaction = await this.swaps.repository().approveSwapAndAssignShift({
+      organizationId: session.organizationId,
+      swapId,
+      shiftId: shift.id,
+      employeeId: swap.proposedEmployeeId,
+      userId: swap.proposedUserId,
+      status: shift.status === "PUBLISHED" ? "PUBLISHED" : "ASSIGNED",
+      approvalId: approval.id,
+      ...(reason ? { decisionReason: reason } : {}),
+      injectFailureAfterSwapUpdate: process.env.PULSESHIFT_INJECT_SWAP_APPROVAL_FAILURE === "after_swap_update"
+    });
     approval.status = "APPROVED";
     if (reason) {
       approval.decisionReason = reason;
@@ -248,14 +268,22 @@ export class SchedulingWorkflowService {
       objectType: "ShiftSwapRequest",
       objectId: swapId,
       ...(reason ? { reason } : {}),
-      after: { status: swap.status, approvalStatus: approval.status, shift, policyDecision }
+      after: {
+        status: transaction.swap.status,
+        approvalStatus: approval.status,
+        shift: transaction.shift,
+        policyDecision
+      }
     });
-    return { swap, approval, shift, policyDecision };
+    return { swap: transaction.swap, approval, shift: transaction.shift, policyDecision };
   }
 
-  listSwaps(session: DemoSession) {
+  async listSwaps(session: DemoSession) {
     if (session.role === "UNIT_MANAGER") {
-      return demoSwaps.filter((swap) =>
+      const swaps = await this.swaps.repository().listSwaps({
+        organizationId: session.organizationId
+      });
+      return swaps.filter((swap) =>
         this.permissions.hasPermission(session, "shift:swap:approve", {
           type: "UNIT",
           unitId: swap.unitId
@@ -263,9 +291,11 @@ export class SchedulingWorkflowService {
       );
     }
 
-    return demoSwaps.filter(
-      (swap) => swap.requesterUserId === session.userId || swap.proposedUserId === session.userId
-    );
+    return this.swaps.repository().listSwaps({
+      organizationId: session.organizationId,
+      requesterUserId: session.userId,
+      proposedUserId: session.userId
+    });
   }
 
   private createApproval(input: Omit<DemoApprovalRecord, "id">) {
@@ -277,8 +307,8 @@ export class SchedulingWorkflowService {
     return approval;
   }
 
-  private findSwap(swapId: string) {
-    const swap = demoSwaps.find((candidate) => candidate.id === swapId);
+  private async findSwap(organizationId: string, swapId: string) {
+    const swap = await this.swaps.repository().findSwap(organizationId, swapId);
     if (!swap) {
       throw new NotFoundException("Swap request not found");
     }
