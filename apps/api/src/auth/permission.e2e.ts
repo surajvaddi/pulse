@@ -6,6 +6,11 @@ import request from "supertest";
 
 import { AppModule } from "../app.module";
 import { resetDemoWorkflowState } from "../demo/demo-data";
+import {
+  assertSqlReportRegistrySafe,
+  listSqlReports,
+  sqlReportRegistry
+} from "../workflows/sql-report.registry";
 
 async function main() {
   resetDemoWorkflowState();
@@ -18,6 +23,17 @@ async function main() {
   await app.init();
 
   const server = app.getHttpServer();
+
+  assert.deepEqual(listSqlReports(), [
+    "get_staffing_gaps_report",
+    "get_employee_schedule_report",
+    "get_timecard_exceptions_report",
+    "get_credential_expiry_report",
+    "get_audit_activity_report"
+  ]);
+  assert.equal(assertSqlReportRegistrySafe(), true);
+  assert.ok(sqlReportRegistry.every((report) => report.maxRows <= 250));
+  assert.ok(sqlReportRegistry.every((report) => report.timeoutMs <= 1500));
 
   const employeeSchedule = await request(server)
     .get("/demo/schedule/me")
