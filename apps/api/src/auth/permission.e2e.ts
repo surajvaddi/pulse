@@ -201,6 +201,13 @@ async function main() {
     .send({})
     .expect(403);
   delete process.env.ENABLE_DEMO_RESET;
+  process.env.APP_ENV = "production";
+  await request(server)
+    .post("/demo/reset")
+    .set("x-demo-user-id", "user_admin")
+    .send({})
+    .expect(403);
+  delete process.env.APP_ENV;
 
   await request(server)
     .get("/demo/audit")

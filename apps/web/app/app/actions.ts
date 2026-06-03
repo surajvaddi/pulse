@@ -102,6 +102,12 @@ export async function runCopilotEvalAction() {
 }
 
 export async function resetDemoAction() {
+  if (process.env.APP_ENV === "production" || process.env.NODE_ENV === "production") {
+    return;
+  }
+  if (process.env.ENABLE_DEMO_RESET === "false") {
+    return;
+  }
   await apiPost("/demo/reset", {}, "user_admin");
   revalidatePath("/app/admin/audit");
   revalidatePath("/app/home");

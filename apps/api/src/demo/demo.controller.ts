@@ -11,6 +11,13 @@ import {
 import { AuditService } from "./audit.service";
 import { ScheduleService } from "./schedule.service";
 
+function demoResetAllowed() {
+  if (process.env.APP_ENV === "production" || process.env.NODE_ENV === "production") {
+    return false;
+  }
+  return process.env.ENABLE_DEMO_RESET !== "false";
+}
+
 @Controller("demo")
 export class DemoController {
   constructor(
@@ -77,7 +84,7 @@ export class DemoController {
 
   @Post("reset")
   async reset(@CurrentSession() session: DemoSession) {
-    if (process.env.ENABLE_DEMO_RESET === "false") {
+    if (!demoResetAllowed()) {
       throw new ForbiddenException("Demo reset is disabled in this environment");
     }
 

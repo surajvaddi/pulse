@@ -8,6 +8,10 @@ export default async function AdminAuditPage() {
     apiGet<AuditLog[]>("/demo/audit", "user_admin"),
     apiGet<AIToolCall[]>("/demo/ai-tool-calls", "user_admin")
   ]);
+  const canResetDemo =
+    process.env.APP_ENV !== "production" &&
+    process.env.NODE_ENV !== "production" &&
+    process.env.ENABLE_DEMO_RESET !== "false";
 
   return (
     <section className="page-stack">
@@ -57,15 +61,19 @@ export default async function AdminAuditPage() {
         </div>
 
         <aside className="panel">
-          <div className="section-heading">
-            <h2>Demo controls</h2>
-          </div>
-          <form action={resetDemoAction} className="detail-stack">
-            <button className="command-button" type="submit">
-              <RotateCcw size={16} aria-hidden="true" />
-              Reset demo state
-            </button>
-          </form>
+          {canResetDemo ? (
+            <>
+              <div className="section-heading">
+                <h2>Demo controls</h2>
+              </div>
+              <form action={resetDemoAction} className="detail-stack">
+                <button className="command-button" type="submit">
+                  <RotateCcw size={16} aria-hidden="true" />
+                  Reset demo state
+                </button>
+              </form>
+            </>
+          ) : null}
 
           <div className="section-heading">
             <h2>AI tool calls</h2>
