@@ -1048,3 +1048,394 @@ run npm audit --audit-level=high
 verify production env blocks demo-only routes and controls
 review release and rollback checklists
 ```
+
+## Goal Mode Execution Protocol For Phases 14-20
+
+Use this protocol for every remaining production step:
+
+- Complete one step at a time.
+- Keep each step focused on either one clear build unit or one integration boundary.
+- Build units may include a small interface, class, repository, service, controller method set, UI component group, or test fixture.
+- Integration steps may connect two previously built units, such as a service to a repository, a page to an API action, or an LLM tool to the tool registry.
+- End every step with verification that proves the touched unit and surrounding workflow still work.
+- After every completed step, commit to GitHub with this format:
+  - `Word: Action ...`
+  - first word is a capitalized description word
+  - colon follows the description word
+  - first word after the colon is a capitalized action verb
+  - examples: `Persistence: Add schedule repository`, `Admin: Build role assignment service`, `LLM: Register staffing report tool`
+- After every completed step, report:
+  - changed files
+  - functions/classes/interfaces added or changed
+  - tests and verification commands run
+  - behavior the user should understand
+  - commit hash
+
+## Phase 14 Goal Mode Steps: Database-Backed Core Workflows
+
+1. `Persistence: Define workflow repository contracts`
+   - Purpose: Add shared repository interfaces for schedules, swaps, approvals, notifications, audit logs, integrations, evals, staff, credentials, timecards, and SQL reports.
+   - Build: interfaces only, plus typed input/output DTOs where missing.
+   - Verify: run `npm run typecheck --workspace @pulseshift/api`, `npm run lint --workspace @pulseshift/api`.
+
+2. `Persistence: Build schedule repository`
+   - Purpose: Move schedule reads from demo arrays into a repository with in-memory and Prisma implementations.
+   - Build: schedule repository class methods for `findMySchedule`, `findUnitSchedule`, and `findOpenShifts`.
+   - Verify: schedule API e2e assertions, `npm run test --workspace @pulseshift/api`, `npm run test:demo`.
+
+3. `Persistence: Integrate schedule service`
+   - Purpose: Route schedule controllers through the schedule service/repository boundary.
+   - Build: service methods, controller delegation, permission-preserving tests.
+   - Verify: employee self schedule allowed, employee unit schedule forbidden, manager unit schedule allowed.
+
+4. `Persistence: Build swap repository`
+   - Purpose: Persist shift swap requests and approvals through Prisma while preserving in-memory test parity.
+   - Build: repository methods for create, list, accept, decline, manager approve, manager deny.
+   - Verify: swap lifecycle e2e tests and repository unit tests.
+
+5. `Persistence: Add transactional swap approval`
+   - Purpose: Make manager approval atomic.
+   - Build: transaction that checks permission, approval status, policy result, swap update, approval update, shift reassignment, notifications, and audit write.
+   - Verify: transaction success test and injected failure test proving no partial schedule reassignment.
+
+6. `Persistence: Build notification repository`
+   - Purpose: Persist notification reads and workflow-created notification records.
+   - Build: repository methods for list, create, mark read, and workflow append.
+   - Verify: notification read e2e test before and after API restart where practical.
+
+7. `Persistence: Build audit repository`
+   - Purpose: Centralize append-only audit writes.
+   - Build: audit service/repository methods for workflow actions, admin actions, AI tool calls, and integration runs.
+   - Verify: audit assertion tests for clock-in/out, swap approval, invite, role changes, and integration sync.
+
+8. `Persistence: Build operations repositories`
+   - Purpose: Persist staff directory, credential warnings, staffing gaps, and timecard exceptions.
+   - Build: repositories plus service methods for staff list, coverage candidates, credential warnings, exception reads, exception resolution.
+   - Verify: operations API e2e tests for employee, manager, payroll, and admin access.
+
+9. `Persistence: Build integration repositories`
+   - Purpose: Persist integration connections, import previews, and sync runs.
+   - Build: repository methods for list connections, preview import, run sync, list sync runs.
+   - Verify: integration API e2e tests and sync audit assertion.
+
+10. `Persistence: Build eval repositories`
+    - Purpose: Persist eval tasks and eval runs.
+    - Build: repository/service methods for list tasks, run evals, list runs.
+    - Verify: eval API e2e tests and stored run assertions.
+
+11. `Reporting: Define SQL report registry`
+    - Purpose: Create the dedicated SQL reporting/tooling layer contract.
+    - Build: named report registry, typed parameter schemas, result schemas, permission metadata, row limit config, timeout config.
+    - Verify: contract tests proving no raw SQL parameter exists.
+
+12. `Reporting: Add staffing SQL report`
+    - Purpose: Implement `get_staffing_gaps_report` with fixed SQL.
+    - Build: one predefined SQL query with server-injected organization scope and typed params.
+    - Verify: tenant isolation, permission denial, row limit, and expected result tests.
+
+13. `Reporting: Add schedule SQL report`
+    - Purpose: Implement `get_employee_schedule_report` with fixed SQL.
+    - Build: one predefined SQL query for employee schedule windows.
+    - Verify: self-scope allowed, cross-user denied, manager/unit scope allowed where appropriate.
+
+14. `Reporting: Add timecard SQL report`
+    - Purpose: Implement `get_timecard_exceptions_report` with fixed SQL.
+    - Build: one predefined SQL query for timecard exception review.
+    - Verify: payroll/manager allowed, employee self-only behavior, no raw SQL input path.
+
+15. `Reporting: Add credential SQL report`
+    - Purpose: Implement `get_credential_expiry_report` with fixed SQL.
+    - Build: one predefined SQL query for credential expiration risk.
+    - Verify: manager/admin access, result limits, date parameter validation.
+
+16. `Reporting: Add audit SQL report`
+    - Purpose: Implement `get_audit_activity_report` with fixed SQL.
+    - Build: one predefined SQL query for audit search and activity summaries.
+    - Verify: admin-only access, bounded result size, action/date filter tests.
+
+17. `Persistence: Remove production demo reset access`
+    - Purpose: Ensure destructive reset cannot run in production mode.
+    - Build: environment guard and route tests.
+    - Verify: `ENABLE_DEMO_RESET=false` returns 403 and production UI exposes no reset control.
+
+18. `Persistence: Verify database-backed demo flow`
+    - Purpose: Prove persisted workflows survive API restart.
+    - Build: no new feature code unless gaps are found; add restart/smoke fixture if practical.
+    - Verify: seed, run flow, restart API, verify schedules/swaps/approvals/notifications/audit/tool calls remain.
+
+## Phase 15 Goal Mode Steps: Multi-Tenant SaaS Administration
+
+1. `Admin: Define administration contracts`
+   - Purpose: Add DTOs/interfaces for organizations, facilities, units, users, roles, invitations, suspensions, and audit reasons.
+   - Build: schemas and service interfaces.
+   - Verify: typecheck and schema unit tests.
+
+2. `Admin: Build organization service`
+   - Purpose: Read and update organization profile safely.
+   - Build: methods for organization summary, settings update, and status checks.
+   - Verify: org admin allowed, cross-org denied.
+
+3. `Admin: Build facility service`
+   - Purpose: Manage facilities within an organization.
+   - Build: list, create, update, deactivate methods.
+   - Verify: tenant isolation and audit write tests.
+
+4. `Admin: Build unit service`
+   - Purpose: Manage units and manager assignments.
+   - Build: list, create, update, assign manager, deactivate methods.
+   - Verify: unit scope tests and manager assignment audit tests.
+
+5. `Admin: Build user management service`
+   - Purpose: List users and manage account status.
+   - Build: list, detail, suspend, reactivate methods.
+   - Verify: suspended user cannot access protected API routes.
+
+6. `Admin: Build role assignment service`
+   - Purpose: Assign role and scope through controlled choices.
+   - Build: assign role, update scope, remove role methods with derived permissions.
+   - Verify: role/scope permission tests and no arbitrary permission entry path.
+
+7. `Admin: Build invitation management service`
+   - Purpose: Manage pending, accepted, expired, and revoked invitations.
+   - Build: list invites, revoke invite, resend invite metadata methods.
+   - Verify: invite status tests and audit assertions.
+
+8. `Admin: Add administration controllers`
+   - Purpose: Expose service methods through tenant-scoped API routes.
+   - Build: organization, facility, unit, user, role, invitation controllers.
+   - Verify: API e2e tests for allowed/forbidden paths.
+
+9. `Admin: Build administration pages`
+   - Purpose: Add role-aware admin UI for users, invites, facilities, units, and roles.
+   - Build: pages, forms, confirmation states, reason fields.
+   - Verify: web typecheck, web lint, UI smoke tests.
+
+10. `Admin: Integrate admin audit trail`
+    - Purpose: Ensure every admin mutation appends audit records.
+    - Build: audit calls in each admin service method.
+    - Verify: audit assertion tests for invite, role assignment, suspension, reactivation, facility/unit changes.
+
+## Phase 16 Goal Mode Steps: Operational UI Redesign
+
+1. `Interface: Build session-aware navigation`
+   - Purpose: Render navigation from `/auth/me` role, scopes, and permissions.
+   - Build: role nav config, filtering function, layout integration.
+   - Verify: employee/manager/payroll/admin nav smoke tests.
+
+2. `Interface: Build role landing router`
+   - Purpose: Send users to the right dashboard after login.
+   - Build: landing resolver and redirect behavior.
+   - Verify: login smoke tests for all seeded roles.
+
+3. `Interface: Build employee dashboard`
+   - Purpose: Give employees a focused home for shift, swap, timecard, notification, and copilot tasks.
+   - Build: dashboard component group and API wiring.
+   - Verify: employee page smoke test and no manager/admin controls visible.
+
+4. `Interface: Build manager dashboard`
+   - Purpose: Give managers operational coverage, staffing, approval, staff, and risk context.
+   - Build: manager dashboard components and service calls.
+   - Verify: manager page smoke test and unit-scope enforcement.
+
+5. `Interface: Build payroll dashboard`
+   - Purpose: Give payroll users timecard exceptions, export readiness, and audit context.
+   - Build: payroll dashboard components and exception actions.
+   - Verify: payroll page smoke test and employee self-data denial.
+
+6. `Interface: Build system admin dashboard`
+   - Purpose: Give system admins user, invite, facility, unit, role, integration, audit, eval, and system health access.
+   - Build: admin dashboard components and route links.
+   - Verify: admin page smoke test and non-admin denial.
+
+7. `Interface: Add workflow explanations`
+   - Purpose: Add concise, useful copy for statuses, policy flags, approvals, AI actions, and integration outcomes.
+   - Build: explanation helpers and page integrations.
+   - Verify: UI tests for expected explanation text on key states.
+
+8. `Interface: Add production states`
+   - Purpose: Standardize empty, loading, error, forbidden, success, confirmation, and destructive-action states.
+   - Build: reusable state components and route integrations.
+   - Verify: component tests or smoke tests for all state variants.
+
+9. `Interface: Verify responsive accessibility`
+   - Purpose: Ensure keyboard navigation, focus states, labels, and mobile layouts work.
+   - Build: focused fixes only.
+   - Verify: responsive manual checks, accessibility checks, web lint/build.
+
+## Phase 17 Goal Mode Steps: Notifications, Realtime, And Communication Preferences
+
+1. `Notifications: Define preference schema`
+   - Purpose: Model notification preferences per user and channel.
+   - Build: Prisma schema, domain schemas, repository interface.
+   - Verify: db validate/generate and preference unit tests.
+
+2. `Notifications: Build notification repository`
+   - Purpose: Persist notification state and delivery metadata.
+   - Build: list, create, mark read, update delivery status methods.
+   - Verify: repository tests and notification API e2e tests.
+
+3. `Notifications: Build preference service`
+   - Purpose: Let users update delivery preferences.
+   - Build: get/update preference methods and controller routes.
+   - Verify: self-access tests and cross-user denial.
+
+4. `Notifications: Integrate workflow events`
+   - Purpose: Create notifications from swaps, approvals, schedule changes, staffing gaps, and timecard events.
+   - Build: service calls from workflow services.
+   - Verify: workflow e2e tests assert notification creation.
+
+5. `Notifications: Add polling or realtime client`
+   - Purpose: Surface notification changes without manual refresh.
+   - Build: polling hook or Supabase Realtime subscription wrapper.
+   - Verify: smoke test for read-state update and new notification visibility.
+
+6. `Notifications: Build preferences UI`
+   - Purpose: Let users view and edit notification preferences.
+   - Build: preferences page/form and explanatory copy.
+   - Verify: web typecheck/lint and UI smoke test.
+
+7. `Notifications: Add delivery failure handling`
+   - Purpose: Track and show delivery failures for admin/operator review.
+   - Build: failure fields, retry metadata, admin view.
+   - Verify: failure-state tests and admin UI smoke test.
+
+## Phase 18 Goal Mode Steps: Tool-Gated Real LLM Integration
+
+1. `LLM: Define provider gateway interface`
+   - Purpose: Create provider-neutral LLM request/response contracts.
+   - Build: gateway interface, model route config, metadata types.
+   - Verify: AI package typecheck and mocked gateway tests.
+
+2. `LLM: Build OpenAI-compatible provider`
+   - Purpose: Call an OpenAI-compatible chat/completions API safely.
+   - Build: provider class, timeout handling, error normalization.
+   - Verify: mocked provider unit tests.
+
+3. `LLM: Build model router`
+   - Purpose: Route tasks to lightweight, reasoning, embedding, or safety models.
+   - Build: router function/class and env-driven config.
+   - Verify: routing unit tests.
+
+4. `LLM: Define tool registry contracts`
+   - Purpose: Make tool schemas typed and permission-aware.
+   - Build: tool definition interface, argument validators, result schemas.
+   - Verify: tool validation tests.
+
+5. `LLM: Register SQL-backed report tools`
+   - Purpose: Expose only predefined SQL reports to the LLM.
+   - Build: tool entries for named SQL reports with typed params.
+   - Verify: SQL-backed tool contract tests and arbitrary-SQL absence tests.
+
+6. `LLM: Register workflow action tools`
+   - Purpose: Expose safe backend actions through policy/preview/approval gates.
+   - Build: tool entries for claim shift, create swap, accept swap, approve swap where allowed.
+   - Verify: permission, preview, approval, and audit tests.
+
+7. `LLM: Integrate real copilot service`
+   - Purpose: Replace deterministic routing with provider calls while preserving deterministic backend execution.
+   - Build: copilot orchestration service and controller integration.
+   - Verify: copilot API e2e tests with mocked provider.
+
+8. `LLM: Persist tool metadata`
+   - Purpose: Store provider, model, latency, tokens, cost, safety status, and blocked reasons.
+   - Build: persistence methods and metadata writes.
+   - Verify: tool-call persistence assertions.
+
+9. `LLM: Expand eval suite`
+   - Purpose: Compare deterministic baseline and real model behavior safely.
+   - Build: eval fixtures for schedule, swap, staffing, timecard, blocked SQL, blocked payroll edits.
+   - Verify: eval suite with zero unsafe action attempts.
+
+10. `LLM: Add live-provider smoke gate`
+    - Purpose: Allow optional live API validation when keys are present.
+    - Build: guarded smoke script/test.
+    - Verify: mocked CI path always passes; live path runs only with explicit key.
+
+## Phase 19 Goal Mode Steps: Security, Compliance, And HIPAA-Ready Controls
+
+1. `Security: Harden session cookies`
+   - Purpose: Make auth cookies production-safe.
+   - Build: secure cookie settings, expiration handling, logout clearing.
+   - Verify: session unit/e2e tests.
+
+2. `Security: Add CORS allowlist`
+   - Purpose: Restrict browser origins in production.
+   - Build: env-driven CORS config.
+   - Verify: allowed and denied origin tests.
+
+3. `Security: Add rate limits`
+   - Purpose: Protect auth, invites, copilot, and write-heavy endpoints.
+   - Build: rate-limit middleware/config.
+   - Verify: rate-limit e2e tests.
+
+4. `Security: Add request IDs and structured logs`
+   - Purpose: Improve traceability without leaking sensitive data.
+   - Build: request ID middleware, log helpers, redaction rules.
+   - Verify: log redaction checks.
+
+5. `Security: Protect audit integrity`
+   - Purpose: Ensure audit records are append-only through public APIs.
+   - Build: absence tests for delete routes and admin export route if needed.
+   - Verify: audit delete absence e2e tests.
+
+6. `Security: Write backup and restore docs`
+   - Purpose: Document Supabase backup/restore and migration rollback expectations.
+   - Build: operational doc.
+   - Verify: doc review against environment variables and migration commands.
+
+7. `Security: Write incident and access review docs`
+   - Purpose: Prepare HIPAA-ready operational practices without claiming certification.
+   - Build: incident response, access review, vendor/BAA checklist docs.
+   - Verify: checklist review and launch-readiness doc link checks.
+
+8. `Security: Add monitoring event hooks`
+   - Purpose: Emit events for auth failures, permission denials, blocked AI actions, integration failures, workflow errors, and notification delivery failures.
+   - Build: monitoring interface and initial emitters.
+   - Verify: unit tests for event emission and redaction.
+
+9. `Security: Run production security gate`
+   - Purpose: Validate security baseline before launch-readiness work.
+   - Build: fixes only if gate failures appear.
+   - Verify: `npm audit --audit-level=high`, typecheck/lint/test/build, security e2e tests.
+
+## Phase 20 Goal Mode Steps: Production Deployment And Launch Readiness
+
+1. `Launch: Write environment runbook`
+   - Purpose: Document staging and production environment variables and secrets.
+   - Build: environment setup doc.
+   - Verify: compare against `.env.example` and deployment needs.
+
+2. `Launch: Write migration runbook`
+   - Purpose: Document database migration, seed/bootstrap, rollback, and Supabase settings.
+   - Build: migration runbook.
+   - Verify: dry-run commands documented and reviewed.
+
+3. `Launch: Build staging smoke tests`
+   - Purpose: Automate login, invite, schedule, swap, approval, notification, audit, integration, copilot, and eval smoke paths.
+   - Build: smoke test script or test suite.
+   - Verify: smoke tests run against local/staging config.
+
+4. `Launch: Build deployment checklist`
+   - Purpose: Create a repeatable pre-release checklist.
+   - Build: release checklist covering migrations, Supabase settings, tenant scoping, backups, monitoring, audit export, evals, dependency audit.
+   - Verify: checklist maps to existing commands and docs.
+
+5. `Launch: Build rollback checklist`
+   - Purpose: Document rollback paths for web, API, migration, integration, and LLM provider failures.
+   - Build: rollback doc.
+   - Verify: each rollback item has owner, trigger, and command/procedure.
+
+6. `Launch: Gate demo affordances`
+   - Purpose: Ensure production cannot access demo-only controls, reset routes, demo switchers, or seed-only shortcuts.
+   - Build: route guards, UI gates, tests.
+   - Verify: production env smoke tests deny demo controls.
+
+7. `Launch: Add monitoring dashboard plan`
+   - Purpose: Define launch metrics and operational alerts.
+   - Build: monitoring doc/config stubs for auth failures, API errors, blocked AI actions, integration failures, notification failures.
+   - Verify: monitoring event hooks exist and docs reference them.
+
+8. `Launch: Run final production gate`
+   - Purpose: Validate the full product before launch.
+   - Build: no feature work unless failures require fixes.
+   - Verify: staging smoke tests, production build, typecheck/lint/test/test:demo, high-severity audit, release checklist complete, rollback checklist complete.
