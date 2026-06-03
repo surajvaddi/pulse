@@ -45,6 +45,15 @@ export type CredentialExpiryReportRow = {
   expiresAt: Date | null;
 };
 
+export type AuditActivityReportRow = {
+  auditId: string;
+  actorUserId: string | null;
+  actorType: string;
+  action: string;
+  objectType: string;
+  createdAt: Date;
+};
+
 export type SqlReportColumn = {
   key: string;
   type: "string" | "number" | "boolean" | "datetime" | "string[]";
@@ -96,6 +105,7 @@ type StaffingGapsReportParams = z.infer<typeof reportSchemas.staffing>;
 type EmployeeScheduleReportParams = z.infer<typeof reportSchemas.schedule>;
 type TimecardExceptionsReportParams = z.infer<typeof reportSchemas.timecard>;
 type CredentialExpiryReportParams = z.infer<typeof reportSchemas.credential>;
+type AuditActivityReportParams = z.infer<typeof reportSchemas.audit>;
 
 function notImplementedReport(name: SqlReportName) {
   return async (_context: SqlReportContext, _params: Record<string, unknown>) => {
@@ -211,6 +221,30 @@ async function runCredentialExpiryReport(
   `);
 }
 
+async function runAuditActivityReport(
+  context: SqlReportContext,
+  params: AuditActivityReportParams
+): Promise<AuditActivityReportRow[]> {
+  const effectiveLimit = Math.min(context.limit, 250);
+  return prisma.$queryRaw<AuditActivityReportRow[]>(Prisma.sql`
+    SELECT
+      al.id AS "auditId",
+      al."actorUserId" AS "actorUserId",
+      al."actorType" AS "actorType",
+      al.action AS "action",
+      al."objectType" AS "objectType",
+      al."createdAt" AS "createdAt"
+    FROM audit_logs al
+    WHERE al."organizationId" = ${context.organizationId}
+      AND (${params.actorUserId ?? null}::text IS NULL OR al."actorUserId" = ${params.actorUserId ?? null})
+      AND (${params.action ?? null}::text IS NULL OR al.action = ${params.action ?? null})
+      AND (${params.startsAt ?? null}::timestamptz IS NULL OR al."createdAt" >= ${params.startsAt ?? null}::timestamptz)
+      AND (${params.endsAt ?? null}::timestamptz IS NULL OR al."createdAt" <= ${params.endsAt ?? null}::timestamptz)
+    ORDER BY al."createdAt" DESC, al.id ASC
+    LIMIT ${effectiveLimit}
+  `);
+}
+
 function defineReport<TParams extends Record<string, unknown>, TResult>(input: {
   name: SqlReportName;
   description: string;
@@ -308,6 +342,7 @@ export const sqlReportRegistry = [
     maxRows: 250,
     timeoutMs: 1500,
     parameterSchema: reportSchemas.audit,
+    run: runAuditActivityReport,
     resultColumns: [
       { key: "auditId", type: "string" },
       { key: "actorUserId", type: "string" },

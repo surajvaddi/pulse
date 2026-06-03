@@ -72,6 +72,16 @@ async function main() {
     expiresBefore: "2026-07-01T00:00:00.000Z"
   });
   assert.throws(() => credentialReport?.validateParams({ rawQuery: "select * from certifications" }));
+  const auditReport = getSqlReportDefinition("get_audit_activity_report");
+  assert.equal(auditReport?.requiredPermission, "audit:read");
+  assert.deepEqual(auditReport?.validateParams({
+    actorUserId: "user_admin",
+    action: "integration.sync_completed"
+  }), {
+    actorUserId: "user_admin",
+    action: "integration.sync_completed"
+  });
+  assert.throws(() => auditReport?.validateParams({ statement: "select * from audit_logs" }));
 
   const employeeSchedule = await request(server)
     .get("/demo/schedule/me")
