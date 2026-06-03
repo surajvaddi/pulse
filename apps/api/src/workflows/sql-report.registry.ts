@@ -16,6 +16,16 @@ export type StaffingGapsReportRow = {
   severity: string;
 };
 
+export type EmployeeScheduleReportRow = {
+  shiftId: string;
+  employeeId: string | null;
+  userId: string | null;
+  unitId: string;
+  startsAt: Date;
+  endsAt: Date;
+  status: string;
+};
+
 export type SqlReportColumn = {
   key: string;
   type: "string" | "number" | "boolean" | "datetime" | "string[]";
@@ -64,6 +74,7 @@ const reportSchemas = {
 };
 
 type StaffingGapsReportParams = z.infer<typeof reportSchemas.staffing>;
+type EmployeeScheduleReportParams = z.infer<typeof reportSchemas.schedule>;
 
 function notImplementedReport(name: SqlReportName) {
   return async (_context: SqlReportContext, _params: Record<string, unknown>) => {
@@ -94,6 +105,33 @@ async function runStaffingGapsReport(
       AND (${params.unitId ?? null}::text IS NULL OR s."unitId" = ${params.unitId ?? null})
     GROUP BY s."unitId", wr.name
     ORDER BY "gapCount" DESC, s."unitId" ASC, wr.name ASC
+    LIMIT ${effectiveLimit}
+  `);
+}
+
+async function runEmployeeScheduleReport(
+  context: SqlReportContext,
+  params: EmployeeScheduleReportParams
+): Promise<EmployeeScheduleReportRow[]> {
+  const effectiveLimit = Math.min(context.limit, 250);
+  return prisma.$queryRaw<EmployeeScheduleReportRow[]>(Prisma.sql`
+    SELECT
+      s.id AS "shiftId",
+      s."assignedEmployeeId" AS "employeeId",
+      ep."userId" AS "userId",
+      s."unitId" AS "unitId",
+      s."startAt" AS "startsAt",
+      s."endAt" AS "endsAt",
+      s.status AS "status"
+    FROM shifts s
+    LEFT JOIN employee_profiles ep ON ep.id = s."assignedEmployeeId"
+    WHERE s."organizationId" = ${context.organizationId}
+      AND (${params.employeeId ?? null}::text IS NULL OR s."assignedEmployeeId" = ${params.employeeId ?? null})
+      AND (${params.userId ?? null}::text IS NULL OR ep."userId" = ${params.userId ?? null})
+      AND (${params.unitId ?? null}::text IS NULL OR s."unitId" = ${params.unitId ?? null})
+      AND (${params.startsAt ?? null}::timestamptz IS NULL OR s."startAt" >= ${params.startsAt ?? null}::timestamptz)
+      AND (${params.endsAt ?? null}::timestamptz IS NULL OR s."endAt" <= ${params.endsAt ?? null}::timestamptz)
+    ORDER BY s."startAt" ASC, s.id ASC
     LIMIT ${effectiveLimit}
   `);
 }
@@ -145,6 +183,7 @@ export const sqlReportRegistry = [
     maxRows: 250,
     timeoutMs: 1500,
     parameterSchema: reportSchemas.schedule,
+    run: runEmployeeScheduleReport,
     resultColumns: [
       { key: "shiftId", type: "string" },
       { key: "employeeId", type: "string" },

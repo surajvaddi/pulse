@@ -40,6 +40,18 @@ async function main() {
   assert.equal(staffingReport?.maxRows, 100);
   assert.deepEqual(staffingReport?.validateParams({ unitId: "unit_icu" }), { unitId: "unit_icu" });
   assert.throws(() => staffingReport?.validateParams({ rawSql: "select * from shifts" }));
+  const scheduleReport = getSqlReportDefinition("get_employee_schedule_report");
+  assert.equal(scheduleReport?.requiredPermission, "schedule:read:self");
+  assert.deepEqual(scheduleReport?.validateParams({
+    userId: "user_priya",
+    startsAt: "2026-05-28T00:00:00.000Z",
+    endsAt: "2026-06-02T00:00:00.000Z"
+  }), {
+    userId: "user_priya",
+    startsAt: "2026-05-28T00:00:00.000Z",
+    endsAt: "2026-06-02T00:00:00.000Z"
+  });
+  assert.throws(() => scheduleReport?.validateParams({ query: "select * from employee_profiles" }));
 
   const employeeSchedule = await request(server)
     .get("/demo/schedule/me")
