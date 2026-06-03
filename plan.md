@@ -156,6 +156,71 @@ The production phases should add these durable interfaces and contracts:
 - LLM metadata should be persisted for conversations and tool calls: provider, model, latency, tokens, estimated cost, safety status, and blocked-action reason.
 - SQL reporting tools should be implemented as concrete, named backend functions with fixed SQL text, typed parameters, mandatory tenant/org scope injection, result limits, query timeouts, and audit metadata. The LLM must never generate, edit, concatenate, or execute arbitrary SQL.
 
+## Production Role And Page Interaction Matrix
+
+The production UI must be driven by a concrete role, permission, scope, and page interaction matrix. Supabase Auth proves identity only; PulseShift roles, scopes, and permissions remain the authorization source of truth.
+
+Role coverage should include:
+
+- `ORGANIZATION_OWNER`: organization-wide administration, account ownership, billing/contract-adjacent settings later, audit visibility, integration oversight, and user/role management.
+- `SYSTEM_ADMIN`: system configuration, integrations, audit, evals, facilities, units, users, invitations, role assignment, and operational monitoring.
+- `WORKFORCE_ADMIN`: schedule planning, schedule publishing, workforce operations, facility-scoped staffing, role/scope assignment where delegated, and notifications.
+- `UNIT_MANAGER`: unit schedule, staffing gaps, approvals, swaps, staff directory, overtime/credential risk, unit notifications, and timecard review context.
+- `CHARGE_NURSE`: unit schedule visibility, near-term coverage context, staffing risk visibility, and unit notifications without broad admin controls.
+- `EMPLOYEE`: own schedule, open shifts, swaps, time clock, timecard exceptions, availability/PTO, notifications, and self-service copilot.
+- `FLOAT_POOL_COORDINATOR`: facility/unit staffing gaps, float candidates, credential visibility, and shift assignment recommendations.
+- `PAYROLL_ADMIN`: timecard exception queues, payroll export readiness, correction workflow, and payroll audit context without schedule mutation.
+- `CREDENTIALING_ADMIN`: credential lists, expiring credentials, verification workflow, and credential audit context without schedule mutation.
+- `COMPLIANCE_AUDITOR`: audit logs, AI tool calls, policy decisions, read-only reports, and access review evidence.
+- `EXECUTIVE_VIEWER`: read-only workforce, staffing, schedule, risk, and performance summaries scoped to allowed facilities/orgs.
+- `EXTERNAL_AGENCY_ADMIN`: agency worker schedule/open shift visibility and claim workflows limited to agency/self scope.
+- `AI_AGENT_SERVICE`: backend service identity for tool execution metadata only, never a user-facing account.
+
+Each production page must declare:
+
+- allowed roles
+- required permissions
+- required scope type: self, unit, facility, or organization
+- visible actions
+- hidden actions
+- read/write level
+- empty state
+- forbidden state
+- audit events created by mutations
+- whether LLM tools can read from or act on the page context
+
+Minimum page interaction matrix:
+
+- Login and invite acceptance: unauthenticated users can sign in, create invited accounts, and accept valid invitations; authenticated users are routed to their role landing page.
+- Employee home: employees see own next shift, own requests, own timecard status, own notifications, and self-service copilot prompts.
+- Schedule: employees see only their own schedule; managers see assigned unit schedules; workforce admins see facility schedules; system admins and organization owners see org-wide schedule management; payroll admins and credentialing admins do not mutate schedules.
+- Open shifts: employees and agency admins see claimable shifts in scope; managers/workforce admins see coverage impact and approval queues; payroll and credentialing roles are read-only or hidden unless needed for context.
+- Swaps/requests: employees create/accept/decline own swaps; managers approve/deny unit swaps; workforce admins can supervise facility workflows; other roles are read-only or hidden.
+- Timecards: employees clock in/out and view own exceptions; payroll admins resolve exceptions/export payroll-adjacent data; managers review unit context; admins audit; schedule mutation remains unavailable.
+- Staffing: managers, charge nurses, workforce admins, float coordinators, system admins, and executives see scoped staffing gaps; employees do not see broad staffing analytics.
+- Staff directory: managers and admins see scoped staff details; credentialing admins see credential fields; employees see limited coworker context only where operationally necessary.
+- Admin users/invitations/roles/facilities/units: organization owners, system admins, and delegated workforce admins can manage scoped resources; every mutation requires visible role/scope impact and audit trail.
+- Integrations: system admins and organization owners manage connections; workforce/payroll roles see only operational sync status where relevant.
+- Audit/evals/AI tool calls: compliance auditors, system admins, organization owners, and AI admins see read-only audit/eval views; no user-facing audit delete exists.
+- Copilot: every role receives only tools allowed by that role, scope, page context, policy, and risk category.
+
+## Schedule View Requirements
+
+The production schedule view must be clear enough for repeated operational use by employees, managers, schedulers, and admins.
+
+Schedule views should include:
+
+- role-specific default view: employee personal calendar, manager unit board, workforce admin facility planner, admin org overview
+- day, week, and list modes
+- clear shift cards showing unit, role, start/end time, duration, status, assigned person, required credentials, risk flags, and pending approvals
+- timezone clarity and local date boundaries
+- filters for unit, facility, role, status, credential requirement, open shifts, swaps, and exceptions where permitted
+- visual distinction between assigned, open, draft, published, in-progress, completed, cancelled, pending swap, pending approval, and policy-blocked shifts
+- explanation text for risk flags such as overtime, overlap, rest period, missing credential, locked schedule, locked pay period, and manager approval required
+- accessible keyboard navigation and mobile-friendly list fallback
+- no schedule visibility outside the user's effective scope
+- no schedule mutation without permission, policy checks, confirmation, approval where required, and audit write
+
 ## Production Readiness Test Strategy
 
 The production phases should add and maintain these gates:

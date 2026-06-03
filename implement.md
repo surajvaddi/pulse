@@ -1165,6 +1165,11 @@ Use this protocol for every remaining production step:
 
 ## Phase 15 Goal Mode Steps: Multi-Tenant SaaS Administration
 
+1. `Admin: Define role permission matrix`
+   - Purpose: Create the production role, permission, scope, and page interaction matrix.
+   - Build: role matrix constants/docs covering every role, each major page, allowed actions, hidden actions, read/write level, scope, empty/forbidden state, and audit events.
+   - Verify: matrix unit tests or static assertions that every role and every production page is covered.
+
 1. `Admin: Define administration contracts`
    - Purpose: Add DTOs/interfaces for organizations, facilities, units, users, roles, invitations, suspensions, and audit reasons.
    - Build: schemas and service interfaces.
@@ -1217,6 +1222,11 @@ Use this protocol for every remaining production step:
 
 ## Phase 16 Goal Mode Steps: Operational UI Redesign
 
+1. `Interface: Define page interaction contracts`
+   - Purpose: Turn the role/page matrix into frontend route contracts.
+   - Build: page config objects declaring allowed roles, required permissions, required scope, visible actions, hidden actions, empty state, forbidden state, and LLM context availability.
+   - Verify: static tests proving every app route has a page contract and unsupported roles are denied.
+
 1. `Interface: Build session-aware navigation`
    - Purpose: Render navigation from `/auth/me` role, scopes, and permissions.
    - Build: role nav config, filtering function, layout integration.
@@ -1232,32 +1242,42 @@ Use this protocol for every remaining production step:
    - Build: dashboard component group and API wiring.
    - Verify: employee page smoke test and no manager/admin controls visible.
 
-4. `Interface: Build manager dashboard`
+4. `Interface: Build schedule view model`
+   - Purpose: Make the schedule page understandable across roles before rendering it.
+   - Build: schedule view model with day/week/list modes, shift status labels, risk flag explanations, timezone display, filters, and role-specific action availability.
+   - Verify: view-model tests for employee self schedule, manager unit schedule, workforce admin facility schedule, payroll read-only behavior, and hidden out-of-scope shifts.
+
+5. `Interface: Build manager dashboard`
    - Purpose: Give managers operational coverage, staffing, approval, staff, and risk context.
    - Build: manager dashboard components and service calls.
    - Verify: manager page smoke test and unit-scope enforcement.
 
-5. `Interface: Build payroll dashboard`
+6. `Interface: Build payroll dashboard`
    - Purpose: Give payroll users timecard exceptions, export readiness, and audit context.
    - Build: payroll dashboard components and exception actions.
    - Verify: payroll page smoke test and employee self-data denial.
 
-6. `Interface: Build system admin dashboard`
+7. `Interface: Build system admin dashboard`
    - Purpose: Give system admins user, invite, facility, unit, role, integration, audit, eval, and system health access.
    - Build: admin dashboard components and route links.
    - Verify: admin page smoke test and non-admin denial.
 
-7. `Interface: Add workflow explanations`
+8. `Interface: Redesign schedule page`
+   - Purpose: Render the schedule view clearly for employees, managers, workforce admins, and admins.
+   - Build: schedule page components for day/week/list modes, filters, shift cards, risk explanations, approval markers, and accessible mobile fallback.
+   - Verify: UI smoke tests for employee, manager, workforce admin, payroll read-only, and system admin schedule access.
+
+9. `Interface: Add workflow explanations`
    - Purpose: Add concise, useful copy for statuses, policy flags, approvals, AI actions, and integration outcomes.
    - Build: explanation helpers and page integrations.
    - Verify: UI tests for expected explanation text on key states.
 
-8. `Interface: Add production states`
+10. `Interface: Add production states`
    - Purpose: Standardize empty, loading, error, forbidden, success, confirmation, and destructive-action states.
    - Build: reusable state components and route integrations.
    - Verify: component tests or smoke tests for all state variants.
 
-9. `Interface: Verify responsive accessibility`
+11. `Interface: Verify responsive accessibility`
    - Purpose: Ensure keyboard navigation, focus states, labels, and mobile layouts work.
    - Build: focused fixes only.
    - Verify: responsive manual checks, accessibility checks, web lint/build.
