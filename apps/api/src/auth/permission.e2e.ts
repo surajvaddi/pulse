@@ -62,6 +62,16 @@ async function main() {
     status: "OPEN"
   });
   assert.throws(() => timecardReport?.validateParams({ sql: "select * from timecard_exceptions" }));
+  const credentialReport = getSqlReportDefinition("get_credential_expiry_report");
+  assert.equal(credentialReport?.requiredPermission, "credential:read");
+  assert.deepEqual(credentialReport?.validateParams({
+    unitId: "unit_icu",
+    expiresBefore: "2026-07-01T00:00:00.000Z"
+  }), {
+    unitId: "unit_icu",
+    expiresBefore: "2026-07-01T00:00:00.000Z"
+  });
+  assert.throws(() => credentialReport?.validateParams({ rawQuery: "select * from certifications" }));
 
   const employeeSchedule = await request(server)
     .get("/demo/schedule/me")

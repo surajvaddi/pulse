@@ -37,6 +37,14 @@ export type TimecardExceptionsReportRow = {
   createdAt: Date;
 };
 
+export type CredentialExpiryReportRow = {
+  employeeId: string;
+  employeeName: string;
+  certification: string;
+  status: string;
+  expiresAt: Date | null;
+};
+
 export type SqlReportColumn = {
   key: string;
   type: "string" | "number" | "boolean" | "datetime" | "string[]";
@@ -87,6 +95,7 @@ const reportSchemas = {
 type StaffingGapsReportParams = z.infer<typeof reportSchemas.staffing>;
 type EmployeeScheduleReportParams = z.infer<typeof reportSchemas.schedule>;
 type TimecardExceptionsReportParams = z.infer<typeof reportSchemas.timecard>;
+type CredentialExpiryReportParams = z.infer<typeof reportSchemas.credential>;
 
 function notImplementedReport(name: SqlReportName) {
   return async (_context: SqlReportContext, _params: Record<string, unknown>) => {
@@ -176,6 +185,32 @@ async function runTimecardExceptionsReport(
   `);
 }
 
+async function runCredentialExpiryReport(
+  context: SqlReportContext,
+  params: CredentialExpiryReportParams
+): Promise<CredentialExpiryReportRow[]> {
+  const effectiveLimit = Math.min(context.limit, 250);
+  return prisma.$queryRaw<CredentialExpiryReportRow[]>(Prisma.sql`
+    SELECT
+      ep.id AS "employeeId",
+      COALESCE(ep."preferredName", ep."legalName") AS "employeeName",
+      c.name AS "certification",
+      ec.status AS "status",
+      ec."expiresAt" AS "expiresAt"
+    FROM employee_certifications ec
+    INNER JOIN employee_profiles ep ON ep.id = ec."employeeId"
+    INNER JOIN certifications c ON c.id = ec."certificationId"
+    WHERE ep."organizationId" = ${context.organizationId}
+      AND (${params.unitId ?? null}::text IS NULL OR ep."primaryUnitId" = ${params.unitId ?? null})
+      AND (
+        ec.status <> 'VERIFIED'
+        OR (${params.expiresBefore ?? null}::timestamptz IS NOT NULL AND ec."expiresAt" <= ${params.expiresBefore ?? null}::timestamptz)
+      )
+    ORDER BY ec."expiresAt" ASC NULLS LAST, ep."legalName" ASC, c.name ASC
+    LIMIT ${effectiveLimit}
+  `);
+}
+
 function defineReport<TParams extends Record<string, unknown>, TResult>(input: {
   name: SqlReportName;
   description: string;
@@ -257,6 +292,7 @@ export const sqlReportRegistry = [
     maxRows: 250,
     timeoutMs: 1500,
     parameterSchema: reportSchemas.credential,
+    run: runCredentialExpiryReport,
     resultColumns: [
       { key: "employeeId", type: "string" },
       { key: "employeeName", type: "string" },
