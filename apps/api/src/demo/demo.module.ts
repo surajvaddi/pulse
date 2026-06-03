@@ -13,6 +13,12 @@ import { DemoController } from "./demo.controller";
 import { EvalController } from "./eval.controller";
 import { IntegrationController } from "./integration.controller";
 import {
+  InMemoryIntegrationRepository,
+  IntegrationRepositoryProvider,
+  PrismaIntegrationRepository
+} from "./integration.repository";
+import { IntegrationService } from "./integration.service";
+import {
   InMemoryNotificationRepository,
   NotificationRepositoryProvider,
   PrismaNotificationRepository
@@ -64,6 +70,7 @@ import { TimeclockService } from "./timeclock.service";
     SchedulingWorkflowService,
     PolicyEngineService,
     CopilotService,
+    IntegrationService,
     AuditService,
     InMemoryAuditRepository,
     PrismaAuditRepository,
@@ -80,6 +87,9 @@ import { TimeclockService } from "./timeclock.service";
     InMemoryOperationsRepository,
     PrismaOperationsRepository,
     OperationsRepositoryProvider,
+    InMemoryIntegrationRepository,
+    PrismaIntegrationRepository,
+    IntegrationRepositoryProvider,
     InMemorySwapRepository,
     PrismaSwapRepository,
     SwapRepositoryProvider,
