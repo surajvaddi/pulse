@@ -11,6 +11,12 @@ import { CopilotController } from "./copilot.controller";
 import { CopilotService } from "./copilot.service";
 import { DemoController } from "./demo.controller";
 import { EvalController } from "./eval.controller";
+import {
+  EvalRepositoryProvider,
+  InMemoryEvalRepository,
+  PrismaEvalRepository
+} from "./eval.repository";
+import { EvalService } from "./eval.service";
 import { IntegrationController } from "./integration.controller";
 import {
   InMemoryIntegrationRepository,
@@ -71,6 +77,7 @@ import { TimeclockService } from "./timeclock.service";
     PolicyEngineService,
     CopilotService,
     IntegrationService,
+    EvalService,
     AuditService,
     InMemoryAuditRepository,
     PrismaAuditRepository,
@@ -90,6 +97,9 @@ import { TimeclockService } from "./timeclock.service";
     InMemoryIntegrationRepository,
     PrismaIntegrationRepository,
     IntegrationRepositoryProvider,
+    InMemoryEvalRepository,
+    PrismaEvalRepository,
+    EvalRepositoryProvider,
     InMemorySwapRepository,
     PrismaSwapRepository,
     SwapRepositoryProvider,

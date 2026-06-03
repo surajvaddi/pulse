@@ -1,39 +1,25 @@
 import { Controller, Get, Inject, Post } from "@nestjs/common";
-import { copilotEvalTasks, createCopilotEvalRun, type CopilotEvalResponse } from "@pulseshift/evals";
 
-import { findDemoSession } from "../auth/demo-users";
-import { CopilotService } from "./copilot.service";
-import { demoCopilotEvalRuns } from "./demo-data";
+import type { DemoSession } from "../auth/demo-users";
+import { CurrentSession } from "../auth/session.decorator";
+import { EvalService } from "./eval.service";
 
 @Controller("evals")
 export class EvalController {
-  constructor(@Inject(CopilotService) private readonly copilot: CopilotService) {}
+  constructor(@Inject(EvalService) private readonly evals: EvalService) {}
 
   @Get("copilot/tasks")
   copilotTasks() {
-    return copilotEvalTasks;
+    return this.evals.tasks();
   }
 
   @Get("copilot/runs")
-  copilotRuns() {
-    return demoCopilotEvalRuns;
+  copilotRuns(@CurrentSession() session: DemoSession) {
+    return this.evals.runs(session.organizationId);
   }
 
   @Post("copilot/run")
-  runCopilotEval() {
-    const responses: Record<string, CopilotEvalResponse> = {};
-    for (const task of copilotEvalTasks) {
-      const session = findDemoSession(task.actorUserId);
-      responses[task.id] = this.copilot.handleMessage(session, task.prompt) as CopilotEvalResponse;
-    }
-
-    const run = createCopilotEvalRun({
-      id: `eval_run_${demoCopilotEvalRuns.length + 1}`,
-      createdAt: new Date().toISOString(),
-      tasks: copilotEvalTasks,
-      responses
-    });
-    demoCopilotEvalRuns.unshift(run);
-    return run;
+  runCopilotEval(@CurrentSession() session: DemoSession) {
+    return this.evals.runCopilotEval(session.organizationId);
   }
 }
