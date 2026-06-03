@@ -1,4 +1,5 @@
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000";
+export const demoAuthEnabled = process.env.ENABLE_DEMO_AUTH !== "false";
 
 export type DemoUserId =
   | "user_priya"
@@ -249,6 +250,9 @@ async function authHeaders(userId: DemoUserId) {
     return {
       authorization: `Bearer ${accessToken}`
     };
+  }
+  if (!demoAuthEnabled) {
+    return {};
   }
   return {
     "x-demo-user-id": userId

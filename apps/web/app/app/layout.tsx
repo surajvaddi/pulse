@@ -1,5 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import {
   Bell,
   Bot,
@@ -16,7 +18,7 @@ import {
   Users
 } from "lucide-react";
 
-import { demoUsers } from "@/lib/api";
+import { demoAuthEnabled, demoUsers } from "@/lib/api";
 
 const navItems = [
   { href: "/app/home", label: "Home", icon: Home },
@@ -33,7 +35,12 @@ const navItems = [
   { href: "/app/copilot", label: "Copilot", icon: Bot }
 ];
 
-export default function AppLayout({ children }: { children: ReactNode }) {
+export default async function AppLayout({ children }: { children: ReactNode }) {
+  const hasSupabaseSession = Boolean((await cookies()).get("ps_access_token")?.value);
+  if (!demoAuthEnabled && !hasSupabaseSession) {
+    redirect("/login");
+  }
+
   return (
     <div className="app-shell">
       <aside className="sidebar" aria-label="Primary navigation">
@@ -73,13 +80,15 @@ export default function AppLayout({ children }: { children: ReactNode }) {
             <Link className="icon-button" aria-label="Sign out" href="/logout">
               <LogOut size={18} />
             </Link>
-            <select aria-label="Demo user" defaultValue="user_priya">
-              {demoUsers.map((user) => (
-                <option key={user.id} value={user.id}>
-                  {user.label} - {user.role}
-                </option>
-              ))}
-            </select>
+            {demoAuthEnabled ? (
+              <select aria-label="Demo user" defaultValue="user_priya">
+                {demoUsers.map((user) => (
+                  <option key={user.id} value={user.id}>
+                    {user.label} - {user.role}
+                  </option>
+                ))}
+              </select>
+            ) : null}
           </div>
         </header>
 
