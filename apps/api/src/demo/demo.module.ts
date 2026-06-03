@@ -20,6 +20,12 @@ import {
 import { NotificationController } from "./notification.controller";
 import { NotificationService } from "./notification.service";
 import { OperationsController } from "./operations.controller";
+import {
+  InMemoryOperationsRepository,
+  OperationsRepositoryProvider,
+  PrismaOperationsRepository
+} from "./operations.repository";
+import { OperationsService } from "./operations.service";
 import { PolicyEngineService } from "./policy-engine.service";
 import {
   InMemoryScheduleRepository,
@@ -67,9 +73,13 @@ import { TimeclockService } from "./timeclock.service";
     ScheduleRepositoryProvider,
     ScheduleService,
     NotificationService,
+    OperationsService,
     InMemoryNotificationRepository,
     PrismaNotificationRepository,
     NotificationRepositoryProvider,
+    InMemoryOperationsRepository,
+    PrismaOperationsRepository,
+    OperationsRepositoryProvider,
     InMemorySwapRepository,
     PrismaSwapRepository,
     SwapRepositoryProvider,
