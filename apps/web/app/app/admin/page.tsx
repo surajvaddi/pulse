@@ -11,6 +11,7 @@ import {
   type IntegrationConnection
 } from "@/lib/api";
 import { buildAdminDashboard } from "@/lib/admin-dashboard";
+import { WorkflowNote } from "../workflow-note";
 
 export default async function AdminDashboardPage() {
   const [users, facilities, units, invitations, integrations, auditLogs] = await Promise.all([
@@ -38,6 +39,7 @@ export default async function AdminDashboardPage() {
         <h1>Organization control center</h1>
         <p>Monitor accounts, facilities, invitations, integrations, and audit activity.</p>
       </div>
+      <WorkflowNote route="/app/admin" role="SYSTEM_ADMIN" />
 
       <div className="dashboard-grid">
         {dashboard.cards.map((card, index) => {

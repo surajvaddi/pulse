@@ -10,6 +10,7 @@ import {
 } from "@/lib/api";
 import { buildEmployeeDashboard, formatDashboardDate } from "@/lib/employee-dashboard";
 import { clockInAction, clockOutAction, createSwapAction } from "../actions";
+import { WorkflowNote } from "../workflow-note";
 
 export default async function HomePage() {
   const [session, shifts, exceptions, clockStatus] = await Promise.all([
@@ -28,6 +29,7 @@ export default async function HomePage() {
         <h1>{dashboard.heading}</h1>
         <p>{dashboard.summary}</p>
       </div>
+      <WorkflowNote route="/app/home" role={session.role} />
       <div className="dashboard-grid">
         {dashboard.cards.map((card, index) => {
           const Icon = icons[index] ?? CalendarDays;

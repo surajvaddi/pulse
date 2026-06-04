@@ -1,8 +1,9 @@
 import { CalendarCheck2, CalendarPlus, Clock3, MessageSquare, RefreshCw, Send } from "lucide-react";
 
-import { apiGet, type DemoShift } from "@/lib/api";
+import { apiGet, type DemoShift, type SessionSummary } from "@/lib/api";
 import { buildScheduleViewModel } from "@/lib/schedule-view-model";
 import { createSwapAction } from "../actions";
+import { WorkflowNote } from "../workflow-note";
 
 function formatShiftTime(value: string) {
   return new Intl.DateTimeFormat("en-US", {
@@ -15,7 +16,10 @@ function formatShiftTime(value: string) {
 }
 
 export default async function SchedulePage() {
-  const shifts = await apiGet<DemoShift[]>("/demo/schedule/me");
+  const [session, shifts] = await Promise.all([
+    apiGet<SessionSummary>("/auth/me"),
+    apiGet<DemoShift[]>("/demo/schedule/me")
+  ]);
   const schedule = buildScheduleViewModel(shifts);
   const selectedShift = schedule.selectedShift;
 
@@ -26,6 +30,7 @@ export default async function SchedulePage() {
         <h1>Your upcoming shifts</h1>
         <p>Scan assigned shifts by day, review shift details, and start swap or calendar actions.</p>
       </div>
+      <WorkflowNote route="/app/schedule" role={session.role} />
 
       <div className="dashboard-grid">
         <article className="metric-card metric-card-ready">

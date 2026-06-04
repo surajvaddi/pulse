@@ -3,6 +3,7 @@ import { AlertTriangle, CheckCircle2, Clock3, Users } from "lucide-react";
 
 import { apiGet, type AuditLog, type DemoShift, type DemoSwap, type StaffingGap } from "@/lib/api";
 import { buildManagerDashboard } from "@/lib/manager-dashboard";
+import { WorkflowNote } from "../workflow-note";
 
 export default async function ManagerPage() {
   const [shifts, auditLogs, gaps, swaps] = await Promise.all([
@@ -21,6 +22,7 @@ export default async function ManagerPage() {
         <h1>ICU operations</h1>
         <p>Review coverage, approvals, staffing risk, and recent audit activity for your unit.</p>
       </div>
+      <WorkflowNote route="/app/manager" role="UNIT_MANAGER" />
       <div className="dashboard-grid">
         {dashboard.cards.map((card, index) => {
           const Icon = icons[index] ?? Users;

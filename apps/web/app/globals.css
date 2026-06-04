@@ -290,6 +290,26 @@ h1 {
   gap: 10px;
 }
 
+.workflow-note {
+  border: 1px solid #ccfbf1;
+  background: #f0fdfa;
+  border-radius: 8px;
+  padding: 12px 14px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  align-items: center;
+}
+
+.workflow-note span,
+.workflow-note small {
+  color: var(--muted);
+}
+
+.workflow-note small {
+  margin-left: auto;
+}
+
 .prompt-form {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 120px;
@@ -594,6 +614,11 @@ h1 {
 
   .prompt-form {
     grid-template-columns: 1fr;
+  }
+
+  .workflow-note small {
+    margin-left: 0;
+    width: 100%;
   }
 
   .auth-panel {

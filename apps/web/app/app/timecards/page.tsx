@@ -9,6 +9,7 @@ import {
 } from "@/lib/api";
 import { buildPayrollDashboard } from "@/lib/payroll-dashboard";
 import { clockInAction, clockOutAction, resolveTimecardAction } from "../actions";
+import { WorkflowNote } from "../workflow-note";
 
 function formatEventTime(value: string) {
   return new Intl.DateTimeFormat("en-US", {
@@ -35,6 +36,7 @@ export default async function TimecardsPage() {
           <h1>Timecard exception review</h1>
           <p>Review scoped exceptions, resolve approved corrections, and prepare clean exports.</p>
         </div>
+        <WorkflowNote route="/app/timecards" role={session.role} />
         <div className="dashboard-grid">
           {dashboard.cards.map((card, index) => {
             const Icon = icons[index] ?? ReceiptText;
@@ -90,6 +92,7 @@ export default async function TimecardsPage() {
         <h1>Current pay period</h1>
         <p>Clock in and out for assigned shifts, then monitor any exceptions that need review.</p>
       </div>
+      <WorkflowNote route="/app/timecards" role={session.role} />
       <section className="panel">
         <div className="section-heading">
           <h2>Time clock</h2>
