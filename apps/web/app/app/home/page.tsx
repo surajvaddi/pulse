@@ -1,58 +1,38 @@
-import { CalendarDays, Clock3, ShieldCheck } from "lucide-react";
+import Link from "next/link";
+import { Bot, CalendarDays, Clock3, RefreshCw, ShieldCheck } from "lucide-react";
 
-import { apiGet, type DemoShift, type SessionSummary, type TimecardException } from "@/lib/api";
-
-function formatShiftDate(value: string) {
-  return new Intl.DateTimeFormat("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    hour: "numeric"
-  }).format(new Date(value));
-}
+import {
+  apiGet,
+  type DemoShift,
+  type SessionSummary,
+  type TimecardException,
+  type TimeclockStatus
+} from "@/lib/api";
+import { buildEmployeeDashboard, formatDashboardDate } from "@/lib/employee-dashboard";
+import { clockInAction, clockOutAction, createSwapAction } from "../actions";
 
 export default async function HomePage() {
-  const [session, shifts, exceptions] = await Promise.all([
+  const [session, shifts, exceptions, clockStatus] = await Promise.all([
     apiGet<SessionSummary>("/auth/me"),
     apiGet<DemoShift[]>("/demo/schedule/me"),
-    apiGet<TimecardException[]>("/demo/timecards/exceptions")
+    apiGet<TimecardException[]>("/demo/timecards/exceptions"),
+    apiGet<TimeclockStatus>("/timeclock/status")
   ]);
-  const nextShift = shifts[0];
-  const exception = exceptions[0];
-  const firstName = session.displayName.split(" ").at(0) ?? session.displayName;
-
-  const cards = [
-    {
-      title: "Next Shift",
-      value: nextShift?.title ?? "No upcoming shifts",
-      detail: nextShift ? formatShiftDate(nextShift.startsAt) : "Nothing visible for this user",
-      icon: CalendarDays
-    },
-    {
-      title: "Pending Requests",
-      value: "No active swaps",
-      detail: "Start from a shift detail when ready",
-      icon: Clock3
-    },
-    {
-      title: "Timecard Exceptions",
-      value: exception?.type.replaceAll("_", " ") ?? "None",
-      detail: exception?.explanation ?? "No open exceptions",
-      icon: ShieldCheck
-    }
-  ];
+  const dashboard = buildEmployeeDashboard({ session, shifts, exceptions, clockStatus });
+  const icons = [CalendarDays, Clock3, ShieldCheck];
 
   return (
     <section className="page-stack">
-      <div>
+      <div className="page-hero">
         <p className="eyebrow">Employee Home</p>
-        <h1>Good morning, {firstName}</h1>
+        <h1>{dashboard.heading}</h1>
+        <p>{dashboard.summary}</p>
       </div>
       <div className="dashboard-grid">
-        {cards.map((card) => {
-          const Icon = card.icon;
+        {dashboard.cards.map((card, index) => {
+          const Icon = icons[index] ?? CalendarDays;
           return (
-            <article className="metric-card" key={card.title}>
+            <article className={`metric-card metric-card-${card.tone}`} key={card.title}>
               <Icon size={20} aria-hidden="true" />
               <p>{card.title}</p>
               <strong>{card.value}</strong>
@@ -61,10 +41,53 @@ export default async function HomePage() {
           );
         })}
       </div>
-      <section className="copilot-entry">
-        <label htmlFor="copilot-prompt">Ask PulseShift</label>
-        <input id="copilot-prompt" placeholder="Can I swap Friday night with Maya?" />
-      </section>
+      <div className="two-column">
+        <section className="panel">
+          <div className="section-heading">
+            <h2>Next shift</h2>
+            <span>{dashboard.nextShift ? "Ready for review" : "No shift selected"}</span>
+          </div>
+          {dashboard.nextShift ? (
+            <div className="detail-stack">
+              <strong className="detail-title">{dashboard.nextShift.title}</strong>
+              <span>Starts {formatDashboardDate(dashboard.nextShift.startsAt)}</span>
+              <span>Ends {formatDashboardDate(dashboard.nextShift.endsAt)}</span>
+              <div className="action-row">
+                <form action={dashboard.primaryAction === "CLOCK_IN" ? clockInAction : clockOutAction}>
+                  <input type="hidden" name="shiftId" value={dashboard.nextShift.id} />
+                  <button className="command-button" type="submit">
+                    <Clock3 size={16} aria-hidden="true" />
+                    {dashboard.primaryAction === "CLOCK_IN" ? "Clock in" : "Clock out"}
+                  </button>
+                </form>
+                <form action={createSwapAction}>
+                  <input type="hidden" name="originalShiftId" value={dashboard.nextShift.id} />
+                  <button className="command-button" type="submit">
+                    <RefreshCw size={16} aria-hidden="true" />
+                    Request swap
+                  </button>
+                </form>
+              </div>
+            </div>
+          ) : (
+            <p className="empty-state">No assigned shifts are visible for this account.</p>
+          )}
+        </section>
+
+        <section className="panel">
+          <div className="section-heading">
+            <h2>Ask PulseShift</h2>
+            <span>Self-service only</span>
+          </div>
+          <div className="detail-stack">
+            <span>Use Copilot for schedule questions, swap previews, and timecard guidance.</span>
+            <Link className="command-button" href="/app/copilot">
+              <Bot size={16} aria-hidden="true" />
+              Open Copilot
+            </Link>
+          </div>
+        </section>
+      </div>
     </section>
   );
 }

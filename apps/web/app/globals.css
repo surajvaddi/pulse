@@ -219,6 +219,18 @@ input {
   gap: 24px;
 }
 
+.page-hero {
+  display: grid;
+  gap: 8px;
+  max-width: 760px;
+}
+
+.page-hero p:last-child {
+  color: var(--muted);
+  line-height: 1.55;
+  margin: 0;
+}
+
 .eyebrow {
   color: var(--accent-strong);
   font-size: 13px;
@@ -262,6 +274,15 @@ h1 {
 
 .metric-card strong {
   font-size: 21px;
+}
+
+.metric-card-ready {
+  border-color: #99f6e4;
+}
+
+.metric-card-attention {
+  border-color: #fed7aa;
+  background: #fffaf5;
 }
 
 .copilot-entry {
