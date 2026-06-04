@@ -14,6 +14,7 @@ import {
 } from "../admin/admin-contracts";
 import { FacilityAdminService } from "../admin/facility.service";
 import { OrganizationAdminService } from "../admin/organization.service";
+import { UnitAdminService } from "../admin/unit.service";
 import {
   assertRolePageMatrixComplete,
   productionPages,
@@ -87,6 +88,39 @@ async function main() {
     timezone: "America/New_York",
     reason: "Cross org denial"
   }));
+  const unitAdmin = new UnitAdminService();
+  const initialUnits = await unitAdmin.list("org_pulseshift_demo", "fac_mercy_main");
+  assert.ok(initialUnits.some((unit) => unit.id === "unit_icu"));
+  const createdUnit = await unitAdmin.create("org_pulseshift_demo", {
+    facilityId: "fac_mercy_main",
+    name: "Pediatric ICU",
+    type: "PEDIATRICS",
+    managerUserIds: ["user_jordan_manager"],
+    reason: "Testing unit creation"
+  });
+  assert.equal(createdUnit.active, true);
+  const reassignedUnit = await unitAdmin.assignManagers(
+    "org_pulseshift_demo",
+    createdUnit.id,
+    ["user_admin", "user_jordan_manager"],
+    "Testing manager assignment"
+  );
+  assert.equal(reassignedUnit.managerUserIds.length, 2);
+  const updatedUnit = await unitAdmin.update("org_pulseshift_demo", createdUnit.id, {
+    facilityId: "fac_mercy_main",
+    name: "Pediatric ICU East",
+    type: "PEDIATRICS",
+    managerUserIds: ["user_admin"],
+    reason: "Testing unit update"
+  });
+  assert.equal(updatedUnit.name, "Pediatric ICU East");
+  const deactivatedUnit = await unitAdmin.deactivate(
+    "org_pulseshift_demo",
+    createdUnit.id,
+    "Testing unit deactivate"
+  );
+  assert.equal(deactivatedUnit.active, false);
+  assert.rejects(() => unitAdmin.assignManagers("org_other", createdUnit.id, [], "Cross org denial"));
 
   assert.deepEqual(listSqlReports(), [
     "get_staffing_gaps_report",
