@@ -14,7 +14,7 @@ export async function startDemoSessionAction(formData: FormData) {
     path: "/",
     maxAge: 60 * 60 * 8
   });
-  redirect("/app/home");
+  redirect("/app");
 }
 
 export async function logoutAction() {
@@ -31,7 +31,7 @@ export async function establishSupabaseSessionAction(accessToken: string) {
     path: "/",
     maxAge: 60 * 60
   });
-  redirect("/app/home");
+  redirect("/app");
 }
 
 export async function inviteWorkforceMemberAction(formData: FormData) {
