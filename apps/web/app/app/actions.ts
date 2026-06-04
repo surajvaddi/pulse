@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
-import { apiPost, type DemoUserId } from "@/lib/api";
+import { apiPatch, apiPost, type DemoUserId } from "@/lib/api";
 
 export async function claimOpenShiftAction(formData: FormData) {
   const shiftId = String(formData.get("shiftId"));
@@ -117,4 +117,57 @@ export async function resetDemoAction() {
   revalidatePath("/app/manager");
   revalidatePath("/app/admin/evals");
   revalidatePath("/app/admin/integrations");
+}
+
+export async function createAdminFacilityAction(formData: FormData) {
+  await apiPost("/admin/facilities", {
+    name: String(formData.get("name") ?? ""),
+    timezone: String(formData.get("timezone") ?? "America/New_York"),
+    reason: String(formData.get("reason") ?? "Created from admin UI")
+  }, "user_admin");
+  revalidatePath("/app/admin/facilities");
+}
+
+export async function createAdminUnitAction(formData: FormData) {
+  await apiPost("/admin/units", {
+    facilityId: String(formData.get("facilityId") ?? ""),
+    name: String(formData.get("name") ?? ""),
+    type: String(formData.get("type") ?? "OTHER"),
+    managerUserIds: String(formData.get("managerUserIds") ?? "")
+      .split(",")
+      .map((value) => value.trim())
+      .filter(Boolean),
+    reason: String(formData.get("reason") ?? "Created from admin UI")
+  }, "user_admin");
+  revalidatePath("/app/admin/units");
+}
+
+export async function suspendAdminUserAction(formData: FormData) {
+  const userId = String(formData.get("userId") ?? "");
+  await apiPatch(`/admin/users/${userId}/status`, {
+    status: "SUSPENDED",
+    reason: String(formData.get("reason") ?? "Suspended from admin UI")
+  }, "user_admin");
+  revalidatePath("/app/admin/users");
+}
+
+export async function assignAdminRoleAction(formData: FormData) {
+  await apiPost("/admin/roles", {
+    userId: String(formData.get("userId") ?? ""),
+    role: String(formData.get("role") ?? "EMPLOYEE"),
+    scope: { type: "UNIT", unitIds: [String(formData.get("unitId") ?? "unit_icu")] },
+    reason: String(formData.get("reason") ?? "Assigned from admin UI")
+  }, "user_admin");
+  revalidatePath("/app/admin/roles");
+  revalidatePath("/app/admin/users");
+}
+
+export async function createAdminInvitationAction(formData: FormData) {
+  await apiPost("/admin/invitations", {
+    email: String(formData.get("email") ?? ""),
+    role: String(formData.get("role") ?? "EMPLOYEE"),
+    scope: { type: "SELF" },
+    reason: String(formData.get("reason") ?? "Invited from admin UI")
+  }, "user_admin");
+  revalidatePath("/app/admin/invitations");
 }

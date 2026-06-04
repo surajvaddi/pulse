@@ -200,6 +200,50 @@ export type IntegrationImportPreview = {
   }>;
 };
 
+export type AdminOrganization = {
+  id: string;
+  name: string;
+  timezone: string;
+  status: string;
+};
+
+export type AdminFacility = {
+  id: string;
+  organizationId: string;
+  name: string;
+  timezone: string;
+  status: string;
+};
+
+export type AdminUnit = {
+  id: string;
+  facilityId: string;
+  name: string;
+  type: string;
+  managerUserIds: string[];
+  active: boolean;
+};
+
+export type AdminUser = {
+  id: string;
+  organizationId: string;
+  email: string;
+  displayName: string;
+  status: string;
+  roles: string[];
+};
+
+export type AdminInvitation = {
+  id: string;
+  organizationId: string;
+  email: string;
+  role: string;
+  scope: Record<string, unknown>;
+  status: string;
+  invitedByUserId: string;
+  acceptedByUserId?: string;
+};
+
 export type CopilotEvalTask = {
   id: string;
   title: string;
@@ -279,6 +323,28 @@ export async function apiPost<T>(
 ): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method: "POST",
+    headers: {
+      "content-type": "application/json",
+      ...(await authHeaders(userId))
+    },
+    body: JSON.stringify(body),
+    cache: "no-store"
+  });
+
+  if (!response.ok) {
+    throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+  }
+
+  return (await response.json()) as T;
+}
+
+export async function apiPatch<T>(
+  path: string,
+  body: Record<string, unknown> = {},
+  userId: DemoUserId = "user_priya"
+): Promise<T> {
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    method: "PATCH",
     headers: {
       "content-type": "application/json",
       ...(await authHeaders(userId))

@@ -30,6 +30,11 @@ const navItems = [
   { href: "/app/staff", label: "Staff", icon: Users },
   { href: "/app/manager", label: "Manager", icon: LayoutDashboard },
   { href: "/app/admin/audit", label: "Audit", icon: ListChecks },
+  { href: "/app/admin/users", label: "Users", icon: Users },
+  { href: "/app/admin/facilities", label: "Facilities", icon: LayoutDashboard },
+  { href: "/app/admin/units", label: "Units", icon: CalendarDays },
+  { href: "/app/admin/roles", label: "Roles", icon: ShieldAlert },
+  { href: "/app/admin/invitations", label: "Invites", icon: Bell },
   { href: "/app/admin/integrations", label: "Integrations", icon: Cable },
   { href: "/app/admin/evals", label: "Evals", icon: Gauge },
   { href: "/app/copilot", label: "Copilot", icon: Bot }
