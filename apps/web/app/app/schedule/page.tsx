@@ -1,4 +1,4 @@
-import { MessageSquare, RefreshCw, Send, CalendarPlus } from "lucide-react";
+import { CalendarCheck2, CalendarPlus, Clock3, MessageSquare, RefreshCw, Send } from "lucide-react";
 
 import { apiGet, type DemoShift } from "@/lib/api";
 import { buildScheduleViewModel } from "@/lib/schedule-view-model";
@@ -21,25 +21,52 @@ export default async function SchedulePage() {
 
   return (
     <section className="page-stack">
-      <div>
+      <div className="page-hero">
         <p className="eyebrow">Employee Schedule</p>
         <h1>Your upcoming shifts</h1>
+        <p>Scan assigned shifts by day, review shift details, and start swap or calendar actions.</p>
       </div>
 
-      <div className="two-column">
-        <section className="panel">
+      <div className="dashboard-grid">
+        <article className="metric-card metric-card-ready">
+          <CalendarCheck2 size={20} aria-hidden="true" />
+          <p>Assigned</p>
+          <strong>{schedule.summary.assignedCount}</strong>
+          <span>Published shifts in view</span>
+        </article>
+        <article className="metric-card">
+          <Clock3 size={20} aria-hidden="true" />
+          <p>Total hours</p>
+          <strong>{schedule.summary.totalHours}</strong>
+          <span>Across visible shifts</span>
+        </article>
+        <article className="metric-card metric-card-attention">
+          <RefreshCw size={20} aria-hidden="true" />
+          <p>Pending</p>
+          <strong>{schedule.summary.pendingCount}</strong>
+          <span>Swap or review state</span>
+        </article>
+      </div>
+
+      <div className="schedule-layout">
+        <section className="panel schedule-board">
           <div className="section-heading">
-            <h2>List View</h2>
+            <h2>Schedule</h2>
             <span>
-              {schedule.summary.assignedCount} assigned · {schedule.summary.totalHours} hours
+              {schedule.groups.length} days · {schedule.summary.openCount} open
             </span>
           </div>
-          <div className="item-list">
+          <div className="schedule-legend" aria-label="Schedule status legend">
+            <span className="status-pill status-assigned">Assigned</span>
+            <span className="status-pill status-open">Open</span>
+            <span className="status-pill status-pending">Pending</span>
+          </div>
+          <div className="schedule-days">
             {schedule.groups.map((group) => (
-              <div className="detail-stack" key={group.dateKey}>
-                <span className="status-pill">{group.label}</span>
+              <article className="schedule-day" key={group.dateKey}>
+                <h3>{group.label}</h3>
                 {group.shifts.map((shift) => (
-                  <article className="list-row" key={shift.id}>
+                  <div className={`schedule-shift schedule-shift-${shift.statusTone}`} key={shift.id}>
                     <div>
                       <strong>{shift.title}</strong>
                       <span>
@@ -47,9 +74,9 @@ export default async function SchedulePage() {
                       </span>
                     </div>
                     <span className={`status-pill status-${shift.statusTone}`}>{shift.status}</span>
-                  </article>
+                  </div>
                 ))}
-              </div>
+              </article>
             ))}
           </div>
         </section>
