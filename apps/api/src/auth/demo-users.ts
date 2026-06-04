@@ -1,4 +1,4 @@
-import type { AccountRole, PermissionGrant, Scope } from "@pulseshift/domain";
+import { RolePermissionMap, type AccountRole, type PermissionGrant, type Scope } from "@pulseshift/domain";
 
 export type DemoSession = {
   userId: string;
@@ -20,9 +20,18 @@ const icuScope: Scope = {
   unitIds: ["unit_icu", "unit_ed"]
 };
 
+const facilityScope: Scope = {
+  type: "FACILITY",
+  facilityIds: ["fac_mercy_main"]
+};
+
 const selfScope: Scope = {
   type: "SELF"
 };
+
+function grantsFor(role: AccountRole, scope: Scope): PermissionGrant[] {
+  return RolePermissionMap[role].map((permission) => ({ permission, scope }));
+}
 
 export const demoSessions: DemoSession[] = [
   {
@@ -32,17 +41,7 @@ export const demoSessions: DemoSession[] = [
     displayName: "Priya Raman",
     email: "priya.nurse@example.com",
     role: "EMPLOYEE",
-    grants: [
-      { permission: "schedule:read:self", scope: selfScope },
-      { permission: "shift:claim", scope: selfScope },
-      { permission: "shift:release", scope: selfScope },
-      { permission: "shift:swap:create", scope: selfScope },
-      { permission: "availability:read:self", scope: selfScope },
-      { permission: "availability:write:self", scope: selfScope },
-      { permission: "timecard:read:self", scope: selfScope },
-      { permission: "timecard:write:self", scope: selfScope },
-      { permission: "ai:use", scope: selfScope }
-    ]
+    grants: grantsFor("EMPLOYEE", selfScope)
   },
   {
     userId: "user_maya",
@@ -51,13 +50,7 @@ export const demoSessions: DemoSession[] = [
     displayName: "Maya Shah",
     email: "maya.shah@example.com",
     role: "EMPLOYEE",
-    grants: [
-      { permission: "schedule:read:self", scope: selfScope },
-      { permission: "shift:swap:create", scope: selfScope },
-      { permission: "timecard:read:self", scope: selfScope },
-      { permission: "timecard:write:self", scope: selfScope },
-      { permission: "ai:use", scope: selfScope }
-    ]
+    grants: grantsFor("EMPLOYEE", selfScope)
   },
   {
     userId: "user_jordan_manager",
@@ -66,14 +59,34 @@ export const demoSessions: DemoSession[] = [
     displayName: "Jordan Lee",
     email: "jordan.manager@example.com",
     role: "UNIT_MANAGER",
-    grants: [
-      { permission: "schedule:read:unit", scope: icuScope },
-      { permission: "shift:swap:approve", scope: icuScope },
-      { permission: "shift:assign", scope: icuScope },
-      { permission: "notification:send:unit", scope: icuScope },
-      { permission: "timecard:read:unit", scope: icuScope },
-      { permission: "ai:use", scope: icuScope }
-    ]
+    grants: grantsFor("UNIT_MANAGER", icuScope)
+  },
+  {
+    userId: "user_olivia_charge",
+    supabaseAuthId: "supabase_user_olivia_charge",
+    organizationId: "org_pulseshift_demo",
+    displayName: "Olivia Charge",
+    email: "olivia.charge@example.com",
+    role: "CHARGE_NURSE",
+    grants: grantsFor("CHARGE_NURSE", icuScope)
+  },
+  {
+    userId: "user_wendy_workforce",
+    supabaseAuthId: "supabase_user_wendy_workforce",
+    organizationId: "org_pulseshift_demo",
+    displayName: "Wendy Workforce",
+    email: "wendy.workforce@example.com",
+    role: "WORKFORCE_ADMIN",
+    grants: grantsFor("WORKFORCE_ADMIN", facilityScope)
+  },
+  {
+    userId: "user_felix_float",
+    supabaseAuthId: "supabase_user_felix_float",
+    organizationId: "org_pulseshift_demo",
+    displayName: "Felix Float",
+    email: "felix.float@example.com",
+    role: "FLOAT_POOL_COORDINATOR",
+    grants: grantsFor("FLOAT_POOL_COORDINATOR", facilityScope)
   },
   {
     userId: "user_payroll",
@@ -82,12 +95,52 @@ export const demoSessions: DemoSession[] = [
     displayName: "Sam Payroll",
     email: "payroll@example.com",
     role: "PAYROLL_ADMIN",
-    grants: [
-      { permission: "timecard:read:unit", scope: icuScope },
-      { permission: "timecard:resolve", scope: icuScope },
-      { permission: "payroll:export", scope: icuScope },
-      { permission: "ai:use", scope: icuScope }
-    ]
+    grants: grantsFor("PAYROLL_ADMIN", icuScope)
+  },
+  {
+    userId: "user_carmen_credentials",
+    supabaseAuthId: "supabase_user_carmen_credentials",
+    organizationId: "org_pulseshift_demo",
+    displayName: "Carmen Credentials",
+    email: "carmen.credentials@example.com",
+    role: "CREDENTIALING_ADMIN",
+    grants: grantsFor("CREDENTIALING_ADMIN", orgScope)
+  },
+  {
+    userId: "user_avery_auditor",
+    supabaseAuthId: "supabase_user_avery_auditor",
+    organizationId: "org_pulseshift_demo",
+    displayName: "Avery Auditor",
+    email: "avery.auditor@example.com",
+    role: "COMPLIANCE_AUDITOR",
+    grants: grantsFor("COMPLIANCE_AUDITOR", orgScope)
+  },
+  {
+    userId: "user_evan_exec",
+    supabaseAuthId: "supabase_user_evan_exec",
+    organizationId: "org_pulseshift_demo",
+    displayName: "Evan Executive",
+    email: "evan.executive@example.com",
+    role: "EXECUTIVE_VIEWER",
+    grants: grantsFor("EXECUTIVE_VIEWER", facilityScope)
+  },
+  {
+    userId: "user_aria_agency",
+    supabaseAuthId: "supabase_user_aria_agency",
+    organizationId: "org_pulseshift_demo",
+    displayName: "Aria Agency",
+    email: "aria.agency@example.com",
+    role: "EXTERNAL_AGENCY_ADMIN",
+    grants: grantsFor("EXTERNAL_AGENCY_ADMIN", selfScope)
+  },
+  {
+    userId: "user_owner",
+    supabaseAuthId: "supabase_user_owner",
+    organizationId: "org_pulseshift_demo",
+    displayName: "Morgan Owner",
+    email: "owner@example.com",
+    role: "ORGANIZATION_OWNER",
+    grants: grantsFor("ORGANIZATION_OWNER", orgScope)
   },
   {
     userId: "user_admin",
@@ -103,6 +156,15 @@ export const demoSessions: DemoSession[] = [
       { permission: "ai:admin", scope: orgScope },
       { permission: "ai:use", scope: orgScope }
     ]
+  },
+  {
+    userId: "user_ai_service",
+    supabaseAuthId: "supabase_user_ai_service",
+    organizationId: "org_pulseshift_demo",
+    displayName: "PulseShift AI Service",
+    email: "ai.service@example.com",
+    role: "AI_AGENT_SERVICE",
+    grants: grantsFor("AI_AGENT_SERVICE", orgScope)
   }
 ];
 

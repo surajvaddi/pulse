@@ -3,7 +3,9 @@ import type { CopilotEvalRun } from "@pulseshift/evals";
 
 export const demoEmployeeByUserId = new Map<string, string>([
   ["user_priya", "emp_priya"],
-  ["user_maya", "emp_maya"]
+  ["user_maya", "emp_maya"],
+  ["user_olivia_charge", "emp_olivia"],
+  ["user_aria_agency", "emp_aria"]
 ]);
 
 export type DemoShiftRecord = {
@@ -77,6 +79,71 @@ export const demoSchedules: DemoShiftRecord[] = [
     endsAt: "2026-06-01T11:00:00.000Z",
     status: "OPEN",
     riskFlags: ["STAFFING_GAP"]
+  },
+  {
+    id: "shift_priya_week2_icu_day",
+    employeeId: "emp_priya",
+    userId: "user_priya",
+    unitId: "unit_icu",
+    facilityId: "fac_mercy_main",
+    title: "ICU RN Day",
+    startsAt: "2026-06-08T11:00:00.000Z",
+    endsAt: "2026-06-08T23:00:00.000Z",
+    status: "ASSIGNED"
+  },
+  {
+    id: "shift_maya_week2_ed_evening",
+    employeeId: "emp_maya",
+    userId: "user_maya",
+    unitId: "unit_ed",
+    facilityId: "fac_mercy_main",
+    title: "ED RN Evening",
+    startsAt: "2026-06-09T19:00:00.000Z",
+    endsAt: "2026-06-10T07:00:00.000Z",
+    status: "ASSIGNED"
+  },
+  {
+    id: "shift_olivia_charge_icu",
+    employeeId: "emp_olivia",
+    userId: "user_olivia_charge",
+    unitId: "unit_icu",
+    facilityId: "fac_mercy_main",
+    title: "ICU Charge Nurse",
+    startsAt: "2026-06-10T11:00:00.000Z",
+    endsAt: "2026-06-10T23:00:00.000Z",
+    status: "PUBLISHED",
+    riskFlags: ["MANAGER_APPROVAL_REQUIRED"]
+  },
+  {
+    id: "shift_aria_agency_icu",
+    employeeId: "emp_aria",
+    userId: "user_aria_agency",
+    unitId: "unit_icu",
+    facilityId: "fac_mercy_main",
+    title: "Agency ICU RN",
+    startsAt: "2026-06-11T23:00:00.000Z",
+    endsAt: "2026-06-12T11:00:00.000Z",
+    status: "ASSIGNED"
+  },
+  {
+    id: "shift_open_ed_day_week2",
+    unitId: "unit_ed",
+    facilityId: "fac_mercy_main",
+    title: "ED RN Day Open",
+    startsAt: "2026-06-12T11:00:00.000Z",
+    endsAt: "2026-06-12T23:00:00.000Z",
+    status: "OPEN",
+    riskFlags: ["REST_PERIOD_RISK"]
+  },
+  {
+    id: "shift_open_icu_week3",
+    unitId: "unit_icu",
+    facilityId: "fac_mercy_main",
+    title: "ICU RN Weekend Open",
+    startsAt: "2026-06-20T23:00:00.000Z",
+    endsAt: "2026-06-21T11:00:00.000Z",
+    status: "OPEN",
+    riskFlags: ["OVERTIME_RISK", "STAFFING_GAP"]
   }
 ];
 
@@ -94,6 +161,26 @@ export const demoTimecardExceptions = [
     severity: "MEDIUM",
     status: "OPEN",
     explanation: "Priya clocked in 17 minutes after the scheduled ICU night shift start."
+  },
+  {
+    id: "timecard_exception_missed_break_maya",
+    employeeId: "emp_maya",
+    userId: "user_maya",
+    unitId: "unit_ed",
+    type: "MISSED_BREAK",
+    severity: "LOW",
+    status: "OPEN",
+    explanation: "Maya has no recorded break during a 12-hour ED evening shift."
+  },
+  {
+    id: "timecard_exception_agency_unscheduled",
+    employeeId: "emp_aria",
+    userId: "user_aria_agency",
+    unitId: "unit_icu",
+    type: "UNSCHEDULED_CLOCK_IN",
+    severity: "HIGH",
+    status: "OPEN",
+    explanation: "Agency worker clocked in before the imported assignment was confirmed."
   }
 ];
 
@@ -128,6 +215,26 @@ export const demoTimecardEvents: DemoTimecardEventRecord[] = [
     occurredAt: "2026-05-30T11:03:00.000Z",
     source: "MOBILE",
     status: "NORMAL"
+  },
+  {
+    id: "timecard_event_maya_clock_in",
+    employeeId: "emp_maya",
+    userId: "user_maya",
+    shiftId: "shift_maya_week2_ed_evening",
+    eventType: "CLOCK_IN",
+    occurredAt: "2026-06-09T19:02:00.000Z",
+    source: "BADGE",
+    status: "NORMAL"
+  },
+  {
+    id: "timecard_event_aria_unscheduled",
+    employeeId: "emp_aria",
+    userId: "user_aria_agency",
+    shiftId: "shift_aria_agency_icu",
+    eventType: "CLOCK_IN",
+    occurredAt: "2026-06-11T22:41:00.000Z",
+    source: "KIOSK",
+    status: "FLAGGED"
   }
 ];
 
@@ -152,6 +259,20 @@ export const demoCredentials = [
     certification: "ACLS",
     status: "EXPIRING_SOON",
     expiresAt: "2026-06-15T00:00:00.000Z"
+  },
+  {
+    employeeId: "emp_aria",
+    employeeName: "Aria Agency",
+    certification: "Agency Contract",
+    status: "VERIFIED",
+    expiresAt: "2026-12-31T00:00:00.000Z"
+  },
+  {
+    employeeId: "emp_olivia",
+    employeeName: "Olivia Charge",
+    certification: "Charge Nurse Authorization",
+    status: "VERIFIED",
+    expiresAt: "2027-04-01T00:00:00.000Z"
   }
 ];
 
@@ -184,6 +305,26 @@ export const demoStaffDirectory = [
     certifications: ["BLS", "ACLS", "ICU Qualified"],
     availability: "Available for open night shift",
     overtimeRisk: "LOW"
+  },
+  {
+    employeeId: "emp_olivia",
+    userId: "user_olivia_charge",
+    name: "Olivia Charge",
+    role: "Charge RN",
+    unitId: "unit_icu",
+    certifications: ["BLS", "ACLS", "Charge Nurse Authorization"],
+    availability: "Charge coverage Wednesday day",
+    overtimeRisk: "LOW"
+  },
+  {
+    employeeId: "emp_aria",
+    userId: "user_aria_agency",
+    name: "Aria Agency",
+    role: "Agency RN",
+    unitId: "unit_icu",
+    certifications: ["BLS", "Agency Contract"],
+    availability: "Agency assignment Thursday night",
+    overtimeRisk: "MEDIUM"
   }
 ];
 
@@ -281,6 +422,38 @@ export const demoAuditLogs: DemoAuditLogRecord[] = [
     objectType: "Organization",
     objectId: "org_pulseshift_demo",
     createdAt: "2026-05-27T00:00:00.000Z"
+  },
+  {
+    id: "audit_seed_schedule_publish",
+    organizationId: "org_pulseshift_demo",
+    actorUserId: "user_wendy_workforce",
+    actorType: "USER",
+    action: "schedule.publish.week_two",
+    objectType: "Schedule",
+    objectId: "fac_mercy_main_week_2026_06_08",
+    reason: "Seeded multi-week sandbox schedule",
+    createdAt: "2026-06-01T14:00:00.000Z"
+  },
+  {
+    id: "audit_seed_credential_warning",
+    organizationId: "org_pulseshift_demo",
+    actorUserId: "user_carmen_credentials",
+    actorType: "USER",
+    action: "credential.review.expiring",
+    objectType: "EmployeeCertification",
+    objectId: "emp_nina_ACLS",
+    reason: "Credential admin demo warning",
+    createdAt: "2026-06-02T15:30:00.000Z"
+  },
+  {
+    id: "audit_seed_integration_attention",
+    organizationId: "org_pulseshift_demo",
+    actorType: "INTEGRATION",
+    action: "integration.sync_attention",
+    objectType: "IntegrationConnection",
+    objectId: "integration_payroll_csv",
+    reason: "Payroll CSV export needs configuration",
+    createdAt: "2026-06-03T08:00:00.000Z"
   }
 ];
 
@@ -334,6 +507,55 @@ export const demoNotifications: Array<{
     type: "TIMECARD_EXCEPTION",
     status: "QUEUED",
     payload: { exceptionId: "timecard_exception_late_priya" }
+  },
+  {
+    id: "notification_charge_coverage",
+    recipientUserId: "user_olivia_charge",
+    type: "UNIT_COVERAGE",
+    status: "QUEUED",
+    payload: { unitId: "unit_icu", shiftId: "shift_open_icu_week3" }
+  },
+  {
+    id: "notification_workforce_publish",
+    recipientUserId: "user_wendy_workforce",
+    type: "SCHEDULE_PUBLISH_READY",
+    status: "QUEUED",
+    payload: { facilityId: "fac_mercy_main" }
+  },
+  {
+    id: "notification_float_gap",
+    recipientUserId: "user_felix_float",
+    type: "FLOAT_POOL_CANDIDATES",
+    status: "QUEUED",
+    payload: { gapId: "gap_icu_night_rn" }
+  },
+  {
+    id: "notification_credential_expiring",
+    recipientUserId: "user_carmen_credentials",
+    type: "CREDENTIAL_EXPIRING",
+    status: "QUEUED",
+    payload: { employeeId: "emp_nina" }
+  },
+  {
+    id: "notification_audit_review",
+    recipientUserId: "user_avery_auditor",
+    type: "AUDIT_REVIEW",
+    status: "QUEUED",
+    payload: { auditId: "audit_seed_integration_attention" }
+  },
+  {
+    id: "notification_exec_summary",
+    recipientUserId: "user_evan_exec",
+    type: "WORKFORCE_SUMMARY",
+    status: "QUEUED",
+    payload: { facilityId: "fac_mercy_main" }
+  },
+  {
+    id: "notification_agency_open_shift",
+    recipientUserId: "user_aria_agency",
+    type: "AGENCY_OPEN_SHIFT",
+    status: "QUEUED",
+    payload: { shiftId: "shift_open_ed_day_week2" }
   }
 ];
 
@@ -355,7 +577,7 @@ export function resetDemoWorkflowState() {
   demoApprovals.splice(0, demoApprovals.length);
   demoAIToolCalls.splice(0, demoAIToolCalls.length);
   demoCopilotEvalRuns.splice(0, demoCopilotEvalRuns.length);
-  demoAuditLogs.splice(1, demoAuditLogs.length - 1);
+  demoAuditLogs.splice(4, demoAuditLogs.length - 4);
   demoIntegrationSyncRuns.splice(1, demoIntegrationSyncRuns.length - 1);
   demoTimecardEvents.splice(0, demoTimecardEvents.length, {
     id: "timecard_event_priya_late_clock_in",
@@ -391,10 +613,21 @@ export function resetDemoWorkflowState() {
     openShift.status = "OPEN";
   }
 
-  const timecardException = demoTimecardExceptions.find(
-    (exception) => exception.id === "timecard_exception_late_priya"
-  );
-  if (timecardException) {
-    timecardException.status = "OPEN";
+  const weekTwoOpenShift = demoSchedules.find((shift) => shift.id === "shift_open_ed_day_week2");
+  if (weekTwoOpenShift) {
+    delete weekTwoOpenShift.employeeId;
+    delete weekTwoOpenShift.userId;
+    weekTwoOpenShift.status = "OPEN";
+  }
+
+  const weekThreeOpenShift = demoSchedules.find((shift) => shift.id === "shift_open_icu_week3");
+  if (weekThreeOpenShift) {
+    delete weekThreeOpenShift.employeeId;
+    delete weekThreeOpenShift.userId;
+    weekThreeOpenShift.status = "OPEN";
+  }
+
+  for (const exception of demoTimecardExceptions) {
+    exception.status = "OPEN";
   }
 }

@@ -75,6 +75,14 @@ export const adminUnits: UnitRecord[] = [
 
 export const adminUsers: AdminUserStateRecord[] = [
   {
+    id: "user_owner",
+    organizationId: "org_pulseshift_demo",
+    email: "owner@example.com",
+    displayName: "Morgan Owner",
+    status: "ACTIVE",
+    roles: ["ORGANIZATION_OWNER"]
+  },
+  {
     id: "user_admin",
     organizationId: "org_pulseshift_demo",
     email: "admin@example.com",
@@ -91,12 +99,92 @@ export const adminUsers: AdminUserStateRecord[] = [
     roles: ["UNIT_MANAGER"]
   },
   {
+    id: "user_olivia_charge",
+    organizationId: "org_pulseshift_demo",
+    email: "olivia.charge@example.com",
+    displayName: "Olivia Charge",
+    status: "ACTIVE",
+    roles: ["CHARGE_NURSE"]
+  },
+  {
+    id: "user_wendy_workforce",
+    organizationId: "org_pulseshift_demo",
+    email: "wendy.workforce@example.com",
+    displayName: "Wendy Workforce",
+    status: "ACTIVE",
+    roles: ["WORKFORCE_ADMIN"]
+  },
+  {
+    id: "user_felix_float",
+    organizationId: "org_pulseshift_demo",
+    email: "felix.float@example.com",
+    displayName: "Felix Float",
+    status: "ACTIVE",
+    roles: ["FLOAT_POOL_COORDINATOR"]
+  },
+  {
+    id: "user_payroll",
+    organizationId: "org_pulseshift_demo",
+    email: "payroll@example.com",
+    displayName: "Sam Payroll",
+    status: "ACTIVE",
+    roles: ["PAYROLL_ADMIN"]
+  },
+  {
+    id: "user_carmen_credentials",
+    organizationId: "org_pulseshift_demo",
+    email: "carmen.credentials@example.com",
+    displayName: "Carmen Credentials",
+    status: "ACTIVE",
+    roles: ["CREDENTIALING_ADMIN"]
+  },
+  {
+    id: "user_avery_auditor",
+    organizationId: "org_pulseshift_demo",
+    email: "avery.auditor@example.com",
+    displayName: "Avery Auditor",
+    status: "ACTIVE",
+    roles: ["COMPLIANCE_AUDITOR"]
+  },
+  {
+    id: "user_evan_exec",
+    organizationId: "org_pulseshift_demo",
+    email: "evan.executive@example.com",
+    displayName: "Evan Executive",
+    status: "ACTIVE",
+    roles: ["EXECUTIVE_VIEWER"]
+  },
+  {
     id: "user_priya",
     organizationId: "org_pulseshift_demo",
     email: "priya.nurse@example.com",
     displayName: "Priya Raman",
     status: "ACTIVE",
     roles: ["EMPLOYEE"]
+  },
+  {
+    id: "user_maya",
+    organizationId: "org_pulseshift_demo",
+    email: "maya.shah@example.com",
+    displayName: "Maya Shah",
+    status: "ACTIVE",
+    roles: ["EMPLOYEE"]
+  },
+  {
+    id: "user_aria_agency",
+    organizationId: "org_pulseshift_demo",
+    email: "aria.agency@example.com",
+    displayName: "Aria Agency",
+    status: "ACTIVE",
+    roles: ["EXTERNAL_AGENCY_ADMIN"]
+  },
+  {
+    id: "user_ai_service",
+    organizationId: "org_pulseshift_demo",
+    email: "ai.service@example.com",
+    displayName: "PulseShift AI Service",
+    status: "ACTIVE",
+    roles: ["AI_AGENT_SERVICE"]
   }
 ];
 
