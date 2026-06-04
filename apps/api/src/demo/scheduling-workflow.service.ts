@@ -26,6 +26,13 @@ export class SchedulingWorkflowService {
     @Inject(AuditService) private readonly auditLogs: AuditService
   ) {}
 
+  async listOpenShifts(session: DemoSession) {
+    this.assertPermission(session, "shift:claim", { type: "SELF", userId: session.userId });
+    return this.schedules.repository().findOpenShifts({
+      organizationId: session.organizationId
+    });
+  }
+
   async claimOpenShift(session: DemoSession, shiftId: string) {
     const shift = await this.schedules.repository().findShift({
       organizationId: session.organizationId,

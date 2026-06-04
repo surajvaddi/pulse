@@ -4,8 +4,7 @@ import { apiGet, type DemoShift } from "@/lib/api";
 import { claimOpenShiftAction } from "../actions";
 
 export default async function OpenShiftsPage() {
-  const shifts = await apiGet<DemoShift[]>("/demo/schedule/unit/unit_icu", "user_jordan_manager");
-  const openShifts = shifts.filter((shift) => shift.status === "OPEN");
+  const openShifts = await apiGet<DemoShift[]>("/workflows/open-shifts");
 
   return (
     <section className="page-stack">

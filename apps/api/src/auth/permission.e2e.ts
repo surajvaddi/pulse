@@ -330,6 +330,12 @@ async function main() {
     .set("x-demo-user-id", "user_priya")
     .expect(403);
 
+  const employeeOpenShifts = await request(server)
+    .get("/workflows/open-shifts")
+    .set("x-demo-user-id", "user_priya")
+    .expect(200);
+  assert.equal(employeeOpenShifts.body[0].id, "shift_open_icu_night");
+
   const managerUnitSchedule = await request(server)
     .get("/demo/schedule/unit/unit_icu")
     .set("x-demo-user-id", "user_jordan_manager")

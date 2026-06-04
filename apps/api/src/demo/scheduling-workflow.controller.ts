@@ -13,6 +13,11 @@ export class SchedulingWorkflowController {
     return this.workflows.listSwaps(session);
   }
 
+  @Get("open-shifts")
+  listOpenShifts(@CurrentSession() session: DemoSession) {
+    return this.workflows.listOpenShifts(session);
+  }
+
   @Post("open-shifts/:shiftId/claim")
   claimOpenShift(@CurrentSession() session: DemoSession, @Param("shiftId") shiftId: string) {
     return this.workflows.claimOpenShift(session, shiftId);
