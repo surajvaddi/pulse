@@ -1282,6 +1282,48 @@ Use this protocol for every remaining production step:
    - Build: focused fixes only.
    - Verify: responsive manual checks, accessibility checks, web lint/build.
 
+## Phase 16B Goal Mode Steps: Full Role Demo Coverage
+
+1. `Demo: Expand role sandbox data`
+   - Purpose: Give every production role realistic data to view during demos.
+   - Build: multi-week shifts, open shifts, staff, credentials, timecard exceptions, notifications, audit records, integration status, and role personas.
+   - Verify: API typecheck/lint/e2e, demo flow, and assertions that each role has sample data in scope.
+
+2. `Access: Add role persona session coverage`
+   - Purpose: Make every production role selectable and permission-scoped in demo mode.
+   - Build: demo auth sessions for organization owner, workforce admin, charge nurse, float pool coordinator, credentialing admin, compliance auditor, executive viewer, external agency admin, and AI service handling.
+   - Verify: permission e2e tests for allowed and forbidden route families by role.
+
+3. `Views: Build role landing and dashboard coverage`
+   - Purpose: Ensure every role lands on a meaningful page rather than a generic employee/admin screen.
+   - Build: role-specific dashboard view models and route rendering for charge nurse, workforce admin, float coordinator, credentialing admin, auditor, executive viewer, external agency admin, organization owner, and AI service/blocked service identity behavior.
+   - Verify: web typecheck/lint, dashboard model assertions, and landing-route assertions for every role.
+
+4. `Schedule: Add role-specific schedule modes`
+   - Purpose: Make schedule views clear for employees, managers, charge nurses, workforce admins, float coordinators, executives, and admins.
+   - Build: employee personal calendar, unit board, facility planner, org overview, open-shift/agency view, read-only executive summary, status/risk legends, and role-appropriate actions.
+   - Verify: schedule model tests by role, API scope tests, and web smoke assertions for no cross-scope leakage.
+
+5. `Operations: Complete secondary workflow pages`
+   - Purpose: Make open shifts, swaps, staffing, staff, credentials, audit, evals, integrations, notifications, and copilot useful or explicitly unavailable for every role.
+   - Build: role-aware empty/read-only/action states, concise page explanations, and links to next workflow steps.
+   - Verify: page contract completeness tests, web assertions, API permission tests, and demo flow.
+
+6. `Demo: Add multi-week sandbox scenarios`
+   - Purpose: Provide a richer demo timeline across several weeks.
+   - Build: assigned, open, pending, blocked, credential-risk, overtime-risk, payroll-exception, staffing-gap, integration, audit, notification, and eval scenarios.
+   - Verify: deterministic reset assertions and sandbox data tests.
+
+7. `Quality: Add role walkthrough tests`
+   - Purpose: Prove every demo role can sign in, land somewhere meaningful, see role-appropriate navigation, and access sample data.
+   - Build: API/web role walkthrough assertions and route matrix checks.
+   - Verify: walkthrough suite, web typecheck/lint/test, API typecheck/lint/test, demo flow.
+
+8. `QA: Run final role coverage gate`
+   - Purpose: Confirm Phase 16B is ready for hands-on demos.
+   - Build: only fixes discovered by the final gate.
+   - Verify: web production build, API/web typecheck, API/web lint, API/web tests, demo flow, clean working tree.
+
 ## Phase 17 Goal Mode Steps: Notifications, Realtime, And Communication Preferences
 
 1. `Notifications: Define preference schema`

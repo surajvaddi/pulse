@@ -137,6 +137,8 @@ Phase 15: Build full SaaS administration for organizations, facilities, units, u
 
 Phase 16: Redesign the operational UI around role-specific workflows for employees, managers, payroll/admin users, and system administrators, with concise explanations for every workflow state, policy flag, AI action, approval, and integration status.
 
+Phase 16B: Complete full role-view coverage for every production role with sandbox data, role-specific landing pages, scoped schedule modes, secondary workflow pages, walkthrough assertions, and final responsive/integration QA so every seeded role can be demoed end to end.
+
 Phase 17: Persist notifications, add communication preferences, and introduce realtime or near-realtime updates for approvals, swaps, schedule changes, staffing gaps, and notification reads.
 
 Phase 18: Integrate a real OpenAI-compatible LLM gateway behind the existing tool permission, policy, preview, approval, audit, and evaluation boundaries.
