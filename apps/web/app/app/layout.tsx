@@ -18,33 +18,50 @@ import {
   Users
 } from "lucide-react";
 
-import { demoAuthEnabled, demoUsers } from "@/lib/api";
+import { startDemoSessionAction } from "@/app/account-actions";
+import { apiGet, demoAuthEnabled, demoUsers, type DemoUserId, type SessionSummary } from "@/lib/api";
+import {
+  navigationForSession,
+  primaryMobileNavigation,
+  type NavigationIconKey,
+  type NavigationItem
+} from "@/lib/navigation";
 
-const navItems = [
-  { href: "/app/home", label: "Home", icon: Home },
-  { href: "/app/schedule", label: "Schedule", icon: CalendarDays },
-  { href: "/app/open-shifts", label: "Open Shifts", icon: Clock3 },
-  { href: "/app/swaps", label: "Swaps", icon: Users },
-  { href: "/app/timecards", label: "Timecards", icon: ReceiptText },
-  { href: "/app/staffing-gaps", label: "Staffing", icon: ShieldAlert },
-  { href: "/app/staff", label: "Staff", icon: Users },
-  { href: "/app/manager", label: "Manager", icon: LayoutDashboard },
-  { href: "/app/admin/audit", label: "Audit", icon: ListChecks },
-  { href: "/app/admin/users", label: "Users", icon: Users },
-  { href: "/app/admin/facilities", label: "Facilities", icon: LayoutDashboard },
-  { href: "/app/admin/units", label: "Units", icon: CalendarDays },
-  { href: "/app/admin/roles", label: "Roles", icon: ShieldAlert },
-  { href: "/app/admin/invitations", label: "Invites", icon: Bell },
-  { href: "/app/admin/integrations", label: "Integrations", icon: Cable },
-  { href: "/app/admin/evals", label: "Evals", icon: Gauge },
-  { href: "/app/copilot", label: "Copilot", icon: Bot }
-];
+const navIcons: Record<NavigationIconKey, typeof Home> = {
+  bell: Bell,
+  bot: Bot,
+  calendar: CalendarDays,
+  clock: Clock3,
+  cable: Cable,
+  gauge: Gauge,
+  home: Home,
+  dashboard: LayoutDashboard,
+  list: ListChecks,
+  receipt: ReceiptText,
+  shield: ShieldAlert,
+  users: Users
+};
+
+function NavLink({ item, className }: { item: NavigationItem; className: string }) {
+  const Icon = navIcons[item.icon];
+  return (
+    <Link href={item.href} className={className}>
+      <Icon size={18} aria-hidden="true" />
+      <span>{item.label}</span>
+    </Link>
+  );
+}
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
-  const hasSupabaseSession = Boolean((await cookies()).get("ps_access_token")?.value);
+  const cookieStore = await cookies();
+  const hasSupabaseSession = Boolean(cookieStore.get("ps_access_token")?.value);
   if (!demoAuthEnabled && !hasSupabaseSession) {
     redirect("/login");
   }
+  const session = await apiGet<SessionSummary>("/auth/me");
+  const navItems = navigationForSession(session);
+  const mobileNavItems = primaryMobileNavigation(navItems);
+  const currentDemoUserId = (cookieStore.get("ps_demo_user_id")?.value ?? session.userId) as DemoUserId;
 
   return (
     <div className="app-shell">
@@ -53,15 +70,9 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
           PulseShift
         </Link>
         <nav className="nav-list">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            return (
-              <Link key={item.href} href={item.href} className="nav-link">
-                <Icon size={18} aria-hidden="true" />
-                <span>{item.label}</span>
-              </Link>
-            );
-          })}
+          {navItems.map((item) => (
+            <NavLink key={item.href} item={item} className="nav-link" />
+          ))}
         </nav>
       </aside>
 
@@ -85,14 +96,23 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
             <Link className="icon-button" aria-label="Sign out" href="/logout">
               <LogOut size={18} />
             </Link>
+            <div className="session-summary" aria-label="Current account">
+              <strong>{session.displayName}</strong>
+              <span>{session.role.replaceAll("_", " ").toLowerCase()}</span>
+            </div>
             {demoAuthEnabled ? (
-              <select aria-label="Demo user" defaultValue="user_priya">
-                {demoUsers.map((user) => (
-                  <option key={user.id} value={user.id}>
-                    {user.label} - {user.role}
-                  </option>
-                ))}
-              </select>
+              <form className="demo-switcher" action={startDemoSessionAction}>
+                <select aria-label="Demo user" name="userId" defaultValue={currentDemoUserId}>
+                  {demoUsers.map((user) => (
+                    <option key={user.id} value={user.id}>
+                      {user.label} - {user.role}
+                    </option>
+                  ))}
+                </select>
+                <button className="command-button" type="submit">
+                  Switch
+                </button>
+              </form>
             ) : null}
           </div>
         </header>
@@ -101,15 +121,9 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
       </div>
 
       <nav className="mobile-nav" aria-label="Mobile navigation">
-        {navItems.slice(0, 5).map((item) => {
-          const Icon = item.icon;
-          return (
-            <Link key={item.href} href={item.href} className="mobile-link">
-              <Icon size={19} aria-hidden="true" />
-              <span>{item.label}</span>
-            </Link>
-          );
-        })}
+        {mobileNavItems.map((item) => (
+          <NavLink key={item.href} item={item} className="mobile-link" />
+        ))}
       </nav>
     </div>
   );

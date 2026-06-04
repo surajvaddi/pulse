@@ -289,7 +289,8 @@ export const demoUsers: Array<{ id: DemoUserId; label: string; role: string }> =
 
 async function authHeaders(userId: DemoUserId) {
   const { cookies } = await import("next/headers");
-  const accessToken = (await cookies()).get("ps_access_token")?.value;
+  const cookieStore = await cookies();
+  const accessToken = cookieStore.get("ps_access_token")?.value;
   if (accessToken) {
     return {
       authorization: `Bearer ${accessToken}`
@@ -298,8 +299,9 @@ async function authHeaders(userId: DemoUserId) {
   if (!demoAuthEnabled) {
     return {};
   }
+  const demoUserId = (cookieStore.get("ps_demo_user_id")?.value ?? userId) as DemoUserId;
   return {
-    "x-demo-user-id": userId
+    "x-demo-user-id": demoUserId
   };
 }
 

@@ -7,7 +7,14 @@ import { apiPost, apiPostWithAccessToken, type DemoUserId, type Invitation } fro
 
 export async function startDemoSessionAction(formData: FormData) {
   const userId = String(formData.get("userId") ?? "user_priya");
-  redirect(`/app/home?user=${encodeURIComponent(userId)}`);
+  (await cookies()).set("ps_demo_user_id", userId, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: 60 * 60 * 8
+  });
+  redirect("/app/home");
 }
 
 export async function logoutAction() {
