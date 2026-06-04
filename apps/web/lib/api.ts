@@ -5,8 +5,17 @@ export type DemoUserId =
   | "user_priya"
   | "user_maya"
   | "user_jordan_manager"
+  | "user_olivia_charge"
+  | "user_wendy_workforce"
+  | "user_felix_float"
   | "user_payroll"
-  | "user_admin";
+  | "user_carmen_credentials"
+  | "user_avery_auditor"
+  | "user_evan_exec"
+  | "user_aria_agency"
+  | "user_owner"
+  | "user_admin"
+  | "user_ai_service";
 
 export type SessionSummary = {
   userId: DemoUserId;
@@ -283,8 +292,17 @@ export const demoUsers: Array<{ id: DemoUserId; label: string; role: string }> =
   { id: "user_priya", label: "Priya Raman", role: "Employee" },
   { id: "user_maya", label: "Maya Shah", role: "Employee" },
   { id: "user_jordan_manager", label: "Jordan Lee", role: "Unit Manager" },
+  { id: "user_olivia_charge", label: "Olivia Charge", role: "Charge Nurse" },
+  { id: "user_wendy_workforce", label: "Wendy Workforce", role: "Workforce Admin" },
+  { id: "user_felix_float", label: "Felix Float", role: "Float Pool" },
   { id: "user_payroll", label: "Sam Payroll", role: "Payroll" },
-  { id: "user_admin", label: "Alex Admin", role: "Admin" }
+  { id: "user_carmen_credentials", label: "Carmen Credentials", role: "Credentialing" },
+  { id: "user_avery_auditor", label: "Avery Auditor", role: "Auditor" },
+  { id: "user_evan_exec", label: "Evan Executive", role: "Executive" },
+  { id: "user_aria_agency", label: "Aria Agency", role: "Agency Admin" },
+  { id: "user_owner", label: "Morgan Owner", role: "Owner" },
+  { id: "user_admin", label: "Alex Admin", role: "System Admin" },
+  { id: "user_ai_service", label: "PulseShift AI Service", role: "Service" }
 ];
 
 async function authHeaders(userId: DemoUserId) {

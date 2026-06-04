@@ -318,6 +318,31 @@ async function main() {
   });
   assert.throws(() => auditReport?.validateParams({ statement: "select * from audit_logs" }));
 
+  const demoUserIdsByRole = {
+    ORGANIZATION_OWNER: "user_owner",
+    SYSTEM_ADMIN: "user_admin",
+    WORKFORCE_ADMIN: "user_wendy_workforce",
+    UNIT_MANAGER: "user_jordan_manager",
+    CHARGE_NURSE: "user_olivia_charge",
+    EMPLOYEE: "user_priya",
+    FLOAT_POOL_COORDINATOR: "user_felix_float",
+    PAYROLL_ADMIN: "user_payroll",
+    CREDENTIALING_ADMIN: "user_carmen_credentials",
+    COMPLIANCE_AUDITOR: "user_avery_auditor",
+    EXECUTIVE_VIEWER: "user_evan_exec",
+    EXTERNAL_AGENCY_ADMIN: "user_aria_agency",
+    AI_AGENT_SERVICE: "user_ai_service"
+  } satisfies Record<(typeof productionRoles)[number], string>;
+
+  for (const role of productionRoles) {
+    const sessionResponse = await request(server)
+      .get("/auth/me")
+      .set("x-demo-user-id", demoUserIdsByRole[role])
+      .expect(200);
+    assert.equal(sessionResponse.body.role, role);
+    assert.ok(sessionResponse.body.permissions.length > 0);
+  }
+
   const employeeSchedule = await request(server)
     .get("/demo/schedule/me")
     .set("x-demo-user-id", "user_priya")
