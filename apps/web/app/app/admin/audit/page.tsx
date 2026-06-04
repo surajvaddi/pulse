@@ -1,12 +1,14 @@
 import { RotateCcw } from "lucide-react";
 
 import { resetDemoAction } from "@/app/app/actions";
-import { apiGet, type AIToolCall, type AuditLog } from "@/lib/api";
+import { apiGet, type AIToolCall, type AuditLog, type SessionSummary } from "@/lib/api";
 
 export default async function AdminAuditPage() {
+  const session = await apiGet<SessionSummary>("/auth/me");
+  const canReadAiToolCalls = session.permissions.includes("ai:admin");
   const [auditLogs, toolCalls] = await Promise.all([
-    apiGet<AuditLog[]>("/demo/audit", "user_admin"),
-    apiGet<AIToolCall[]>("/demo/ai-tool-calls", "user_admin")
+    apiGet<AuditLog[]>("/demo/audit"),
+    canReadAiToolCalls ? apiGet<AIToolCall[]>("/demo/ai-tool-calls") : Promise.resolve([])
   ]);
   const canResetDemo =
     process.env.APP_ENV !== "production" &&
@@ -15,9 +17,10 @@ export default async function AdminAuditPage() {
 
   return (
     <section className="page-stack">
-      <div>
+      <div className="page-hero">
         <p className="eyebrow">Admin review</p>
         <h1>Audit and AI tool calls</h1>
+        <p>{session.displayName} can review audit evidence available to this role.</p>
       </div>
 
       <section className="dashboard-grid">

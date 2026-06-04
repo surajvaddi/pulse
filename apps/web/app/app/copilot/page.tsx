@@ -1,4 +1,4 @@
-import { apiPost, type CopilotResponse } from "@/lib/api";
+import { apiGet, apiPost, type CopilotResponse, type SessionSummary } from "@/lib/api";
 import { askCopilotAction } from "../actions";
 
 const promptGroups = [
@@ -23,19 +23,21 @@ export default async function CopilotPage({
 }) {
   const params = await searchParams;
   const lastPrompt = params?.last ? decodeURIComponent(params.last) : "When do I work next?";
+  const session = await apiGet<SessionSummary>("/auth/me");
   const response = await apiPost<CopilotResponse>("/copilot/messages", { message: lastPrompt });
 
   return (
     <section className="page-stack">
-      <div>
+      <div className="page-hero">
         <p className="eyebrow">Copilot</p>
         <h1>Permission-aware workforce questions</h1>
+        <p>Answers and tools are constrained by {session.displayName}'s current role and scope.</p>
       </div>
       <section className="copilot-entry">
         <label htmlFor="copilot-full">Ask PulseShift</label>
         <form action={askCopilotAction} className="prompt-form">
           <input id="copilot-full" name="message" defaultValue={lastPrompt} />
-          <input type="hidden" name="userId" value="user_priya" />
+          <input type="hidden" name="userId" value={session.userId} />
           <button className="command-button" type="submit">
             Ask
           </button>
