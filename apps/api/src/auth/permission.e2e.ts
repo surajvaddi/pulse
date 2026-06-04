@@ -12,6 +12,7 @@ import {
   UserStatusMutationSchema,
   assertAdminContractsSafe
 } from "../admin/admin-contracts";
+import { OrganizationAdminService } from "../admin/organization.service";
 import {
   assertRolePageMatrixComplete,
   productionPages,
@@ -50,6 +51,15 @@ async function main() {
   assert.equal(UserStatusMutationSchema.parse({ status: "SUSPENDED", reason: "Policy review" }).status, "SUSPENDED");
   assert.throws(() => RoleAssignmentSchema.parse({ userId: "user", role: "EMPLOYEE", permissions: [] }));
   assert.throws(() => InvitationMutationSchema.parse({ email: "bad", role: "EMPLOYEE", scope: { type: "SELF" }, reason: "Invite" }));
+  const organizationAdmin = new OrganizationAdminService();
+  const organizationSummary = await organizationAdmin.getSummary("org_pulseshift_demo");
+  assert.equal(organizationSummary.name, "PulseShift Demo Health");
+  const renamedOrganization = await organizationAdmin.updateSettings("org_pulseshift_demo", {
+    name: "PulseShift Demo Health System",
+    reason: "Testing organization settings update"
+  });
+  assert.equal(renamedOrganization.name, "PulseShift Demo Health System");
+  assert.rejects(() => organizationAdmin.getSummary("org_unknown"));
 
   assert.deepEqual(listSqlReports(), [
     "get_staffing_gaps_report",
