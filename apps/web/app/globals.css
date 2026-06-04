@@ -219,6 +219,11 @@ input {
   gap: 24px;
 }
 
+.production-state {
+  min-height: 420px;
+  align-content: center;
+}
+
 .page-hero {
   display: grid;
   gap: 8px;
