@@ -10,7 +10,8 @@ import {
   demoNotifications,
   demoSchedules,
   demoStaffDirectory,
-  demoTimecardExceptions
+  demoTimecardExceptions,
+  resetDemoWorkflowState
 } from "./demo-data";
 
 const sessionRoles = new Set(demoSessions.map((session) => session.role));
@@ -32,3 +33,19 @@ assert.ok(demoCredentials.some((credential) => credential.employeeId === "emp_ar
 assert.ok(demoTimecardExceptions.length >= 3);
 assert.ok(demoNotifications.some((notification) => notification.recipientUserId === "user_evan_exec"));
 assert.ok(demoAuditLogs.some((log) => log.action === "credential.review.expiring"));
+
+const weekThreeOpenShift = demoSchedules.find((shift) => shift.id === "shift_open_icu_week3");
+assert.ok(weekThreeOpenShift);
+weekThreeOpenShift.status = "ASSIGNED";
+weekThreeOpenShift.employeeId = "emp_priya";
+weekThreeOpenShift.userId = "user_priya";
+const firstException = demoTimecardExceptions.at(0);
+assert.ok(firstException);
+firstException.status = "RESOLVED";
+
+resetDemoWorkflowState();
+
+assert.equal(weekThreeOpenShift.status, "OPEN");
+assert.equal(weekThreeOpenShift.employeeId, undefined);
+assert.equal(weekThreeOpenShift.userId, undefined);
+assert.ok(demoTimecardExceptions.every((exception) => exception.status === "OPEN"));
