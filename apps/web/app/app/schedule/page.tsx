@@ -1,6 +1,7 @@
 import { MessageSquare, RefreshCw, Send, CalendarPlus } from "lucide-react";
 
 import { apiGet, type DemoShift } from "@/lib/api";
+import { buildScheduleViewModel } from "@/lib/schedule-view-model";
 import { createSwapAction } from "../actions";
 
 function formatShiftTime(value: string) {
@@ -15,7 +16,8 @@ function formatShiftTime(value: string) {
 
 export default async function SchedulePage() {
   const shifts = await apiGet<DemoShift[]>("/demo/schedule/me");
-  const selectedShift = shifts[0];
+  const schedule = buildScheduleViewModel(shifts);
+  const selectedShift = schedule.selectedShift;
 
   return (
     <section className="page-stack">
@@ -28,17 +30,26 @@ export default async function SchedulePage() {
         <section className="panel">
           <div className="section-heading">
             <h2>List View</h2>
-            <span>{shifts.length} visible</span>
+            <span>
+              {schedule.summary.assignedCount} assigned · {schedule.summary.totalHours} hours
+            </span>
           </div>
           <div className="item-list">
-            {shifts.map((shift) => (
-              <article className="list-row" key={shift.id}>
-                <div>
-                  <strong>{shift.title}</strong>
-                  <span>{formatShiftTime(shift.startsAt)}</span>
-                </div>
-                <span className="status-pill">{shift.status}</span>
-              </article>
+            {schedule.groups.map((group) => (
+              <div className="detail-stack" key={group.dateKey}>
+                <span className="status-pill">{group.label}</span>
+                {group.shifts.map((shift) => (
+                  <article className="list-row" key={shift.id}>
+                    <div>
+                      <strong>{shift.title}</strong>
+                      <span>
+                        {shift.startsLabel} to {shift.endsLabel}
+                      </span>
+                    </div>
+                    <span className={`status-pill status-${shift.statusTone}`}>{shift.status}</span>
+                  </article>
+                ))}
+              </div>
             ))}
           </div>
         </section>

@@ -364,6 +364,18 @@ h1 {
   font-weight: 800;
 }
 
+.status-assigned {
+  color: #047857;
+}
+
+.status-open {
+  color: #2563eb;
+}
+
+.status-pending {
+  color: #9a3412;
+}
+
 .detail-title {
   font-size: 22px;
 }
