@@ -12,6 +12,7 @@ import {
   UserStatusMutationSchema,
   assertAdminContractsSafe
 } from "../admin/admin-contracts";
+import { FacilityAdminService } from "../admin/facility.service";
 import { OrganizationAdminService } from "../admin/organization.service";
 import {
   assertRolePageMatrixComplete,
@@ -60,6 +61,32 @@ async function main() {
   });
   assert.equal(renamedOrganization.name, "PulseShift Demo Health System");
   assert.rejects(() => organizationAdmin.getSummary("org_unknown"));
+  const facilityAdmin = new FacilityAdminService();
+  const initialFacilities = await facilityAdmin.list("org_pulseshift_demo");
+  assert.ok(initialFacilities.some((facility) => facility.id === "fac_mercy_main"));
+  const createdFacility = await facilityAdmin.create("org_pulseshift_demo", {
+    name: "North Campus",
+    timezone: "America/New_York",
+    reason: "Testing facility creation"
+  });
+  assert.equal(createdFacility.status, "ACTIVE");
+  const updatedFacility = await facilityAdmin.update("org_pulseshift_demo", createdFacility.id, {
+    name: "North Campus Hospital",
+    timezone: "America/Chicago",
+    reason: "Testing facility update"
+  });
+  assert.equal(updatedFacility.timezone, "America/Chicago");
+  const deactivatedFacility = await facilityAdmin.deactivate(
+    "org_pulseshift_demo",
+    createdFacility.id,
+    "Testing facility deactivate"
+  );
+  assert.equal(deactivatedFacility.status, "INACTIVE");
+  assert.rejects(() => facilityAdmin.update("org_other", createdFacility.id, {
+    name: "Cross Org",
+    timezone: "America/New_York",
+    reason: "Cross org denial"
+  }));
 
   assert.deepEqual(listSqlReports(), [
     "get_staffing_gaps_report",
