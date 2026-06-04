@@ -116,7 +116,7 @@ export const pageContracts: Record<AppRoute, PageInteractionContract> = {
     route: "/app/swaps",
     label: "Swaps",
     allowedRoles: [...employeeRoles, ...managerRoles],
-    requiredPermissions: ["shift:swap:create"],
+    requiredPermissions: ["ai:use"],
     requiredScope: "SELF",
     visibleActions: ["create_swap", "accept_swap", "decline_swap"],
     hiddenActions: ["approve_without_manager_scope"],

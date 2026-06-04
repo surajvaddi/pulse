@@ -9,12 +9,40 @@ import {
   type TimeclockStatus
 } from "@/lib/api";
 import { buildEmployeeDashboard, formatDashboardDate } from "@/lib/employee-dashboard";
+import { buildRoleDashboard } from "@/lib/role-dashboard";
 import { clockInAction, clockOutAction, createSwapAction } from "../actions";
 import { WorkflowNote } from "../workflow-note";
 
 export default async function HomePage() {
-  const [session, shifts, exceptions, clockStatus] = await Promise.all([
-    apiGet<SessionSummary>("/auth/me"),
+  const session = await apiGet<SessionSummary>("/auth/me");
+  if (!["EMPLOYEE", "EXTERNAL_AGENCY_ADMIN"].includes(session.role)) {
+    const roleDashboard = buildRoleDashboard(session.role);
+    return (
+      <section className="page-stack">
+        <div className="page-hero">
+          <p className="eyebrow">{roleDashboard.eyebrow}</p>
+          <h1>{roleDashboard.title}</h1>
+          <p>{roleDashboard.summary}</p>
+        </div>
+        <WorkflowNote route="/app/home" role={session.role} />
+        <div className="dashboard-grid">
+          {roleDashboard.cards.map((card) => (
+            <article className="metric-card" key={card.title}>
+              <CalendarDays size={20} aria-hidden="true" />
+              <p>{card.title}</p>
+              <strong>{card.value}</strong>
+              <span>{card.detail}</span>
+              <Link className="command-button" href={card.href}>
+                Open
+              </Link>
+            </article>
+          ))}
+        </div>
+      </section>
+    );
+  }
+
+  const [shifts, exceptions, clockStatus] = await Promise.all([
     apiGet<DemoShift[]>("/demo/schedule/me"),
     apiGet<TimecardException[]>("/demo/timecards/exceptions"),
     apiGet<TimeclockStatus>("/timeclock/status")

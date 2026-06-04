@@ -56,8 +56,9 @@ const navigationCatalog: Array<Omit<NavigationItem, "label" | "contract">> = [
 const permissionScopeRank: Record<string, number> = {
   self: 1,
   unit: 2,
-  org: 3,
-  global: 4
+  facility: 3,
+  org: 4,
+  global: 5
 };
 
 function permissionSatisfies(required: Permission, granted: string) {

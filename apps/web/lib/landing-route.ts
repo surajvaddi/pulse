@@ -6,16 +6,16 @@ import { navigationForSession, sessionCanOpenRoute, type SessionAccess } from "@
 const roleLandingRoutes: Partial<Record<AccountRole, AppRoute>> = {
   EMPLOYEE: "/app/home",
   EXTERNAL_AGENCY_ADMIN: "/app/home",
-  CHARGE_NURSE: "/app/manager",
-  FLOAT_POOL_COORDINATOR: "/app/manager",
+  CHARGE_NURSE: "/app/home",
+  FLOAT_POOL_COORDINATOR: "/app/home",
   UNIT_MANAGER: "/app/manager",
   PAYROLL_ADMIN: "/app/timecards",
   CREDENTIALING_ADMIN: "/app/admin/credentials",
   COMPLIANCE_AUDITOR: "/app/admin/audit",
-  EXECUTIVE_VIEWER: "/app/admin/audit",
+  EXECUTIVE_VIEWER: "/app/home",
   ORGANIZATION_OWNER: "/app/admin",
   SYSTEM_ADMIN: "/app/admin",
-  WORKFORCE_ADMIN: "/app/admin",
+  WORKFORCE_ADMIN: "/app/home",
   AI_AGENT_SERVICE: "/app/copilot"
 };
 
