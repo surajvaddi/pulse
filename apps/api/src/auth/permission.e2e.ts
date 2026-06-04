@@ -14,6 +14,7 @@ import {
 } from "../admin/admin-contracts";
 import { FacilityAdminService } from "../admin/facility.service";
 import { OrganizationAdminService } from "../admin/organization.service";
+import { RoleAdminService } from "../admin/role.service";
 import { UnitAdminService } from "../admin/unit.service";
 import { UserAdminService } from "../admin/user.service";
 import {
@@ -142,6 +143,33 @@ async function main() {
   });
   assert.equal(reactivatedUser.status, "ACTIVE");
   assert.rejects(() => userAdmin.detail("org_other", "user_priya"));
+  const roleAdmin = new RoleAdminService();
+  const assignedRole = await roleAdmin.assignRole("org_pulseshift_demo", {
+    userId: "user_priya",
+    role: "UNIT_MANAGER",
+    scope: { type: "UNIT", unitIds: ["unit_icu"] },
+    reason: "Testing controlled role assignment"
+  });
+  assert.equal(assignedRole.role, "UNIT_MANAGER");
+  assert.ok(assignedRole.permissions.includes("schedule:read:unit"));
+  assert.equal(assignedRole.permissions.includes("audit:read"), false);
+  const scopedRole = await roleAdmin.updateScope("org_pulseshift_demo", {
+    userId: "user_priya",
+    role: "UNIT_MANAGER",
+    scope: { type: "UNIT", unitIds: ["unit_ed"] },
+    reason: "Testing controlled scope update"
+  });
+  assert.deepEqual(scopedRole.scope, { type: "UNIT", unitIds: ["unit_ed"] });
+  await roleAdmin.removeRole("org_pulseshift_demo", "user_priya", "UNIT_MANAGER", "Testing role removal");
+  const priyaAfterRoleRemoval = await userAdmin.detail("org_pulseshift_demo", "user_priya");
+  assert.equal(priyaAfterRoleRemoval.roles.includes("UNIT_MANAGER"), false);
+  assert.throws(() => RoleAssignmentSchema.parse({
+    userId: "user_priya",
+    role: "UNIT_MANAGER",
+    scope: { type: "UNIT", unitIds: ["unit_icu"] },
+    permissions: ["audit:read"],
+    reason: "Arbitrary permission attempt"
+  }));
 
   assert.deepEqual(listSqlReports(), [
     "get_staffing_gaps_report",
