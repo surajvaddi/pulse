@@ -15,6 +15,7 @@ import {
 import { FacilityAdminService } from "../admin/facility.service";
 import { OrganizationAdminService } from "../admin/organization.service";
 import { UnitAdminService } from "../admin/unit.service";
+import { UserAdminService } from "../admin/user.service";
 import {
   assertRolePageMatrixComplete,
   productionPages,
@@ -121,6 +122,26 @@ async function main() {
   );
   assert.equal(deactivatedUnit.active, false);
   assert.rejects(() => unitAdmin.assignManagers("org_other", createdUnit.id, [], "Cross org denial"));
+  const userAdmin = new UserAdminService();
+  const adminUsers = await userAdmin.list("org_pulseshift_demo");
+  assert.ok(adminUsers.some((user) => user.id === "user_priya"));
+  const userDetail = await userAdmin.detail("org_pulseshift_demo", "user_priya");
+  assert.equal(userDetail.email, "priya.nurse@example.com");
+  const suspendedUser = await userAdmin.updateStatus("org_pulseshift_demo", "user_priya", {
+    status: "SUSPENDED",
+    reason: "Testing suspension blocks protected access"
+  });
+  assert.equal(suspendedUser.status, "SUSPENDED");
+  await request(server)
+    .get("/demo/schedule/me")
+    .set("x-demo-user-id", "user_priya")
+    .expect(401);
+  const reactivatedUser = await userAdmin.updateStatus("org_pulseshift_demo", "user_priya", {
+    status: "ACTIVE",
+    reason: "Testing reactivation"
+  });
+  assert.equal(reactivatedUser.status, "ACTIVE");
+  assert.rejects(() => userAdmin.detail("org_other", "user_priya"));
 
   assert.deepEqual(listSqlReports(), [
     "get_staffing_gaps_report",

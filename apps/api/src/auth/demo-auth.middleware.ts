@@ -4,6 +4,7 @@ import type { NextFunction, Request, Response } from "express";
 import { AuthSessionService } from "./auth-session.service";
 import { findDemoSession } from "./demo-users";
 import { SupabaseJwtService } from "./supabase-jwt.service";
+import { activeAdminUser } from "../admin/user.service";
 
 @Injectable()
 export class DemoAuthMiddleware implements NestMiddleware {
@@ -22,7 +23,12 @@ export class DemoAuthMiddleware implements NestMiddleware {
   ) {
     if (process.env.ENABLE_DEMO_AUTH !== "false") {
       const requestedUser = request.header("x-demo-user-id");
-      request.session = findDemoSession(requestedUser);
+      const session = findDemoSession(requestedUser);
+      if (!activeAdminUser(session.userId)) {
+        response.status(401).json({ message: "PulseShift user is not active" });
+        return;
+      }
+      request.session = session;
       next();
       return;
     }
