@@ -44,6 +44,7 @@ assert.deepEqual(payrollRoutes.filter((route) => route === "/app/timecards"), ["
 assert.ok(!payrollRoutes.includes("/app/manager"));
 
 const adminRoutes = navigationForSession(admin).map((item) => item.href);
+assert.ok(adminRoutes.includes("/app/admin"));
 assert.ok(adminRoutes.includes("/app/admin/users"));
 assert.ok(adminRoutes.includes("/app/admin/evals"));
 assert.ok(!adminRoutes.includes("/app/open-shifts"));

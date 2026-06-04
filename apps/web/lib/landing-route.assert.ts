@@ -31,7 +31,7 @@ assert.equal(
     role: "SYSTEM_ADMIN",
     permissions: ["integration:manage", "user:manage", "audit:read", "ai:admin", "ai:use"]
   }),
-  "/app/admin/users"
+  "/app/admin"
 );
 
 assert.equal(defaultLandingRoute({ role: "UNKNOWN", permissions: [] }), "/app/home");

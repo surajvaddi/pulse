@@ -11,6 +11,7 @@ export type AppRoute =
   | "/app/manager"
   | "/app/notifications"
   | "/app/copilot"
+  | "/app/admin"
   | "/app/admin/audit"
   | "/app/admin/credentials"
   | "/app/admin/evals"
@@ -45,6 +46,7 @@ export const appRoutes: AppRoute[] = [
   "/app/manager",
   "/app/notifications",
   "/app/copilot",
+  "/app/admin",
   "/app/admin/audit",
   "/app/admin/credentials",
   "/app/admin/evals",
@@ -193,6 +195,18 @@ export const pageContracts: Record<AppRoute, PageInteractionContract> = {
     emptyState: "Start with a workforce question.",
     forbiddenState: "Copilot is unavailable for this role.",
     llmContext: "SELF_SERVICE"
+  }),
+  "/app/admin": contract({
+    route: "/app/admin",
+    label: "Admin",
+    allowedRoles: adminRoles,
+    requiredPermissions: ["user:manage"],
+    requiredScope: "ORG",
+    visibleActions: ["review_admin_health", "open_admin_workflow"],
+    hiddenActions: ["cross_org_access", "raw_permission_entry"],
+    emptyState: "No administration summary is available.",
+    forbiddenState: "Administration overview requires organization admin scope.",
+    llmContext: "ADMIN"
   }),
   "/app/admin/audit": contract({
     route: "/app/admin/audit",

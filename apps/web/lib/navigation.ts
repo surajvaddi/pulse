@@ -41,6 +41,7 @@ const navigationCatalog: Array<Omit<NavigationItem, "label" | "contract">> = [
   { href: "/app/staffing-gaps", icon: "shield", section: "work" },
   { href: "/app/staff", icon: "users", section: "work" },
   { href: "/app/manager", icon: "dashboard", section: "work" },
+  { href: "/app/admin", icon: "dashboard", section: "admin" },
   { href: "/app/admin/audit", icon: "list", section: "admin" },
   { href: "/app/admin/users", icon: "users", section: "admin" },
   { href: "/app/admin/facilities", icon: "dashboard", section: "admin" },

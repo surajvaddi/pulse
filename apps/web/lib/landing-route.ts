@@ -13,9 +13,9 @@ const roleLandingRoutes: Partial<Record<AccountRole, AppRoute>> = {
   CREDENTIALING_ADMIN: "/app/admin/credentials",
   COMPLIANCE_AUDITOR: "/app/admin/audit",
   EXECUTIVE_VIEWER: "/app/admin/audit",
-  ORGANIZATION_OWNER: "/app/admin/users",
-  SYSTEM_ADMIN: "/app/admin/users",
-  WORKFORCE_ADMIN: "/app/admin/users",
+  ORGANIZATION_OWNER: "/app/admin",
+  SYSTEM_ADMIN: "/app/admin",
+  WORKFORCE_ADMIN: "/app/admin",
   AI_AGENT_SERVICE: "/app/copilot"
 };
 
