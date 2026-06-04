@@ -65,6 +65,9 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
 
   return (
     <div className="app-shell">
+      <Link href="#main-content" className="skip-link">
+        Skip to main content
+      </Link>
       <aside className="sidebar" aria-label="Primary navigation">
         <Link href="/app/home" className="brand">
           PulseShift
@@ -117,7 +120,9 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
           </div>
         </header>
 
-        <main className="content">{children}</main>
+        <main className="content" id="main-content" tabIndex={-1}>
+          {children}
+        </main>
       </div>
 
       <nav className="mobile-nav" aria-label="Mobile navigation">

@@ -8,7 +8,7 @@
     "start": "next start --port 3000",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
-    "test": "tsx lib/page-contracts.assert.ts && tsx lib/navigation.assert.ts && tsx lib/landing-route.assert.ts && tsx lib/employee-dashboard.assert.ts && tsx lib/schedule-view-model.assert.ts && tsx lib/manager-dashboard.assert.ts && tsx lib/payroll-dashboard.assert.ts && tsx lib/admin-dashboard.assert.ts && tsx lib/workflow-explanations.assert.ts && tsx lib/production-states.assert.ts && tsc --noEmit"
+    "test": "tsx lib/page-contracts.assert.ts && tsx lib/navigation.assert.ts && tsx lib/landing-route.assert.ts && tsx lib/employee-dashboard.assert.ts && tsx lib/schedule-view-model.assert.ts && tsx lib/manager-dashboard.assert.ts && tsx lib/payroll-dashboard.assert.ts && tsx lib/admin-dashboard.assert.ts && tsx lib/workflow-explanations.assert.ts && tsx lib/production-states.assert.ts && tsx lib/accessibility.assert.ts && tsc --noEmit"
   },
   "dependencies": {
     "@pulseshift/domain": "*",
