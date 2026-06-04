@@ -195,6 +195,60 @@ async function main() {
   assert.equal(revokedInvitation.status, "REVOKED");
   assert.rejects(() => invitationAdmin.revoke("org_other", adminInvitation.id, "Cross org denial"));
 
+  const orgAdminApi = await request(server)
+    .get("/admin/organization")
+    .set("x-demo-user-id", "user_admin")
+    .expect(200);
+  assert.equal(orgAdminApi.body.id, "org_pulseshift_demo");
+  await request(server)
+    .get("/admin/organization")
+    .set("x-demo-user-id", "user_priya")
+    .expect(403);
+  const adminFacilityApi = await request(server)
+    .post("/admin/facilities")
+    .set("x-demo-user-id", "user_admin")
+    .send({
+      name: "South Campus",
+      timezone: "America/New_York",
+      reason: "API facility test"
+    })
+    .expect(201);
+  assert.equal(adminFacilityApi.body.status, "ACTIVE");
+  const adminUnitApi = await request(server)
+    .post("/admin/units")
+    .set("x-demo-user-id", "user_admin")
+    .send({
+      facilityId: adminFacilityApi.body.id,
+      name: "Observation",
+      type: "OTHER",
+      managerUserIds: ["user_jordan_manager"],
+      reason: "API unit test"
+    })
+    .expect(201);
+  assert.equal(adminUnitApi.body.managerUserIds[0], "user_jordan_manager");
+  const adminRoleApi = await request(server)
+    .post("/admin/roles")
+    .set("x-demo-user-id", "user_admin")
+    .send({
+      userId: "user_priya",
+      role: "UNIT_MANAGER",
+      scope: { type: "UNIT", unitIds: ["unit_icu"] },
+      reason: "API role test"
+    })
+    .expect(201);
+  assert.ok(adminRoleApi.body.permissions.includes("schedule:read:unit"));
+  const adminInvitationApi = await request(server)
+    .post("/admin/invitations")
+    .set("x-demo-user-id", "user_admin")
+    .send({
+      email: "api.invite@example.com",
+      role: "EMPLOYEE",
+      scope: { type: "SELF" },
+      reason: "API invite test"
+    })
+    .expect(201);
+  assert.equal(adminInvitationApi.body.status, "PENDING");
+
   assert.deepEqual(listSqlReports(), [
     "get_staffing_gaps_report",
     "get_employee_schedule_report",
