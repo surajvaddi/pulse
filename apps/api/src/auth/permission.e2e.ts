@@ -13,6 +13,7 @@ import {
   assertAdminContractsSafe
 } from "../admin/admin-contracts";
 import { FacilityAdminService } from "../admin/facility.service";
+import { InvitationAdminService } from "../admin/invitation-admin.service";
 import { OrganizationAdminService } from "../admin/organization.service";
 import { RoleAdminService } from "../admin/role.service";
 import { UnitAdminService } from "../admin/unit.service";
@@ -170,6 +171,29 @@ async function main() {
     permissions: ["audit:read"],
     reason: "Arbitrary permission attempt"
   }));
+  const invitationAdmin = new InvitationAdminService();
+  const adminInvitation = await invitationAdmin.create("org_pulseshift_demo", "user_admin", {
+    email: "new.unit.manager@example.com",
+    role: "UNIT_MANAGER",
+    scope: { type: "UNIT", unitIds: ["unit_icu"] },
+    reason: "Testing admin invitation"
+  });
+  assert.equal(adminInvitation.status, "PENDING");
+  const adminInvitations = await invitationAdmin.list("org_pulseshift_demo");
+  assert.ok(adminInvitations.some((invitation) => invitation.id === adminInvitation.id));
+  const resentInvitation = await invitationAdmin.resendMetadata(
+    "org_pulseshift_demo",
+    adminInvitation.id,
+    "Testing invite resend"
+  );
+  assert.equal(resentInvitation.status, "PENDING");
+  const revokedInvitation = await invitationAdmin.revoke(
+    "org_pulseshift_demo",
+    adminInvitation.id,
+    "Testing invite revoke"
+  );
+  assert.equal(revokedInvitation.status, "REVOKED");
+  assert.rejects(() => invitationAdmin.revoke("org_other", adminInvitation.id, "Cross org denial"));
 
   assert.deepEqual(listSqlReports(), [
     "get_staffing_gaps_report",
