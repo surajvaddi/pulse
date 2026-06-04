@@ -7,7 +7,7 @@ import {
   type UnitMutation,
   type UnitRecord
 } from "./admin-contracts";
-import { adminFacilities, adminUnits } from "./admin-state";
+import { adminFacilities, adminUnits, appendAdminAuditEvent } from "./admin-state";
 
 @Injectable()
 export class UnitAdminService implements UnitAdminServiceContract {
@@ -30,6 +30,14 @@ export class UnitAdminService implements UnitAdminServiceContract {
       active: true
     };
     adminUnits.push(unit);
+    appendAdminAuditEvent({
+      organizationId,
+      action: "admin.unit.created",
+      objectType: "Unit",
+      objectId: unit.id,
+      reason: parsed.reason,
+      after: unit
+    });
     return UnitRecordSchema.parse(unit);
   }
 
@@ -41,18 +49,42 @@ export class UnitAdminService implements UnitAdminServiceContract {
     unit.name = parsed.name;
     unit.type = parsed.type;
     unit.managerUserIds = parsed.managerUserIds;
+    appendAdminAuditEvent({
+      organizationId,
+      action: "admin.unit.updated",
+      objectType: "Unit",
+      objectId: unitId,
+      reason: parsed.reason,
+      after: UnitRecordSchema.parse(unit)
+    });
     return UnitRecordSchema.parse(unit);
   }
 
-  async assignManagers(organizationId: string, unitId: string, managerUserIds: string[], _reason: string) {
+  async assignManagers(organizationId: string, unitId: string, managerUserIds: string[], reason: string) {
     const unit = this.unitFor(organizationId, unitId);
     unit.managerUserIds = managerUserIds;
+    appendAdminAuditEvent({
+      organizationId,
+      action: "admin.unit.managers_assigned",
+      objectType: "Unit",
+      objectId: unitId,
+      reason,
+      after: { managerUserIds }
+    });
     return UnitRecordSchema.parse(unit);
   }
 
-  async deactivate(organizationId: string, unitId: string, _reason: string) {
+  async deactivate(organizationId: string, unitId: string, reason: string) {
     const unit = this.unitFor(organizationId, unitId);
     unit.active = false;
+    appendAdminAuditEvent({
+      organizationId,
+      action: "admin.unit.deactivated",
+      objectType: "Unit",
+      objectId: unitId,
+      reason,
+      after: UnitRecordSchema.parse(unit)
+    });
     return UnitRecordSchema.parse(unit);
   }
 

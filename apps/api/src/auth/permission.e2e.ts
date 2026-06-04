@@ -24,6 +24,7 @@ import {
   productionRoles,
   rolePageMatrix
 } from "../admin/role-page-matrix";
+import { adminAuditEvents } from "../admin/admin-state";
 import { resetDemoWorkflowState } from "../demo/demo-data";
 import {
   assertSqlReportRegistrySafe,
@@ -248,6 +249,16 @@ async function main() {
     })
     .expect(201);
   assert.equal(adminInvitationApi.body.status, "PENDING");
+  const adminAuditActions = adminAuditEvents.map((event) => event.action);
+  assert.ok(adminAuditActions.includes("admin.organization.updated"));
+  assert.ok(adminAuditActions.includes("admin.facility.created"));
+  assert.ok(adminAuditActions.includes("admin.unit.managers_assigned"));
+  assert.ok(adminAuditActions.includes("admin.user.suspended"));
+  assert.ok(adminAuditActions.includes("admin.user.active"));
+  assert.ok(adminAuditActions.includes("admin.role.assigned"));
+  assert.ok(adminAuditActions.includes("admin.role.removed"));
+  assert.ok(adminAuditActions.includes("admin.invitation.created"));
+  assert.ok(adminAuditActions.includes("admin.invitation.revoked"));
 
   assert.deepEqual(listSqlReports(), [
     "get_staffing_gaps_report",

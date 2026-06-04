@@ -7,7 +7,7 @@ import {
   type UserAdminServiceContract,
   type UserStatusMutation
 } from "./admin-contracts";
-import { adminUsers } from "./admin-state";
+import { adminUsers, appendAdminAuditEvent } from "./admin-state";
 
 @Injectable()
 export class UserAdminService implements UserAdminServiceContract {
@@ -25,6 +25,14 @@ export class UserAdminService implements UserAdminServiceContract {
     const parsed = UserStatusMutationSchema.parse(input);
     const user = this.userFor(organizationId, userId);
     user.status = parsed.status;
+    appendAdminAuditEvent({
+      organizationId,
+      action: `admin.user.${parsed.status.toLowerCase()}`,
+      objectType: "User",
+      objectId: userId,
+      reason: parsed.reason,
+      after: AdminUserRecordSchema.parse(user)
+    });
     return AdminUserRecordSchema.parse(user);
   }
 

@@ -7,7 +7,7 @@ import {
   type InvitationMutation,
   type InvitationRecord
 } from "./admin-contracts";
-import { adminInvitations, invitationStatusFor } from "./admin-state";
+import { adminInvitations, appendAdminAuditEvent, invitationStatusFor } from "./admin-state";
 
 @Injectable()
 export class InvitationAdminService implements InvitationAdminServiceContract {
@@ -31,20 +31,44 @@ export class InvitationAdminService implements InvitationAdminServiceContract {
       tokenVersion: 1
     };
     adminInvitations.push(invitation);
+    appendAdminAuditEvent({
+      organizationId,
+      action: "admin.invitation.created",
+      objectType: "Invitation",
+      objectId: invitation.id,
+      reason: parsed.reason,
+      after: this.publicRecord(invitation)
+    });
     return this.publicRecord(invitation);
   }
 
-  async revoke(organizationId: string, invitationId: string, _reason: string) {
+  async revoke(organizationId: string, invitationId: string, reason: string) {
     const invitation = this.invitationFor(organizationId, invitationId);
     invitation.status = "REVOKED";
+    appendAdminAuditEvent({
+      organizationId,
+      action: "admin.invitation.revoked",
+      objectType: "Invitation",
+      objectId: invitationId,
+      reason,
+      after: this.publicRecord(invitation)
+    });
     return this.publicRecord(invitation);
   }
 
-  async resendMetadata(organizationId: string, invitationId: string, _reason: string) {
+  async resendMetadata(organizationId: string, invitationId: string, reason: string) {
     const invitation = this.invitationFor(organizationId, invitationId);
     invitation.tokenVersion += 1;
     invitation.expiresAt = new Date(Date.now() + 1000 * 60 * 60 * 24 * 7).toISOString();
     invitation.status = "PENDING";
+    appendAdminAuditEvent({
+      organizationId,
+      action: "admin.invitation.resent",
+      objectType: "Invitation",
+      objectId: invitationId,
+      reason,
+      after: { tokenVersion: invitation.tokenVersion, status: invitation.status }
+    });
     return this.publicRecord(invitation);
   }
 

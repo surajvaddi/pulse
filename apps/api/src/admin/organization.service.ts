@@ -7,7 +7,7 @@ import {
   type OrganizationSettingsUpdate,
   type OrganizationSummary
 } from "./admin-contracts";
-import { adminOrganizations } from "./admin-state";
+import { adminOrganizations, appendAdminAuditEvent } from "./admin-state";
 
 @Injectable()
 export class OrganizationAdminService implements OrganizationAdminServiceContract {
@@ -27,6 +27,14 @@ export class OrganizationAdminService implements OrganizationAdminServiceContrac
     if (parsed.status) {
       organization.status = parsed.status;
     }
+    appendAdminAuditEvent({
+      organizationId,
+      action: "admin.organization.updated",
+      objectType: "Organization",
+      objectId: organizationId,
+      reason: parsed.reason,
+      after: OrganizationSummarySchema.parse(organization)
+    });
     return OrganizationSummarySchema.parse(organization);
   }
 

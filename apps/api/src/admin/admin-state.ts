@@ -25,6 +25,16 @@ export type AdminRoleStateRecord = {
   permissions: string[];
 };
 
+export type AdminAuditEvent = {
+  id: string;
+  organizationId: string;
+  action: string;
+  objectType: string;
+  objectId: string;
+  reason: string;
+  after?: Record<string, unknown>;
+};
+
 export const adminOrganizations: AdminOrganizationRecord[] = [
   {
     id: "org_pulseshift_demo",
@@ -93,6 +103,17 @@ export const adminUsers: AdminUserStateRecord[] = [
 export const adminRoles: AdminRoleStateRecord[] = [];
 
 export const adminInvitations: Array<InvitationRecord & { expiresAt: string; tokenVersion: number }> = [];
+
+export const adminAuditEvents: AdminAuditEvent[] = [];
+
+export function appendAdminAuditEvent(input: Omit<AdminAuditEvent, "id">) {
+  const event: AdminAuditEvent = {
+    id: `admin_audit_${adminAuditEvents.length + 1}`,
+    ...input
+  };
+  adminAuditEvents.push(event);
+  return event;
+}
 
 export function invitationStatusFor(record: { status: InvitationStatus; expiresAt: string }) {
   if (record.status === "PENDING" && new Date(record.expiresAt).getTime() < Date.now()) {

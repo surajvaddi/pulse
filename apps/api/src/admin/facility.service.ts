@@ -7,7 +7,7 @@ import {
   type FacilityMutation,
   type FacilityRecord
 } from "./admin-contracts";
-import { adminFacilities } from "./admin-state";
+import { adminFacilities, appendAdminAuditEvent } from "./admin-state";
 
 @Injectable()
 export class FacilityAdminService implements FacilityAdminServiceContract {
@@ -27,6 +27,14 @@ export class FacilityAdminService implements FacilityAdminServiceContract {
       status: "ACTIVE"
     };
     adminFacilities.push(facility);
+    appendAdminAuditEvent({
+      organizationId,
+      action: "admin.facility.created",
+      objectType: "Facility",
+      objectId: facility.id,
+      reason: parsed.reason,
+      after: facility
+    });
     return FacilityRecordSchema.parse(facility);
   }
 
@@ -35,12 +43,28 @@ export class FacilityAdminService implements FacilityAdminServiceContract {
     const facility = this.facilityFor(organizationId, facilityId);
     facility.name = parsed.name;
     facility.timezone = parsed.timezone;
+    appendAdminAuditEvent({
+      organizationId,
+      action: "admin.facility.updated",
+      objectType: "Facility",
+      objectId: facilityId,
+      reason: parsed.reason,
+      after: FacilityRecordSchema.parse(facility)
+    });
     return FacilityRecordSchema.parse(facility);
   }
 
-  async deactivate(organizationId: string, facilityId: string, _reason: string) {
+  async deactivate(organizationId: string, facilityId: string, reason: string) {
     const facility = this.facilityFor(organizationId, facilityId);
     facility.status = "INACTIVE";
+    appendAdminAuditEvent({
+      organizationId,
+      action: "admin.facility.deactivated",
+      objectType: "Facility",
+      objectId: facilityId,
+      reason,
+      after: FacilityRecordSchema.parse(facility)
+    });
     return FacilityRecordSchema.parse(facility);
   }
 

@@ -8,7 +8,7 @@ import {
   type RoleAdminServiceContract,
   type RoleAssignment
 } from "./admin-contracts";
-import { adminRoles, adminUsers } from "./admin-state";
+import { adminRoles, adminUsers, appendAdminAuditEvent } from "./admin-state";
 
 function derivedGrant(input: RoleAssignment): DerivedRoleGrant {
   return DerivedRoleGrantSchema.parse({
@@ -39,6 +39,14 @@ export class RoleAdminService implements RoleAdminServiceContract {
     if (!user.roles.includes(parsed.role)) {
       user.roles.push(parsed.role);
     }
+    appendAdminAuditEvent({
+      organizationId,
+      action: "admin.role.assigned",
+      objectType: "UserRole",
+      objectId: `${parsed.userId}:${parsed.role}`,
+      reason: parsed.reason,
+      after: grant
+    });
     return grant;
   }
 
@@ -46,13 +54,21 @@ export class RoleAdminService implements RoleAdminServiceContract {
     return this.assignRole(organizationId, input);
   }
 
-  async removeRole(organizationId: string, userId: string, role: AccountRole, _reason: string) {
+  async removeRole(organizationId: string, userId: string, role: AccountRole, reason: string) {
     const user = this.userFor(organizationId, userId);
     const index = adminRoles.findIndex((candidate) => candidate.userId === userId && candidate.role === role);
     if (index >= 0) {
       adminRoles.splice(index, 1);
     }
     user.roles = user.roles.filter((candidate) => candidate !== role);
+    appendAdminAuditEvent({
+      organizationId,
+      action: "admin.role.removed",
+      objectType: "UserRole",
+      objectId: `${userId}:${role}`,
+      reason,
+      after: { userId, role }
+    });
   }
 
   private userFor(organizationId: string, userId: string) {
