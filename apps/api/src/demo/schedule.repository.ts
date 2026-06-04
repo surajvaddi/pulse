@@ -76,6 +76,14 @@ export class InMemoryScheduleRepository implements ScheduleRepository {
     return demoSchedules.filter((shift) => shift.unitId === query.unitId);
   }
 
+  async findFacilitySchedule(query: { organizationId: string; facilityId: string }) {
+    return demoSchedules.filter((shift) => shift.facilityId === query.facilityId);
+  }
+
+  async findOrganizationSchedule(_query: { organizationId: string }) {
+    return demoSchedules;
+  }
+
   async findOpenShifts(query: { organizationId: string; unitId?: string; facilityId?: string }) {
     return demoSchedules.filter((shift) => {
       if (shift.status !== "OPEN") {
@@ -151,6 +159,37 @@ export class PrismaScheduleRepository implements ScheduleRepository {
       where: {
         organizationId: query.organizationId,
         unitId: query.unitId
+      },
+      include: {
+        assignedEmployee: { select: { userId: true } },
+        roleRequired: { select: { name: true } },
+        unit: { select: { name: true } }
+      },
+      orderBy: { startAt: "asc" }
+    });
+    return shifts.map(mapPrismaShift);
+  }
+
+  async findFacilitySchedule(query: { organizationId: string; facilityId: string }) {
+    const shifts = await prisma.shift.findMany({
+      where: {
+        organizationId: query.organizationId,
+        facilityId: query.facilityId
+      },
+      include: {
+        assignedEmployee: { select: { userId: true } },
+        roleRequired: { select: { name: true } },
+        unit: { select: { name: true } }
+      },
+      orderBy: { startAt: "asc" }
+    });
+    return shifts.map(mapPrismaShift);
+  }
+
+  async findOrganizationSchedule(query: { organizationId: string }) {
+    const shifts = await prisma.shift.findMany({
+      where: {
+        organizationId: query.organizationId
       },
       include: {
         assignedEmployee: { select: { userId: true } },

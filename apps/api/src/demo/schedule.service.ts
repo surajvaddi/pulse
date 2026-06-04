@@ -31,6 +31,35 @@ export class ScheduleService {
     });
   }
 
+  async visibleSchedule(session: DemoSession) {
+    const repository = this.repositories.repository();
+    if (
+      this.permissions.hasPermission(session, "schedule:read:facility", {
+        type: "FACILITY",
+        facilityId: "fac_mercy_main"
+      })
+    ) {
+      return repository.findFacilitySchedule({
+        organizationId: session.organizationId,
+        facilityId: "fac_mercy_main"
+      });
+    }
+
+    if (
+      this.permissions.hasPermission(session, "schedule:read:unit", {
+        type: "UNIT",
+        unitId: "unit_icu"
+      })
+    ) {
+      return repository.findUnitSchedule({
+        organizationId: session.organizationId,
+        unitId: "unit_icu"
+      });
+    }
+
+    return this.mySchedule(session);
+  }
+
   async unitSchedule(session: DemoSession, unitId: string) {
     this.assertAllowed(
       session,

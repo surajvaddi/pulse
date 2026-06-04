@@ -350,6 +350,29 @@ async function main() {
   assert.ok(employeeSchedule.body.length >= 2);
   assert.ok(employeeSchedule.body.some((shift: { id: string }) => shift.id === "shift_priya_friday_icu_night"));
 
+  const employeeVisibleSchedule = await request(server)
+    .get("/demo/schedule/visible")
+    .set("x-demo-user-id", "user_priya")
+    .expect(200);
+  assert.ok(employeeVisibleSchedule.body.every((shift: { userId?: string }) => shift.userId === "user_priya"));
+
+  const chargeVisibleSchedule = await request(server)
+    .get("/demo/schedule/visible")
+    .set("x-demo-user-id", "user_olivia_charge")
+    .expect(200);
+  assert.ok(chargeVisibleSchedule.body.every((shift: { unitId: string }) => shift.unitId === "unit_icu"));
+
+  const workforceVisibleSchedule = await request(server)
+    .get("/demo/schedule/visible")
+    .set("x-demo-user-id", "user_wendy_workforce")
+    .expect(200);
+  assert.ok(workforceVisibleSchedule.body.length >= chargeVisibleSchedule.body.length);
+
+  await request(server)
+    .get("/demo/schedule/visible")
+    .set("x-demo-user-id", "user_payroll")
+    .expect(403);
+
   await request(server)
     .get("/demo/schedule/unit/unit_icu")
     .set("x-demo-user-id", "user_priya")

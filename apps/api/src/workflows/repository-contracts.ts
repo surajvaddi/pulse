@@ -38,6 +38,8 @@ export interface ScheduleRepository {
   findShift(query: { organizationId: string; shiftId: string }): Promise<DemoShiftRecord | null>;
   findMySchedule(query: Required<Pick<ScheduleQuery, "organizationId" | "employeeId">>): Promise<DemoShiftRecord[]>;
   findUnitSchedule(query: Required<Pick<ScheduleQuery, "organizationId" | "unitId">>): Promise<DemoShiftRecord[]>;
+  findFacilitySchedule(query: Required<Pick<ScheduleQuery, "organizationId" | "facilityId">>): Promise<DemoShiftRecord[]>;
+  findOrganizationSchedule(query: Pick<ScheduleQuery, "organizationId">): Promise<DemoShiftRecord[]>;
   findOpenShifts(query: Pick<ScheduleQuery, "organizationId" | "unitId" | "facilityId">): Promise<DemoShiftRecord[]>;
   assignShift(input: {
     organizationId: string;

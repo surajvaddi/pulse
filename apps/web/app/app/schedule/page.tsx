@@ -18,17 +18,21 @@ function formatShiftTime(value: string) {
 export default async function SchedulePage() {
   const [session, shifts] = await Promise.all([
     apiGet<SessionSummary>("/auth/me"),
-    apiGet<DemoShift[]>("/demo/schedule/me")
+    apiGet<DemoShift[]>("/demo/schedule/visible")
   ]);
   const schedule = buildScheduleViewModel(shifts);
   const selectedShift = schedule.selectedShift;
+  const scheduleTitle =
+    session.role === "EMPLOYEE" || session.role === "EXTERNAL_AGENCY_ADMIN"
+      ? "Your upcoming shifts"
+      : "Scoped schedule board";
 
   return (
     <section className="page-stack">
       <div className="page-hero">
-        <p className="eyebrow">Employee Schedule</p>
-        <h1>Your upcoming shifts</h1>
-        <p>Scan assigned shifts by day, review shift details, and start swap or calendar actions.</p>
+        <p className="eyebrow">Schedule</p>
+        <h1>{scheduleTitle}</h1>
+        <p>Scan visible shifts by day, review shift details, and use only actions allowed for this role.</p>
       </div>
       <WorkflowNote route="/app/schedule" role={session.role} />
 

@@ -31,6 +31,11 @@ export class DemoController {
     return this.schedules.mySchedule(session);
   }
 
+  @Get("schedule/visible")
+  visibleSchedule(@CurrentSession() session: DemoSession) {
+    return this.schedules.visibleSchedule(session);
+  }
+
   @Get("schedule/unit/:unitId")
   unitSchedule(@CurrentSession() session: DemoSession, @Param("unitId") unitId: string) {
     return this.schedules.unitSchedule(session, unitId);
