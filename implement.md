@@ -1939,3 +1939,38 @@ Phase 20 must treat Phase 16B role walkthroughs as a launch blocker. Staging and
      - `npm run build`
      - `npm run test:llm:live` in default skipped mode
    - Commit: `Quality: Run phase 20 gate`
+
+Phase 20 completion gate recorded on 2026-06-05:
+
+- Completed commits:
+  - `Runtime: Fix AI package import`
+  - `Planning: Refine phase 20 steps`
+  - `Launch: Write environment runbook`
+  - `Launch: Write migration runbook`
+  - `Launch: Build staging smoke tests`
+  - `Launch: Build deployment checklist`
+  - `Launch: Build rollback checklist`
+  - `Launch: Gate demo affordances`
+  - `Launch: Add monitoring plan`
+- Final verification:
+  - `npm run db:validate` passed.
+  - `npm run typecheck` passed.
+  - `npm run lint` passed.
+  - `npm run test` passed.
+  - `npm run test:demo` passed.
+  - `npm run test:staging-smoke` passed.
+  - `npm run build` passed.
+  - `npm audit --audit-level=high` passed.
+  - `npm run test:llm:live` passed in default skipped mode because `LLM_LIVE_SMOKE` was not enabled.
+- Launch-readiness outputs:
+  - Environment runbook: `docs/environment-runbook.md`
+  - Migration runbook: `docs/migration-runbook.md`
+  - Deployment checklist: `docs/deployment-checklist.md`
+  - Rollback checklist: `docs/rollback-checklist.md`
+  - Monitoring dashboard plan: `docs/monitoring-dashboard-plan.md`
+  - Staging smoke suites: `apps/api/src/demo/staging-smoke.e2e.ts` and `apps/web/lib/staging-smoke.assert.ts`
+  - Production demo-control gates: `apps/web/lib/demo-controls.ts`, API reset denial tests, and web production-state assertions.
+- Notes:
+  - `npm audit --audit-level=high` reports no high or critical vulnerabilities. npm still reports two moderate PostCSS advisories through Next; the suggested forced fix would install a breaking old Next version and was not applied.
+  - The Next.js build still warns that the Next ESLint plugin is not detected in the current ESLint configuration, but the production build completed successfully.
+  - Live LLM validation remains opt-in with `LLM_LIVE_SMOKE=true npm run test:llm:live` once staging provider credentials are intentionally loaded.
