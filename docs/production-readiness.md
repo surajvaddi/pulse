@@ -51,6 +51,8 @@ Never expose service-role keys to the browser. Never reuse staging credentials i
 
 Environment separation, browser-safe variables, server-only secrets, and rotation ownership are
 documented in [Environment Runbook](./environment-runbook.md).
+Release preflight, staging smoke, final quality gates, and go/no-go criteria are documented in
+[Deployment Checklist](./deployment-checklist.md).
 
 Run the opt-in live LLM smoke gate only after staging credentials are loaded:
 
