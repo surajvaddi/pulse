@@ -10,6 +10,7 @@ export type AppRoute =
   | "/app/staff"
   | "/app/manager"
   | "/app/notifications"
+  | "/app/notifications/preferences"
   | "/app/copilot"
   | "/app/admin"
   | "/app/admin/audit"
@@ -45,6 +46,7 @@ export const appRoutes: AppRoute[] = [
   "/app/staff",
   "/app/manager",
   "/app/notifications",
+  "/app/notifications/preferences",
   "/app/copilot",
   "/app/admin",
   "/app/admin/audit",
@@ -182,6 +184,18 @@ export const pageContracts: Record<AppRoute, PageInteractionContract> = {
     hiddenActions: ["send_broadcast_without_scope"],
     emptyState: "No notifications are waiting.",
     forbiddenState: "Notifications require an active account.",
+    llmContext: "NONE"
+  }),
+  "/app/notifications/preferences": contract({
+    route: "/app/notifications/preferences",
+    label: "Notification preferences",
+    allowedRoles: [...employeeRoles, ...managerRoles, ...payrollRoles, ...adminRoles, ...aiRole],
+    requiredPermissions: ["ai:use"],
+    requiredScope: "SELF",
+    visibleActions: ["view_preferences", "update_editable_preferences"],
+    hiddenActions: ["disable_required_alerts", "edit_ai_service_preferences"],
+    emptyState: "Notification defaults are being prepared.",
+    forbiddenState: "Notification preferences require an active account.",
     llmContext: "NONE"
   }),
   "/app/copilot": contract({

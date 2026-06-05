@@ -22,6 +22,11 @@ export default async function NotificationsPage() {
         <h1>Inbox</h1>
         <p>Review messages and workflow alerts scoped to {session.displayName}.</p>
       </div>
+      <div className="action-row">
+        <Link className="secondary-button" href="/app/notifications/preferences">
+          Preferences
+        </Link>
+      </div>
       <section className="panel">
         <div className="item-list">
           {notifications.length ? (

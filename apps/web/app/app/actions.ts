@@ -54,6 +54,15 @@ export async function markNotificationReadAction(formData: FormData) {
   revalidatePath("/app", "layout");
 }
 
+export async function updateNotificationPreferenceAction(formData: FormData) {
+  const userId = String(formData.get("userId") ?? "user_priya") as DemoUserId;
+  const category = String(formData.get("category"));
+  const channel = String(formData.get("channel"));
+  const enabled = String(formData.get("enabled")) === "true";
+  await apiPost("/notifications/preferences", { category, channel, enabled }, userId);
+  revalidatePath("/app/notifications/preferences");
+}
+
 export async function askCopilotAction(formData: FormData) {
   const message = String(formData.get("message") ?? "");
   const userId = String(formData.get("userId") ?? "user_priya") as DemoUserId;

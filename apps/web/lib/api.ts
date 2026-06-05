@@ -147,6 +147,17 @@ export type NotificationSummary = {
   recent: Notification[];
 };
 
+export type NotificationPreference = {
+  id: string;
+  userId: string;
+  role: string;
+  category: string;
+  channel: string;
+  enabled: boolean;
+  required: boolean;
+  priority: string;
+};
+
 export type CopilotResponse = {
   mode: "ANSWER" | "ACTION_PREVIEW" | "BLOCKED";
   answer: string;

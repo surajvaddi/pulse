@@ -459,6 +459,12 @@ h1 {
   font-weight: 800;
 }
 
+.muted-pill {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
 .status-assigned {
   color: #047857;
 }
