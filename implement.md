@@ -1623,6 +1623,32 @@ Phase 18 must use the Phase 16B role matrix as the mandatory LLM test surface. E
       - `npm run build`
     - Commit: `Quality: Run phase 18 gate`
 
+### Phase 18 Completion Gate Record
+
+- Completed on 2026-06-05.
+- Commits created:
+  - `LLM: Define provider gateway interface`
+  - `LLM: Build OpenAI provider`
+  - `LLM: Build model router`
+  - `LLM: Define tool registry contracts`
+  - `LLM: Register SQL report tools`
+  - `LLM: Register workflow tools`
+  - `LLM: Integrate copilot service`
+  - `LLM: Persist tool metadata`
+  - `LLM: Expand role evals`
+  - `LLM: Add live smoke gate`
+- Final verification passed:
+  - `npm run db:validate`
+  - `npm run typecheck`
+  - `npm run lint`
+  - `npm run test`
+  - `npm run test:demo`
+  - `npm run build`
+  - `npm run test:llm:live` in default skipped mode
+- Notes:
+  - `npm run test:demo` intentionally logs an injected swap approval failure while asserting rollback behavior and exits successfully.
+  - Live provider validation remains opt-in with `LLM_LIVE_SMOKE=true` and `AI_GATEWAY_API_KEY` or `OPENAI_API_KEY`.
+
 ## Phase 19 Goal Mode Steps: Security, Compliance, And HIPAA-Ready Controls
 
 Phase 19 must harden the full role surface from Phase 16B. Security work must cover human roles, admin roles, read-only roles, external agency users, and the AI service identity separately.
