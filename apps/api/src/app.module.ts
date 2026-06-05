@@ -6,6 +6,8 @@ import { AdminModule } from "./admin/admin.module";
 import { DemoModule } from "./demo/demo.module";
 import { HealthController } from "./health.controller";
 import { RateLimitMiddleware } from "./security/rate-limit.middleware";
+import { RequestContextMiddleware } from "./security/request-context";
+import { RequestLoggingMiddleware } from "./security/request-logging.middleware";
 import { SecurityModule } from "./security/security.module";
 
 @Module({
@@ -14,6 +16,6 @@ import { SecurityModule } from "./security/security.module";
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    consumer.apply(DemoAuthMiddleware, RateLimitMiddleware).forRoutes("*");
+    consumer.apply(RequestContextMiddleware, RequestLoggingMiddleware, DemoAuthMiddleware, RateLimitMiddleware).forRoutes("*");
   }
 }

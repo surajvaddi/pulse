@@ -5,6 +5,7 @@ import { AuthSessionService } from "./auth-session.service";
 import { findDemoSession } from "./demo-users";
 import { SupabaseJwtService } from "./supabase-jwt.service";
 import { activeAdminUser } from "../admin/user.service";
+import type { RequestWithContext } from "../security/request-context";
 
 @Injectable()
 export class DemoAuthMiddleware implements NestMiddleware {
@@ -14,7 +15,8 @@ export class DemoAuthMiddleware implements NestMiddleware {
   ) {}
 
   async use(
-    request: Request & {
+    request: Request &
+      RequestWithContext & {
       session?: ReturnType<typeof findDemoSession>;
       supabaseClaims?: ReturnType<SupabaseJwtService["verifyBearerToken"]>;
     },
@@ -25,7 +27,7 @@ export class DemoAuthMiddleware implements NestMiddleware {
       const requestedUser = request.header("x-demo-user-id");
       const session = findDemoSession(requestedUser);
       if (!activeAdminUser(session.userId)) {
-        response.status(401).json({ message: "PulseShift user is not active" });
+        response.status(401).json({ message: "PulseShift user is not active", requestId: request.requestId });
         return;
       }
       request.session = session;
@@ -53,7 +55,8 @@ export class DemoAuthMiddleware implements NestMiddleware {
       next();
     } catch (error) {
       response.status(401).json({
-        message: error instanceof Error ? error.message : "Unauthorized"
+        message: error instanceof Error ? error.message : "Unauthorized",
+        requestId: request.requestId
       });
     }
   }
