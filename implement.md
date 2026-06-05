@@ -1329,39 +1329,135 @@ Use this protocol for every remaining production step:
 Phase 17 must preserve the Phase 16B role coverage gate. Every notification preference, inbox state, realtime event, and delivery failure view must define role visibility, actionability, read-only context, forbidden behavior, and walkthrough coverage for all demo personas.
 
 1. `Notifications: Define preference schema`
-   - Purpose: Model notification preferences per user and channel.
-   - Build: Prisma schema, domain schemas, repository interface, and role/channel defaults for every Phase 16B persona.
-   - Verify: db validate/generate, preference unit tests, and role-default assertions for every production role.
+   - Purpose: Add the data contract for notification preferences without changing runtime behavior.
+   - Sub-steps:
+     - Add Prisma models/enums for notification preferences, channel preferences, event categories, delivery urgency, and immutable/system-critical settings.
+     - Add matching domain schemas and exported TypeScript types.
+     - Add role/channel default mapping for every Phase 16B persona.
+     - Add repository interfaces for preference reads/writes and default hydration.
+   - Tests:
+     - `npm run db:validate`
+     - `npm run db:generate`
+     - domain/unit tests for role default coverage across every Phase 16B role
+     - typecheck for API/domain packages
+   - Commit: `Notifications: Define preference schema`
 
-2. `Notifications: Build notification repository`
-   - Purpose: Persist notification state and delivery metadata.
-   - Build: list, create, mark read, update delivery status methods with tenant, recipient, role, and scope constraints.
-   - Verify: repository tests and notification API e2e tests covering employee, manager, payroll, credentialing, auditor, executive, admin, and agency users.
+2. `Notifications: Persist notification repository`
+   - Purpose: Move notification reads/writes toward durable, scope-aware persistence.
+   - Sub-steps:
+     - Extend notification records with organization, recipient, role, category, priority, delivery metadata, and read/delivery timestamps.
+     - Implement repository methods for list, create, mark read, mark unread if needed, update delivery status, and fetch unread counts.
+     - Keep the in-memory adapter aligned for local demo mode.
+     - Ensure every repository method enforces tenant, recipient, role, and scope constraints.
+   - Tests:
+     - repository unit tests for list/create/read/update delivery
+     - tenant isolation tests
+     - recipient isolation tests
+     - API e2e tests for employee, manager, payroll, credentialing, auditor, executive, admin, and agency notification reads
+   - Commit: `Notifications: Persist repository state`
 
 3. `Notifications: Build preference service`
-   - Purpose: Let users update delivery preferences.
-   - Build: get/update preference methods and controller routes with role-specific allowed channels and immutable system-critical alerts where needed.
-   - Verify: self-access tests, cross-user denial, role/channel tests, and admin-read-only behavior where applicable.
+   - Purpose: Add the application service that owns preference rules and channel permissions.
+   - Sub-steps:
+     - Implement get/update preference methods.
+     - Apply role-specific channel eligibility for in-app, email, SMS, and urgent/system messages.
+     - Prevent users from disabling required safety, approval, payroll, credential, and compliance alerts where policy requires delivery.
+     - Add controller routes for current-user preferences.
+     - Add admin/operator read-only access only where justified by role permissions.
+   - Tests:
+     - self-access preference tests
+     - cross-user denial tests
+     - immutable critical alert tests
+     - role/channel matrix tests for all Phase 16B roles
+   - Commit: `Notifications: Build preference service`
 
 4. `Notifications: Integrate workflow events`
-   - Purpose: Create notifications from swaps, approvals, schedule changes, staffing gaps, and timecard events.
-   - Build: service calls from workflow services mapped to the roles that should receive each event.
-   - Verify: workflow e2e tests assert notification creation and denial/non-delivery for roles outside scope.
+   - Purpose: Replace scattered notification creation with a role-aware event publisher.
+   - Sub-steps:
+     - Define workflow notification event types for swaps, approvals, schedule changes, open shifts, staffing gaps, timecard exceptions, credentials, integrations, and AI/tool safety.
+     - Add a notification event publisher used by workflow services.
+     - Map each event to eligible recipient roles and scopes.
+     - Preserve audit writes for notification creation and denied/non-delivered events where relevant.
+   - Tests:
+     - workflow e2e tests assert notification creation for eligible recipients
+     - denial/non-delivery tests for roles outside scope
+     - audit assertions for important workflow notification events
+     - `npm run test --workspace @pulseshift/api`
+   - Commit: `Notifications: Publish workflow events`
 
-5. `Notifications: Add polling or realtime client`
-   - Purpose: Surface notification changes without manual refresh.
-   - Build: polling hook or Supabase Realtime subscription wrapper scoped to the current user and organization.
-   - Verify: smoke test for read-state update and new notification visibility across representative employee, manager, payroll, credentialing, auditor, executive, and admin personas.
+5. `Notifications: Add update transport`
+   - Purpose: Surface notification changes without requiring a full manual page refresh.
+   - Sub-steps:
+     - Choose the first production-compatible transport for this phase: scoped polling by default, Supabase Realtime wrapper if the existing environment is ready.
+     - Add unread count and recent notification API support if needed by the web shell.
+     - Add a client hook/helper scoped to the active user and organization.
+     - Ensure production auth and demo auth both use the same scoped transport contract.
+   - Tests:
+     - API tests for unread counts and scoped recent notifications
+     - web tests for read-state refresh and new notification visibility
+     - role smoke checks for employee, manager, payroll, credentialing, auditor, executive, agency, and admin accounts
+   - Commit: `Notifications: Add update transport`
 
-6. `Notifications: Build preferences UI`
-   - Purpose: Let users view and edit notification preferences.
-   - Build: preferences page/form, role-aware explanatory copy, and forbidden/read-only states for roles without editable preferences.
-   - Verify: web typecheck/lint and UI smoke tests for every Phase 16B role landing/navigation path.
+6. `Notifications: Improve inbox experience`
+   - Purpose: Make the notification inbox useful, understandable, and role-aware.
+   - Sub-steps:
+     - Replace raw JSON payload rendering with concise human-readable notification summaries.
+     - Add category, priority, source workflow, timestamp, and status display.
+     - Add clear empty, loading, forbidden, and error states.
+     - Add role-aware action affordances only when the user can act on the notification.
+     - Preserve keyboard and responsive behavior.
+   - Tests:
+     - web component/page tests for rendering and empty/forbidden states
+     - action visibility tests for role/page contracts
+     - `npm run test --workspace @pulseshift/web`
+     - `npm run lint --workspace @pulseshift/web`
+   - Commit: `Notifications: Improve inbox experience`
 
-7. `Notifications: Add delivery failure handling`
-   - Purpose: Track and show delivery failures for admin/operator review.
-   - Build: failure fields, retry metadata, admin/operator view, and user-safe failure messages.
-   - Verify: failure-state tests, admin UI smoke test, non-admin denial, and monitoring event assertions.
+7. `Notifications: Build preferences UI`
+   - Purpose: Let users safely view and edit delivery preferences.
+   - Sub-steps:
+     - Add preferences route or account-panel section.
+     - Render role-aware channel controls, category controls, disabled critical settings, and save feedback.
+     - Wire server actions/API calls to the preference service.
+     - Add concise explanatory text for why critical alerts cannot be disabled.
+     - Hide or deny editing for roles without editable preferences.
+   - Tests:
+     - web tests for preference display, save behavior, disabled critical settings, and forbidden/read-only roles
+     - API e2e tests for update success and denial paths
+     - role walkthrough assertions remain complete
+   - Commit: `Notifications: Build preferences UI`
+
+8. `Delivery: Track notification failures`
+   - Purpose: Give admins/operators visibility into delivery problems without exposing sensitive details to the wrong roles.
+   - Sub-steps:
+     - Add failure reason, retry count, last attempted timestamp, next retry timestamp, and provider metadata fields.
+     - Add service method to record delivery attempts and failures.
+     - Add admin/operator review view or section.
+     - Add user-safe failure messaging for recipient-facing pages.
+     - Emit monitoring events for repeated failures and blocked channels.
+   - Tests:
+     - failure-state unit tests
+     - admin/operator UI smoke tests
+     - non-admin denial tests
+     - monitoring event/redaction assertions
+   - Commit: `Delivery: Track notification failures`
+
+9. `Quality: Run phase 17 gate`
+   - Purpose: Validate Phase 17 end to end before moving to Phase 18.
+   - Sub-steps:
+     - Run full API and web typecheck/lint/test suites.
+     - Run demo flow and Phase 16B role walkthrough assertions.
+     - Run production build with the API available.
+     - Fix only Phase 17 regressions discovered by the gate.
+     - Confirm the working tree only contains intentional Phase 17 changes.
+   - Tests:
+     - `npm run db:validate`
+     - `npm run typecheck`
+     - `npm run lint`
+     - `npm run test`
+     - `npm run test:demo`
+     - `npm run build`
+   - Commit: `Quality: Run phase 17 gate`
 
 ## Phase 18 Goal Mode Steps: Tool-Gated Real LLM Integration
 
