@@ -1465,53 +1465,163 @@ Phase 18 must use the Phase 16B role matrix as the mandatory LLM test surface. E
 
 1. `LLM: Define provider gateway interface`
    - Purpose: Create provider-neutral LLM request/response contracts.
-   - Build: gateway interface, model route config, metadata types, and role/scope context envelope.
-   - Verify: AI package typecheck, mocked gateway tests, and role-context serialization tests.
+   - Sub-steps:
+     - Add request/response types for chat messages, tool proposals, structured outputs, usage, latency, provider IDs, model IDs, and normalized errors.
+     - Add a role/scope/page context envelope that includes actor user ID, role, permissions, organization scope, current page, and production/demo mode.
+     - Add model route config types for fast, reasoning, safety, and eval routes without hard-coding one vendor.
+     - Add a no-provider mock gateway for deterministic tests.
+   - Tests:
+     - AI package typecheck
+     - gateway serialization tests
+     - normalized provider error tests
+     - role-context tests across every Phase 16B role
+   - Commit: `LLM: Define provider gateway interface`
 
 2. `LLM: Build OpenAI-compatible provider`
    - Purpose: Call an OpenAI-compatible chat/completions API safely.
-   - Build: provider class, timeout handling, error normalization.
-   - Verify: mocked provider unit tests.
+   - Sub-steps:
+     - Implement provider class that accepts base URL, API key, model, timeout, and retry config.
+     - Normalize OpenAI-compatible success, refusal, rate-limit, timeout, auth, and malformed-response cases.
+     - Keep live network calls behind explicit environment opt-in so CI uses mocks.
+     - Ensure secrets are read server-side only and never serialized to web clients, tool calls, or audit payloads.
+   - Tests:
+     - mocked provider success test
+     - timeout/error normalization tests
+     - missing-key disabled-provider test
+     - secret redaction assertion
+   - Commit: `LLM: Build OpenAI provider`
 
 3. `LLM: Build model router`
    - Purpose: Route tasks to lightweight, reasoning, embedding, or safety models.
-   - Build: router function/class and env-driven config.
-   - Verify: routing unit tests.
+   - Sub-steps:
+     - Add route names for self-service chat, manager operations, SQL/report summarization, workflow preview, safety review, and eval runs.
+     - Read provider/model mapping from env-backed config with safe defaults.
+     - Add fallback behavior when a route is disabled.
+     - Add cost/latency budget metadata per route.
+   - Tests:
+     - route selection tests for every route name
+     - disabled-route fallback tests
+     - env config parsing tests
+     - budget metadata assertions
+   - Commit: `LLM: Build model router`
 
 4. `LLM: Define tool registry contracts`
    - Purpose: Make tool schemas typed and permission-aware.
-   - Build: tool definition interface, argument validators, result schemas, role matrix declarations, and page-context declarations.
-   - Verify: tool validation tests and assertions that every tool declares allowed/read-only/blocked/approval-required behavior for every Phase 16B role.
+   - Sub-steps:
+     - Define tool contract shape with name, description, input schema, output schema, risk level, route availability, page context, and audit metadata.
+     - Add required role matrix declarations: allowed, read-only, approval-required, and blocked.
+     - Add scope requirements for self, unit, facility, org, agency, and AI service identity.
+     - Add registry validation that rejects missing role coverage, missing schemas, arbitrary SQL tools, or mutation tools without policy gates.
+   - Tests:
+     - tool registry validation tests
+     - role matrix completeness assertion for every Phase 16B role
+     - page-context declaration tests
+     - arbitrary SQL tool rejection test
+   - Commit: `LLM: Define tool registry contracts`
 
 5. `LLM: Register SQL-backed report tools`
    - Purpose: Expose only predefined SQL reports to the LLM.
-   - Build: tool entries for named SQL reports with typed params, role/scope constraints, tenant injection, and result limits.
-   - Verify: SQL-backed tool contract tests, arbitrary-SQL absence tests, and role-specific allowed/denied report calls.
+   - Sub-steps:
+     - Register only existing predefined SQL report definitions from the SQL reporting layer.
+     - Add typed tool inputs for staffing gaps, employee schedule, timecard exceptions, credential expiry, and audit activity reports.
+     - Inject tenant/org scope server-side and prevent caller-supplied tenant override.
+     - Add per-role allowed/denied behavior for employee, manager, payroll, credentialing, auditor, executive, agency, admin, and AI service identity.
+   - Tests:
+     - SQL-backed tool contract tests
+     - arbitrary SQL absence tests
+     - tenant override rejection tests
+     - allowed/denied role report-call tests
+   - Commit: `LLM: Register SQL report tools`
 
 6. `LLM: Register workflow action tools`
    - Purpose: Expose safe backend actions through policy/preview/approval gates.
-   - Build: tool entries for claim shift, create swap, accept swap, approve swap, notification/context tools, and timecard/credential read tools where allowed.
-   - Verify: permission, preview, approval, blocked-role, and audit tests across all Phase 16B personas.
+   - Sub-steps:
+     - Register read tools for self schedule, visible schedule context, staffing gaps, notifications, timecard exceptions, credentials, and audit summaries where role-appropriate.
+     - Register low-risk or approval-required action tools for claim shift, create swap, accept swap, and approve/deny swap.
+     - Require preview output before any mutation and preserve policy/approval gates.
+     - Block direct payroll edits, permission edits, audit deletion, credential override, raw SQL, and self-approval.
+   - Tests:
+     - permission tests across all Phase 16B personas
+     - preview-before-mutation tests
+     - approval-required tests
+     - blocked unsafe action tests
+     - audit/tool-call persistence assertions
+   - Commit: `LLM: Register workflow tools`
 
 7. `LLM: Integrate real copilot service`
    - Purpose: Replace deterministic routing with provider calls while preserving deterministic backend execution.
-   - Build: copilot orchestration service and controller integration that passes role, scope, page context, and tool constraints to the model.
-   - Verify: copilot API e2e tests with mocked provider for employee, manager, payroll, credentialing, auditor, executive, agency, admin, and AI service identity behavior.
+   - Sub-steps:
+     - Add copilot orchestrator that sends prompt, conversation context, role envelope, available tools, and page context to the model route.
+     - Keep deterministic execution in backend tools after provider proposes a tool call.
+     - Add structured response handling for answer, action preview, blocked action, provider failure, and no-tool answer.
+     - Preserve the existing deterministic fallback when real provider use is disabled.
+   - Tests:
+     - copilot API e2e tests with mocked provider
+     - employee self-schedule behavior
+     - manager staffing behavior
+     - payroll/credential/auditor/executive/agency/admin role behavior
+     - AI service identity blocked-human-account behavior
+   - Commit: `LLM: Integrate copilot service`
 
 8. `LLM: Persist tool metadata`
    - Purpose: Store provider, model, latency, tokens, cost, safety status, and blocked reasons.
-   - Build: persistence methods and metadata writes including actor role, scope, page context, tool risk, and denied reason.
-   - Verify: tool-call persistence assertions and audit-view visibility tests for admin/auditor roles.
+   - Sub-steps:
+     - Extend tool-call metadata with provider, model, route, latency, token counts, estimated cost, page context, actor role, scope, risk level, safety status, and denied reason.
+     - Persist provider failures and blocked tool attempts without leaking secrets or prompt-sensitive data.
+     - Add audit metadata for executed, blocked, failed, and approval-required tool calls.
+     - Ensure admin and auditor views can inspect tool-call evidence while normal roles cannot.
+   - Tests:
+     - tool-call metadata persistence tests
+     - blocked/failed provider metadata tests
+     - redaction assertions
+     - admin/auditor visibility tests
+     - employee/payroll/agency denial tests for tool-call review
+   - Commit: `LLM: Persist tool metadata`
 
 9. `LLM: Expand eval suite`
    - Purpose: Compare deterministic baseline and real model behavior safely.
-   - Build: eval fixtures for schedule, swap, staffing, timecard, credentialing, audit, executive summaries, agency access, blocked SQL, blocked payroll edits, and AI service identity misuse.
-   - Verify: eval suite with zero unsafe action attempts and per-role expected tool-selection assertions.
+   - Sub-steps:
+     - Add eval fixtures for every role family: employee, manager, charge nurse, workforce, float pool, payroll, credentialing, auditor, executive, agency, admin, owner, and AI service identity.
+     - Add tasks for schedule lookup, swap preview, staffing gap, timecard exception, credential expiry, audit summary, executive summary, agency scoped access, blocked SQL, blocked payroll edit, and AI service misuse.
+     - Score tool selection, role/scope correctness, unsafe action attempts, answer sufficiency, and refusal quality.
+     - Keep live-provider eval optional; mocked eval must remain deterministic.
+   - Tests:
+     - eval dataset completeness assertions
+     - eval runner tests
+     - zero unsafe action attempt assertion
+     - per-role expected tool-selection assertions
+   - Commit: `LLM: Expand eval suite`
 
 10. `LLM: Add live-provider smoke gate`
     - Purpose: Allow optional live API validation when keys are present.
-    - Build: guarded smoke script/test with a minimal prompt set per role family.
-    - Verify: mocked CI path always passes; live path runs only with explicit key and checks allowed/blocked behavior without performing real unsafe mutations.
+    - Sub-steps:
+      - Add explicit env gate for live provider smoke tests.
+      - Add minimal prompt set per role family that verifies allowed read behavior and blocked unsafe behavior.
+      - Ensure live smoke never performs real unsafe mutations and uses preview-only paths for actions.
+      - Document required env vars and expected skip behavior when keys are absent.
+    - Tests:
+      - mocked CI path always passes
+      - live path skips without explicit key/flag
+      - live path validates allowed/blocked behavior when enabled
+      - no unsafe mutation assertion
+    - Commit: `LLM: Add live smoke gate`
+
+11. `Quality: Run phase 18 gate`
+    - Purpose: Validate Phase 18 end to end before moving to security hardening.
+    - Sub-steps:
+      - Run full API, web, AI, eval, tools, domain, db, and integrations typecheck/lint/test suites.
+      - Run demo flow and Phase 16B role walkthrough assertions.
+      - Run production build with the API available.
+      - Confirm live-provider smoke is skipped safely unless explicitly configured.
+      - Fix only Phase 18 regressions discovered by the gate.
+    - Tests:
+      - `npm run db:validate`
+      - `npm run typecheck`
+      - `npm run lint`
+      - `npm run test`
+      - `npm run test:demo`
+      - `npm run build`
+    - Commit: `Quality: Run phase 18 gate`
 
 ## Phase 19 Goal Mode Steps: Security, Compliance, And HIPAA-Ready Controls
 
