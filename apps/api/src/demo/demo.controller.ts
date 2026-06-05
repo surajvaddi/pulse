@@ -65,7 +65,7 @@ export class DemoController {
   audit(@CurrentSession() session: DemoSession) {
     this.assertAllowed(
       session,
-      this.permissions.hasPermission(session, "audit:read", {
+      this.permissions.hasPermission(session, "ai:admin", {
         type: "ORG",
         organizationId: session.organizationId
       })
@@ -94,7 +94,7 @@ export class DemoController {
 
     this.assertAllowed(
       session,
-      this.permissions.hasPermission(session, "audit:read", {
+      this.permissions.hasPermission(session, "ai:admin", {
         type: "ORG",
         organizationId: session.organizationId
       })

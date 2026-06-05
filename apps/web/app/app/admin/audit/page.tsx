@@ -13,7 +13,8 @@ export default async function AdminAuditPage() {
   const canResetDemo =
     process.env.APP_ENV !== "production" &&
     process.env.NODE_ENV !== "production" &&
-    process.env.ENABLE_DEMO_RESET !== "false";
+    process.env.ENABLE_DEMO_RESET !== "false" &&
+    session.permissions.includes("ai:admin");
 
   return (
     <section className="page-stack">

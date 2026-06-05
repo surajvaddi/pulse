@@ -508,6 +508,34 @@ async function main() {
     .set("x-demo-user-id", "user_payroll")
     .expect(403);
 
+  await request(server)
+    .post("/demo/reset")
+    .set("x-demo-user-id", "user_avery_auditor")
+    .send({})
+    .expect(403);
+
+  await request(server)
+    .delete("/demo/audit/audit_seed_demo")
+    .set("x-demo-user-id", "user_admin")
+    .expect(404);
+
+  await request(server)
+    .patch("/demo/audit/audit_seed_demo")
+    .set("x-demo-user-id", "user_admin")
+    .send({ reason: "rewrite audit" })
+    .expect(404);
+
+  await request(server)
+    .delete("/demo/ai-tool-calls/tool_1")
+    .set("x-demo-user-id", "user_admin")
+    .expect(404);
+
+  await request(server)
+    .patch("/demo/ai-tool-calls/tool_1")
+    .set("x-demo-user-id", "user_admin")
+    .send({ status: "EXECUTED" })
+    .expect(404);
+
   const adminAudit = await request(server)
     .get("/demo/audit")
     .set("x-demo-user-id", "user_admin")
