@@ -49,6 +49,9 @@ Required variables:
 
 Never expose service-role keys to the browser. Never reuse staging credentials in production.
 
+Environment separation, browser-safe variables, server-only secrets, and rotation ownership are
+documented in [Environment Runbook](./environment-runbook.md).
+
 Run the opt-in live LLM smoke gate only after staging credentials are loaded:
 
 ```bash
