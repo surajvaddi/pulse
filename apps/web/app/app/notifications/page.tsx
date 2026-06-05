@@ -1,4 +1,12 @@
+import Link from "next/link";
+
 import { apiGet, type Notification, type SessionSummary } from "@/lib/api";
+import {
+  notificationActionFor,
+  notificationMetadata,
+  notificationSummary,
+  notificationTitle
+} from "@/lib/notification-view";
 import { markNotificationReadAction } from "../actions";
 
 export default async function NotificationsPage() {
@@ -17,21 +25,47 @@ export default async function NotificationsPage() {
       <section className="panel">
         <div className="item-list">
           {notifications.length ? (
-            notifications.map((notification) => (
-              <article className="list-row" key={notification.id}>
-                <div>
-                  <strong>{notification.type.replaceAll("_", " ")}</strong>
-                  <span>{JSON.stringify(notification.payload)}</span>
-                </div>
-                <form action={markNotificationReadAction}>
-                  <input type="hidden" name="notificationId" value={notification.id} />
-                  <input type="hidden" name="userId" value={session.userId} />
-                  <button className="command-button" type="submit">
-                    {notification.status === "READ" ? "Read" : "Mark read"}
-                  </button>
-                </form>
-              </article>
-            ))
+            notifications.map((notification) => {
+              const action = notificationActionFor(notification, session);
+              return (
+                <article
+                  className={`list-row notification-row ${notification.status === "READ" ? "is-read" : ""}`}
+                  key={notification.id}
+                >
+                  <div className="notification-copy">
+                    <div>
+                      <strong>{notificationTitle(notification)}</strong>
+                      <span>{notificationMetadata(notification)}</span>
+                    </div>
+                    <p>{notificationSummary(notification)}</p>
+                    {notification.createdAt ? (
+                      <time dateTime={notification.createdAt}>
+                        {new Intl.DateTimeFormat("en", {
+                          month: "short",
+                          day: "numeric",
+                          hour: "numeric",
+                          minute: "2-digit"
+                        }).format(new Date(notification.createdAt))}
+                      </time>
+                    ) : null}
+                  </div>
+                  <div className="notification-actions">
+                    {action ? (
+                      <Link className="secondary-button" href={action.href}>
+                        {action.label}
+                      </Link>
+                    ) : null}
+                    <form action={markNotificationReadAction}>
+                      <input type="hidden" name="notificationId" value={notification.id} />
+                      <input type="hidden" name="userId" value={session.userId} />
+                      <button className="command-button" type="submit">
+                        {notification.status === "READ" ? "Read" : "Mark read"}
+                      </button>
+                    </form>
+                  </div>
+                </article>
+              );
+            })
           ) : (
             <p className="empty-state">No notifications are waiting for this account.</p>
           )}
