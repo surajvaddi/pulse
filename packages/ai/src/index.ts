@@ -98,7 +98,11 @@ export type LlmToolDefinition = {
 };
 
 export class LlmToolRegistry {
-  constructor(private readonly tools: LlmToolDefinition[]) {}
+  private readonly tools: LlmToolDefinition[];
+
+  constructor(tools: LlmToolDefinition[]) {
+    this.tools = tools;
+  }
 
   list() {
     return [...this.tools];
@@ -408,7 +412,11 @@ export function normalizeProviderError(error: unknown): LlmProviderError {
 }
 
 export class MockLlmGateway implements LlmGateway {
-  constructor(private readonly response?: Partial<LlmResponse>) {}
+  private readonly response: Partial<LlmResponse> | undefined;
+
+  constructor(response?: Partial<LlmResponse>) {
+    this.response = response;
+  }
 
   async complete(request: LlmRequest): Promise<LlmResponse> {
     const startedAt = Date.now();
@@ -431,10 +439,13 @@ export class MockLlmGateway implements LlmGateway {
 }
 
 export class OpenAICompatibleGateway implements LlmGateway {
-  constructor(
-    private readonly config: OpenAICompatibleProviderConfig,
-    private readonly fetchImpl: typeof fetch = fetch
-  ) {}
+  private readonly config: OpenAICompatibleProviderConfig;
+  private readonly fetchImpl: typeof fetch;
+
+  constructor(config: OpenAICompatibleProviderConfig, fetchImpl: typeof fetch = fetch) {
+    this.config = config;
+    this.fetchImpl = fetchImpl;
+  }
 
   async complete(request: LlmRequest): Promise<LlmResponse> {
     const startedAt = Date.now();
