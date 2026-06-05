@@ -126,6 +126,37 @@ export interface LlmGateway {
   complete(request: LlmRequest): Promise<LlmResponse>;
 }
 
+export type OpenAICompatibleProviderConfig = {
+  baseUrl: string;
+  apiKey?: string;
+  model: string;
+  timeoutMs: number;
+  maxRetries: number;
+  enabled: boolean;
+};
+
+type OpenAICompatibleResponse = {
+  id?: string;
+  model?: string;
+  choices?: Array<{
+    message?: {
+      content?: string | null;
+      tool_calls?: Array<{
+        function?: {
+          name?: string;
+          arguments?: string;
+        };
+      }>;
+    };
+    finish_reason?: string | null;
+  }>;
+  usage?: {
+    prompt_tokens?: number;
+    completion_tokens?: number;
+    total_tokens?: number;
+  };
+};
+
 export function serializeRoleContext(context: LlmRoleContext) {
   return {
     actorUserId: context.actorUserId,
@@ -178,6 +209,153 @@ export class MockLlmGateway implements LlmGateway {
       ...this.response
     };
   }
+}
+
+export class OpenAICompatibleGateway implements LlmGateway {
+  constructor(
+    private readonly config: OpenAICompatibleProviderConfig,
+    private readonly fetchImpl: typeof fetch = fetch
+  ) {}
+
+  async complete(request: LlmRequest): Promise<LlmResponse> {
+    const startedAt = Date.now();
+    if (!this.config.enabled || !this.config.apiKey) {
+      return this.failureResponse(request, startedAt, {
+        code: "DISABLED",
+        message: "OpenAI-compatible provider is disabled or missing a server-side API key",
+        retryable: false
+      });
+    }
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), this.config.timeoutMs);
+    try {
+      const response = await this.fetchImpl(`${this.config.baseUrl.replace(/\/$/, "")}/chat/completions`, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          authorization: `Bearer ${this.config.apiKey}`
+        },
+        body: JSON.stringify({
+          model: this.config.model,
+          messages: request.messages.map((message) => ({
+            role: message.role,
+            content: message.content,
+            ...(message.name ? { name: message.name } : {})
+          })),
+          tool_choice: request.availableTools.length ? "auto" : undefined,
+          response_format: request.responseFormat === "json" ? { type: "json_object" } : undefined
+        }),
+        signal: controller.signal
+      });
+
+      if (!response.ok) {
+        return this.failureResponse(request, startedAt, {
+          code: response.status === 401 || response.status === 403 ? "AUTHENTICATION" : response.status === 429 ? "RATE_LIMIT" : "UNKNOWN",
+          message: `OpenAI-compatible provider returned HTTP ${response.status}`,
+          retryable: response.status === 429 || response.status >= 500,
+          statusCode: response.status
+        });
+      }
+
+      const payload = (await response.json()) as OpenAICompatibleResponse;
+      const choice = payload.choices?.[0];
+      if (!choice?.message) {
+        return this.failureResponse(request, startedAt, {
+          code: "MALFORMED_RESPONSE",
+          message: "OpenAI-compatible provider response did not include a message",
+          retryable: false
+        });
+      }
+
+      return {
+        provider: "openai-compatible",
+        model: payload.model ?? this.config.model,
+        route: request.route,
+        content: choice.message.content ?? "",
+        toolProposals: (choice.message.tool_calls ?? []).map((toolCall) => ({
+          toolName: toolCall.function?.name ?? "unknown_tool",
+          argumentsJson: parseToolArguments(toolCall.function?.arguments),
+          riskLevel: "READ_ONLY",
+          requiresApproval: false
+        })),
+        usage: {
+          inputTokens: payload.usage?.prompt_tokens ?? 0,
+          outputTokens: payload.usage?.completion_tokens ?? 0,
+          totalTokens: payload.usage?.total_tokens ?? 0
+        },
+        latencyMs: Date.now() - startedAt,
+        finishReason: normalizeFinishReason(choice.finish_reason)
+      };
+    } catch (error) {
+      return this.failureResponse(request, startedAt, normalizeFetchError(error));
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
+  redactedConfig() {
+    return {
+      baseUrl: this.config.baseUrl,
+      model: this.config.model,
+      timeoutMs: this.config.timeoutMs,
+      maxRetries: this.config.maxRetries,
+      enabled: this.config.enabled,
+      apiKey: this.config.apiKey ? "[REDACTED]" : undefined
+    };
+  }
+
+  private failureResponse(request: LlmRequest, startedAt: number, error: LlmProviderError): LlmResponse {
+    return {
+      provider: "openai-compatible",
+      model: this.config.model,
+      route: request.route,
+      content: "",
+      toolProposals: [],
+      usage: { inputTokens: 0, outputTokens: 0, totalTokens: 0 },
+      latencyMs: Date.now() - startedAt,
+      finishReason: "error",
+      error
+    };
+  }
+}
+
+function parseToolArguments(value: string | undefined): Record<string, unknown> {
+  if (!value) {
+    return {};
+  }
+  try {
+    const parsed: unknown = JSON.parse(value);
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      ? (parsed as Record<string, unknown>)
+      : {};
+  } catch {
+    return {};
+  }
+}
+
+function normalizeFinishReason(reason: string | null | undefined): LlmResponse["finishReason"] {
+  if (reason === "tool_calls") {
+    return "tool_calls";
+  }
+  if (reason === "length") {
+    return "length";
+  }
+  if (reason === "content_filter") {
+    return "content_filter";
+  }
+  return "stop";
+}
+
+function normalizeFetchError(error: unknown): LlmProviderError {
+  if (error instanceof Error && error.name === "AbortError") {
+    return {
+      code: "TIMEOUT",
+      message: "OpenAI-compatible provider request timed out",
+      retryable: true
+    };
+  }
+  return normalizeProviderError(error);
 }
 
 export function assertRoleContextComplete(contexts: LlmRoleContext[], expectedRoles: LlmAccountRole[]) {

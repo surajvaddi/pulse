@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   LlmAccountRoleSchema,
   MockLlmGateway,
+  OpenAICompatibleGateway,
   assertRoleContextComplete,
   normalizeProviderError,
   serializeRoleContext,
@@ -49,3 +50,76 @@ const response = await gateway.complete({
 assert.equal(response.provider, "mock");
 assert.equal(response.content, "hello");
 assert.equal(response.route, "SELF_SERVICE_CHAT");
+
+const disabledProvider = new OpenAICompatibleGateway({
+  baseUrl: "https://llm.example.test/v1",
+  model: "test-model",
+  timeoutMs: 100,
+  maxRetries: 0,
+  enabled: false
+});
+
+const disabledResponse = await disabledProvider.complete({
+  route: "SELF_SERVICE_CHAT",
+  messages: [{ role: "user", content: "hello" }],
+  roleContext: employeeContext,
+  availableTools: []
+});
+
+assert.equal(disabledResponse.finishReason, "error");
+assert.equal(disabledResponse.error?.code, "DISABLED");
+assert.equal(disabledProvider.redactedConfig().apiKey, undefined);
+
+const successfulProvider = new OpenAICompatibleGateway(
+  {
+    baseUrl: "https://llm.example.test/v1",
+    apiKey: "secret-key",
+    model: "test-model",
+    timeoutMs: 100,
+    maxRetries: 0,
+    enabled: true
+  },
+  async () =>
+    new Response(
+      JSON.stringify({
+        model: "test-model",
+        choices: [{ message: { content: "Provider answer" }, finish_reason: "stop" }],
+        usage: { prompt_tokens: 3, completion_tokens: 2, total_tokens: 5 }
+      }),
+      { status: 200, headers: { "content-type": "application/json" } }
+    )
+);
+
+const providerResponse = await successfulProvider.complete({
+  route: "SELF_SERVICE_CHAT",
+  messages: [{ role: "user", content: "hello" }],
+  roleContext: employeeContext,
+  availableTools: []
+});
+
+assert.equal(providerResponse.provider, "openai-compatible");
+assert.equal(providerResponse.content, "Provider answer");
+assert.equal(providerResponse.usage.totalTokens, 5);
+assert.equal(successfulProvider.redactedConfig().apiKey, "[REDACTED]");
+
+const rateLimitedProvider = new OpenAICompatibleGateway(
+  {
+    baseUrl: "https://llm.example.test/v1",
+    apiKey: "secret-key",
+    model: "test-model",
+    timeoutMs: 100,
+    maxRetries: 0,
+    enabled: true
+  },
+  async () => new Response("rate limited", { status: 429 })
+);
+
+const rateLimited = await rateLimitedProvider.complete({
+  route: "SAFETY_REVIEW",
+  messages: [{ role: "user", content: "hello" }],
+  roleContext: employeeContext,
+  availableTools: []
+});
+
+assert.equal(rateLimited.error?.code, "RATE_LIMIT");
+assert.equal(rateLimited.error?.retryable, true);
