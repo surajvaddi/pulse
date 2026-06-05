@@ -5,7 +5,7 @@ import { apiGet, type AIToolCall, type AuditLog, type SessionSummary } from "@/l
 
 export default async function AdminAuditPage() {
   const session = await apiGet<SessionSummary>("/auth/me");
-  const canReadAiToolCalls = session.permissions.includes("ai:admin");
+  const canReadAiToolCalls = session.permissions.includes("ai:admin") || session.permissions.includes("audit:read");
   const [auditLogs, toolCalls] = await Promise.all([
     apiGet<AuditLog[]>("/demo/audit"),
     canReadAiToolCalls ? apiGet<AIToolCall[]>("/demo/ai-tool-calls") : Promise.resolve([])
@@ -89,7 +89,13 @@ export default async function AdminAuditPage() {
                   <div>
                     <strong>{toolCall.toolName}</strong>
                     <span>{toolCall.userId}</span>
-                    <span>{toolCall.riskLevel}</span>
+                    <span>
+                      {toolCall.route ?? "UNROUTED"} · {toolCall.model ?? "mock"}
+                    </span>
+                    <span>
+                      {toolCall.actorRole ?? "UNKNOWN_ROLE"} · {toolCall.latencyMs ?? 0}ms
+                    </span>
+                    <span>{toolCall.safetyStatus ?? toolCall.riskLevel}</span>
                   </div>
                   <span className="status-pill">{toolCall.status}</span>
                 </article>

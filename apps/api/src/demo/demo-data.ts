@@ -654,6 +654,19 @@ export const demoAIToolCalls: Array<{
   outputJson?: Record<string, unknown>;
   status: "PROPOSED" | "AUTHORIZED" | "EXECUTED" | "BLOCKED" | "FAILED";
   riskLevel: "READ_ONLY" | "LOW_RISK_WRITE" | "APPROVAL_REQUIRED" | "BLOCKED";
+  provider?: string;
+  model?: string;
+  route?: string;
+  latencyMs?: number;
+  inputTokens?: number;
+  outputTokens?: number;
+  totalTokens?: number;
+  estimatedCostUsd?: number;
+  pageContext?: string;
+  actorRole?: string;
+  scopeSummary?: string;
+  safetyStatus?: "SAFE" | "APPROVAL_REQUIRED" | "BLOCKED" | "FAILED";
+  deniedReason?: string;
   createdAt: string;
 }> = [];
 

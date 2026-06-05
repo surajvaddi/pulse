@@ -559,6 +559,19 @@ export const AIToolCallSchema = z.object({
   status: AIToolCallStatusSchema,
   riskLevel: ToolRiskLevelSchema,
   policyDecisionId: z.string().optional(),
+  provider: z.string().optional(),
+  model: z.string().optional(),
+  route: z.string().optional(),
+  latencyMs: z.number().int().nonnegative().optional(),
+  inputTokens: z.number().int().nonnegative().optional(),
+  outputTokens: z.number().int().nonnegative().optional(),
+  totalTokens: z.number().int().nonnegative().optional(),
+  estimatedCostUsd: z.number().nonnegative().optional(),
+  pageContext: z.string().optional(),
+  actorRole: AccountRoleSchema.optional(),
+  scopeSummary: z.string().optional(),
+  safetyStatus: z.enum(["SAFE", "APPROVAL_REQUIRED", "BLOCKED", "FAILED"]).optional(),
+  deniedReason: z.string().optional(),
   createdAt: IsoDateTimeSchema
 });
 export type AIToolCall = z.infer<typeof AIToolCallSchema>;

@@ -5,6 +5,7 @@ import {
   parseLlmRouteOverrides,
   type LlmGateway,
   type LlmModelRoute,
+  type LlmResponse,
   type LlmRoleContext
 } from "@pulseshift/ai";
 
@@ -15,6 +16,16 @@ import { llmSqlReportTools } from "../workflows/llm-sql-tool.registry";
 import { llmWorkflowTools } from "../workflows/llm-workflow-tool.registry";
 
 type ToolRiskLevel = "READ_ONLY" | "LOW_RISK_WRITE" | "APPROVAL_REQUIRED" | "BLOCKED";
+type ToolStatus = "EXECUTED" | "BLOCKED" | "FAILED";
+type ToolSafetyStatus = "SAFE" | "APPROVAL_REQUIRED" | "BLOCKED" | "FAILED";
+
+type CopilotLlmContext = Pick<LlmResponse, "provider" | "model" | "route" | "latencyMs" | "usage"> & {
+  availableTools: string[];
+  fallback: boolean;
+  pageContext: string;
+  actorRole: string;
+  scopeSummary: string;
+};
 
 type ToolDefinition = {
   name: string;
@@ -43,7 +54,7 @@ export class CopilotService {
 
     if (normalized.includes("clock-in") && normalized.includes("change")) {
       return {
-        ...this.blockedTool(session, "edit_timecard_event", message),
+        ...this.blockedTool(session, "edit_timecard_event", message, llmContext),
         llm: llmContext
       };
     }
@@ -54,7 +65,7 @@ export class CopilotService {
         mode: "ACTION_PREVIEW",
         answer:
           "I can create a swap request for Priya's Friday ICU night shift with Maya. Maya must accept, then Jordan must approve before the schedule changes.",
-        toolCalls: [this.logTool(session, "create_shift_swap_request", { message }, { preview: true })],
+        toolCalls: [this.logTool(session, "create_shift_swap_request", { message }, { preview: true }, llmContext)],
         llm: llmContext
       };
     }
@@ -69,7 +80,8 @@ export class CopilotService {
             session,
             "compute_staffing_gaps",
             { unitId: "unit_icu" },
-            { gapCount: 1, severity: "HIGH" }
+            { gapCount: 1, severity: "HIGH" },
+            llmContext
           )
         ],
         llm: llmContext
@@ -82,9 +94,15 @@ export class CopilotService {
         mode: "ANSWER",
         answer: demoTimecardExceptions[0]?.explanation ?? "No open timecard exceptions are visible.",
         toolCalls: [
-          this.logTool(session, "get_timecard_exceptions", { userId: session.userId }, {
-            exceptionIds: demoTimecardExceptions.map((exception) => exception.id)
-          })
+          this.logTool(
+            session,
+            "get_timecard_exceptions",
+            { userId: session.userId },
+            {
+              exceptionIds: demoTimecardExceptions.map((exception) => exception.id)
+            },
+            llmContext
+          )
         ],
         llm: llmContext
       };
@@ -98,16 +116,26 @@ export class CopilotService {
         ? `Your next visible shift is ${visibleShift.title} starting ${visibleShift.startsAt}.`
         : "I do not see an upcoming shift in your self-scoped schedule.",
       toolCalls: [
-        this.logTool(session, "get_my_schedule", { userId: session.userId }, {
-          shiftIds: visibleShift ? [visibleShift.id] : []
-        })
+        this.logTool(
+          session,
+          "get_my_schedule",
+          { userId: session.userId },
+          {
+            shiftIds: visibleShift ? [visibleShift.id] : []
+          },
+          llmContext
+        )
       ],
       llm: llmContext
     };
   }
 
   listToolCalls(session: DemoSession) {
-    if (this.permissions.hasPermission(session, "ai:admin", { type: "ORG", organizationId: session.organizationId })) {
+    const orgScope = { type: "ORG", organizationId: session.organizationId } as const;
+    if (
+      this.permissions.hasPermission(session, "ai:admin", orgScope) ||
+      this.permissions.hasPermission(session, "audit:read", orgScope)
+    ) {
       return demoAIToolCalls;
     }
 
@@ -128,15 +156,17 @@ export class CopilotService {
     }
   }
 
-  private blockedTool(session: DemoSession, toolName: string, message: string) {
+  private blockedTool(session: DemoSession, toolName: string, message: string, llmContext: CopilotLlmContext) {
     const tool = this.findTool(toolName);
     const toolCall = this.logTool(
       session,
       toolName,
       { message },
       { blockedReason: "AI cannot directly edit payroll-impacting timecard events." },
+      llmContext,
       "BLOCKED",
-      tool.riskLevel
+      tool.riskLevel,
+      "AI cannot directly edit payroll-impacting timecard events."
     );
     return {
       mode: "BLOCKED",
@@ -151,9 +181,12 @@ export class CopilotService {
     toolName: string,
     inputJson: Record<string, unknown>,
     outputJson: Record<string, unknown>,
-    status: "EXECUTED" | "BLOCKED" = "EXECUTED",
-    riskLevel = this.findTool(toolName).riskLevel
+    llmContext: CopilotLlmContext,
+    status: ToolStatus = "EXECUTED",
+    riskLevel = this.findTool(toolName).riskLevel,
+    deniedReason?: string
   ) {
+    const safetyStatus = this.safetyStatusFor(status, riskLevel);
     const toolCall = {
       id: `tool_${demoAIToolCalls.length + 1}`,
       userId: session.userId,
@@ -162,6 +195,25 @@ export class CopilotService {
       outputJson,
       status,
       riskLevel,
+      provider: llmContext.provider,
+      model: llmContext.model,
+      route: llmContext.route,
+      latencyMs: llmContext.latencyMs,
+      pageContext: llmContext.pageContext,
+      actorRole: llmContext.actorRole,
+      scopeSummary: llmContext.scopeSummary,
+      safetyStatus,
+      ...(llmContext.usage
+        ? {
+            inputTokens: llmContext.usage.inputTokens,
+            outputTokens: llmContext.usage.outputTokens,
+            totalTokens: llmContext.usage.totalTokens
+          }
+        : {}),
+      ...(llmContext.usage?.estimatedCostUsd !== undefined
+        ? { estimatedCostUsd: llmContext.usage.estimatedCostUsd }
+        : {}),
+      ...(deniedReason ? { deniedReason } : {}),
       createdAt: new Date().toISOString()
     };
     demoAIToolCalls.push(toolCall);
@@ -178,13 +230,14 @@ export class CopilotService {
 
   private async prepareLlmContext(session: DemoSession, message: string, normalized: string) {
     const route = this.routeForMessage(normalized);
+    const pageContext = "/app/copilot";
     const roleContext: LlmRoleContext = {
       actorUserId: session.userId,
       organizationId: session.organizationId,
       role: session.role,
       permissions: session.grants.map((grant) => grant.permission),
       scopes: session.grants.map((grant) => grant.scope),
-      currentPage: "/app/copilot",
+      currentPage: pageContext,
       mode: process.env.ENABLE_DEMO_AUTH === "false" ? "PRODUCTION" : "DEMO"
     };
     const modelRoute = this.router.route(route);
@@ -207,9 +260,30 @@ export class CopilotService {
       model: response.model,
       route: response.route,
       latencyMs: response.latencyMs,
+      usage: response.usage,
       availableTools,
+      pageContext,
+      actorRole: session.role,
+      scopeSummary: this.scopeSummary(session),
       fallback: true
     };
+  }
+
+  private safetyStatusFor(status: ToolStatus, riskLevel: ToolRiskLevel): ToolSafetyStatus {
+    if (status === "FAILED") {
+      return "FAILED";
+    }
+    if (status === "BLOCKED" || riskLevel === "BLOCKED") {
+      return "BLOCKED";
+    }
+    if (riskLevel === "APPROVAL_REQUIRED") {
+      return "APPROVAL_REQUIRED";
+    }
+    return "SAFE";
+  }
+
+  private scopeSummary(session: DemoSession) {
+    return [...new Set(session.grants.map((grant) => grant.scope.type))].sort().join(",");
   }
 
   private routeForMessage(normalized: string): LlmModelRoute {

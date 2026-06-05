@@ -677,6 +677,30 @@ async function main() {
     .set("x-demo-user-id", "user_admin")
     .expect(200);
   assert.ok(adminToolCalls.body.length >= 4);
+  const scheduleToolCall = adminToolCalls.body.find(
+    (toolCall: { toolName: string }) => toolCall.toolName === "get_my_schedule"
+  );
+  assert.equal(scheduleToolCall.provider, "mock");
+  assert.equal(scheduleToolCall.model, "mock-deterministic");
+  assert.equal(scheduleToolCall.route, "SELF_SERVICE_CHAT");
+  assert.equal(scheduleToolCall.actorRole, "EMPLOYEE");
+  assert.equal(scheduleToolCall.pageContext, "/app/copilot");
+  assert.equal(scheduleToolCall.safetyStatus, "SAFE");
+  assert.equal(typeof scheduleToolCall.latencyMs, "number");
+  assert.equal(typeof scheduleToolCall.totalTokens, "number");
+  assert.equal(JSON.stringify(scheduleToolCall).includes("apiKey"), false);
+
+  const blockedToolCall = adminToolCalls.body.find(
+    (toolCall: { toolName: string }) => toolCall.toolName === "edit_timecard_event"
+  );
+  assert.equal(blockedToolCall.safetyStatus, "BLOCKED");
+  assert.equal(blockedToolCall.deniedReason, "AI cannot directly edit payroll-impacting timecard events.");
+
+  const auditorToolCalls = await request(server)
+    .get("/copilot/tool-calls")
+    .set("x-demo-user-id", "user_avery_auditor")
+    .expect(200);
+  assert.equal(auditorToolCalls.body.length, adminToolCalls.body.length);
 
   const staffingGaps = await request(server)
     .get("/operations/staffing/gaps")

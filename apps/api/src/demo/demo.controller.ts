@@ -76,12 +76,11 @@ export class DemoController {
 
   @Get("ai-tool-calls")
   aiToolCalls(@CurrentSession() session: DemoSession) {
+    const orgScope = { type: "ORG", organizationId: session.organizationId } as const;
     this.assertAllowed(
       session,
-      this.permissions.hasPermission(session, "ai:admin", {
-        type: "ORG",
-        organizationId: session.organizationId
-      })
+      this.permissions.hasPermission(session, "ai:admin", orgScope) ||
+        this.permissions.hasPermission(session, "audit:read", orgScope)
     );
 
     return demoAIToolCalls;

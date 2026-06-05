@@ -709,10 +709,26 @@ model AIToolCall {
   status           AIToolCallStatus
   riskLevel        ToolRiskLevel
   policyDecisionId String?
+  provider         String?
+  model            String?
+  route            String?
+  latencyMs        Int?
+  inputTokens      Int?
+  outputTokens     Int?
+  totalTokens      Int?
+  estimatedCostUsd Decimal?
+  pageContext      String?
+  actorRole        AccountRole?
+  scopeSummary     String?
+  safetyStatus     String?
+  deniedReason     String?
   createdAt        DateTime         @default(now())
 
   @@index([conversationId])
   @@index([toolName])
+  @@index([route])
+  @@index([actorRole])
+  @@index([safetyStatus])
   @@map("ai_tool_calls")
 }
 

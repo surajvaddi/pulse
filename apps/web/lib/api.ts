@@ -116,6 +116,19 @@ export type AIToolCall = {
   outputJson?: Record<string, unknown>;
   status: string;
   riskLevel: string;
+  provider?: string;
+  model?: string;
+  route?: string;
+  latencyMs?: number;
+  inputTokens?: number;
+  outputTokens?: number;
+  totalTokens?: number;
+  estimatedCostUsd?: number;
+  pageContext?: string;
+  actorRole?: string;
+  scopeSummary?: string;
+  safetyStatus?: string;
+  deniedReason?: string;
   createdAt: string;
 };
 
