@@ -626,6 +626,23 @@ async function main() {
     .send({ category: "SYSTEM", channel: "IN_APP", enabled: false })
     .expect(403);
 
+  const deliveryFailures = await request(server)
+    .get("/notifications/delivery-failures")
+    .set("x-demo-user-id", "user_admin")
+    .expect(200);
+  assert.ok(deliveryFailures.body.length >= 1);
+  assert.ok(
+    deliveryFailures.body.every(
+      (notification: { status: string; failureReason?: string }) =>
+        notification.status === "FAILED" && Boolean(notification.failureReason)
+    )
+  );
+
+  await request(server)
+    .get("/notifications/delivery-failures")
+    .set("x-demo-user-id", "user_priya")
+    .expect(403);
+
   const scheduleAnswer = await request(server)
     .post("/copilot/messages")
     .set("x-demo-user-id", "user_priya")

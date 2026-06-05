@@ -74,6 +74,9 @@ export default async function AdminDashboardPage() {
             <Link className="command-button" href="/app/admin/audit">
               Audit log
             </Link>
+            <Link className="command-button" href="/app/admin/notifications">
+              Delivery failures
+            </Link>
           </div>
         </section>
 

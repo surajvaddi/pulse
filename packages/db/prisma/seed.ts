@@ -499,6 +499,23 @@ async function main() {
         priority: "HIGH",
         status: "QUEUED",
         payload: { exceptionId: ids.timecardLate }
+      },
+      {
+        organizationId: ids.org,
+        recipientUserId: ids.userAdmin,
+        channel: "EMAIL",
+        type: "APPROVAL_REQUIRED",
+        category: "INTEGRATION",
+        priority: "HIGH",
+        status: "FAILED",
+        payload: { connectionId: ids.integrationKronos },
+        failureReason: "Provider rejected the delivery address",
+        retryCount: 2,
+        failedAt: new Date("2026-06-05T13:30:00.000Z"),
+        lastAttemptedAt: new Date("2026-06-05T13:30:00.000Z"),
+        nextRetryAt: new Date("2026-06-05T14:00:00.000Z"),
+        providerMessageId: "demo-provider-failure-1",
+        providerMetadata: { provider: "demo-email" }
       }
     ],
     skipDuplicates: true

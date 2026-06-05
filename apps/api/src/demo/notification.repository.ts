@@ -209,6 +209,12 @@ export class InMemoryNotificationRepository implements NotificationRepository {
     ).length;
   }
 
+  async listDeliveryFailures(query: { organizationId: string }) {
+    return demoNotifications.filter(
+      (notification) => notification.organizationId === query.organizationId && notification.status === "FAILED"
+    );
+  }
+
   async createNotification(
     input: Omit<NotificationRecord, "id" | "status" | "retryCount"> &
       Partial<Pick<NotificationRecord, "status" | "retryCount">>
@@ -385,6 +391,17 @@ export class PrismaNotificationRepository implements NotificationRepository {
         status: { not: "READ" }
       }
     });
+  }
+
+  async listDeliveryFailures(query: { organizationId: string }) {
+    const notifications = await prisma.notification.findMany({
+      where: {
+        organizationId: query.organizationId,
+        status: "FAILED"
+      },
+      orderBy: [{ failedAt: "desc" }, { updatedAt: "desc" }]
+    });
+    return notifications.map(mapNotification);
   }
 
   async createNotification(

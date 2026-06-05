@@ -49,6 +49,7 @@ const navigationCatalog: Array<Omit<NavigationItem, "label" | "contract">> = [
   { href: "/app/admin/units", icon: "calendar", section: "admin" },
   { href: "/app/admin/roles", icon: "shield", section: "admin" },
   { href: "/app/admin/invitations", icon: "bell", section: "admin" },
+  { href: "/app/admin/notifications", icon: "bell", section: "admin" },
   { href: "/app/admin/integrations", icon: "cable", section: "admin" },
   { href: "/app/admin/evals", icon: "gauge", section: "admin" },
   { href: "/app/copilot", icon: "bot", section: "assist" }

@@ -23,6 +23,11 @@ export class NotificationController {
     return this.notifications.listPreferences(session);
   }
 
+  @Get("delivery-failures")
+  deliveryFailures(@CurrentSession() session: DemoSession) {
+    return this.notifications.listDeliveryFailuresForSession(session);
+  }
+
   @Post("preferences")
   updatePreference(
     @CurrentSession() session: DemoSession,

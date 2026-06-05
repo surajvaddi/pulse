@@ -47,6 +47,16 @@ export class NotificationService {
     };
   }
 
+  listDeliveryFailuresForSession(session: DemoSession) {
+    if (!["ORGANIZATION_OWNER", "SYSTEM_ADMIN", "WORKFORCE_ADMIN"].includes(session.role)) {
+      throw new ForbiddenException("Notification delivery failures require operator access");
+    }
+
+    return this.repositories.repository().listDeliveryFailures({
+      organizationId: session.organizationId
+    });
+  }
+
   create(input: {
     organizationId: string;
     recipientUserId: string;

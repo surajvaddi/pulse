@@ -625,6 +625,24 @@ export const demoNotifications: Array<{
     status: "QUEUED",
     payload: { shiftId: "shift_open_ed_day_week2" },
     retryCount: 0
+  },
+  {
+    id: "notification_delivery_failed_admin",
+    organizationId: "org_pulseshift_demo",
+    recipientUserId: "user_admin",
+    type: "INTEGRATION_ATTENTION",
+    channel: "EMAIL",
+    category: "INTEGRATION",
+    priority: "HIGH",
+    status: "FAILED",
+    payload: { connectionId: "integration_kronos" },
+    retryCount: 2,
+    failedAt: "2026-06-05T13:30:00.000Z",
+    failureReason: "Provider rejected the delivery address",
+    lastAttemptedAt: "2026-06-05T13:30:00.000Z",
+    nextRetryAt: "2026-06-05T14:00:00.000Z",
+    providerMessageId: "demo-provider-failure-1",
+    providerMetadata: { provider: "demo-email" }
   }
 ];
 

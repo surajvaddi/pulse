@@ -136,6 +136,9 @@ export interface NotificationRepository {
     organizationId: string;
     recipientUserId: string;
   }): Promise<number>;
+  listDeliveryFailures(query: {
+    organizationId: string;
+  }): Promise<NotificationRecord[]>;
   createNotification(
     input: Omit<NotificationRecord, "id" | "status" | "retryCount"> &
       Partial<Pick<NotificationRecord, "status" | "retryCount">>

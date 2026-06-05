@@ -19,6 +19,7 @@ export type AppRoute =
   | "/app/admin/facilities"
   | "/app/admin/integrations"
   | "/app/admin/invitations"
+  | "/app/admin/notifications"
   | "/app/admin/roles"
   | "/app/admin/units"
   | "/app/admin/users";
@@ -55,6 +56,7 @@ export const appRoutes: AppRoute[] = [
   "/app/admin/facilities",
   "/app/admin/integrations",
   "/app/admin/invitations",
+  "/app/admin/notifications",
   "/app/admin/roles",
   "/app/admin/units",
   "/app/admin/users"
@@ -292,6 +294,18 @@ export const pageContracts: Record<AppRoute, PageInteractionContract> = {
     hiddenActions: ["invite_without_role"],
     emptyState: "No invitations are pending.",
     forbiddenState: "Invitation administration requires organization admin scope.",
+    llmContext: "ADMIN"
+  }),
+  "/app/admin/notifications": contract({
+    route: "/app/admin/notifications",
+    label: "Notification delivery",
+    allowedRoles: ["ORGANIZATION_OWNER", "SYSTEM_ADMIN", "WORKFORCE_ADMIN"],
+    requiredPermissions: ["ai:use"],
+    requiredScope: "ORG",
+    visibleActions: ["review_delivery_failures"],
+    hiddenActions: ["view_unscoped_recipient_inbox"],
+    emptyState: "No delivery failures are waiting.",
+    forbiddenState: "Notification delivery review requires operator access.",
     llmContext: "ADMIN"
   }),
   "/app/admin/roles": contract({
