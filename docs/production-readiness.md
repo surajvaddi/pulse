@@ -39,9 +39,21 @@ Required variables:
 - `ENABLE_DEMO_RESET`: `true` only for local/demo environments; set to `false` for staging and production.
 - `AUTH_PERSISTENCE`: `memory` for local demo invites, `prisma` for Supabase-backed invitations and account linking.
 - `WORKFLOW_PERSISTENCE`: `memory` for the local MVP demo, `prisma` for database-backed workflow state.
+- `LLM_PROVIDER`: `mock` for deterministic local runs or `openai-compatible` for a real provider.
+- `LLM_PROVIDER_ENABLED`: `true` only when the server should call the configured LLM provider.
+- `LLM_MODEL`: default model name for the provider gateway.
+- `LLM_TIMEOUT_MS`: provider request timeout in milliseconds.
+- `LLM_LIVE_SMOKE`: `true` only when intentionally running the live provider smoke test.
 - `OPENAI_API_KEY` or `AI_GATEWAY_API_KEY`: LLM provider key.
+- `AI_GATEWAY_BASE_URL`: OpenAI-compatible base URL; leave blank to use the default OpenAI API URL in the live smoke test.
 
 Never expose service-role keys to the browser. Never reuse staging credentials in production.
+
+Run the opt-in live LLM smoke gate only after staging credentials are loaded:
+
+```bash
+LLM_LIVE_SMOKE=true npm run test:llm:live
+```
 
 ## Supabase Setup
 

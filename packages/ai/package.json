@@ -9,7 +9,8 @@
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc --noEmit",
     "lint": "eslint \"src/**/*.ts\"",
-    "test": "tsx src/gateway.assert.ts && tsc --noEmit"
+    "test": "tsx src/gateway.assert.ts && tsc --noEmit",
+    "test:live": "tsx src/live-smoke.assert.ts"
   },
   "dependencies": {
     "@pulseshift/tools": "*",
