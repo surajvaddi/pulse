@@ -1,13 +1,24 @@
-import { Inject, Injectable } from "@nestjs/common";
-import type { NotificationCategory, NotificationPriority } from "@pulseshift/domain";
+import { BadRequestException, ForbiddenException, Inject, Injectable } from "@nestjs/common";
+import {
+  NotificationCategorySchema,
+  NotificationChannelSchema,
+  RoleNotificationPreferenceDefaults,
+  type NotificationCategory,
+  type NotificationPriority
+} from "@pulseshift/domain";
 
 import type { DemoSession } from "../auth/demo-users";
-import { NotificationRepositoryProvider } from "./notification.repository";
+import {
+  NotificationPreferenceRepositoryProvider,
+  NotificationRepositoryProvider
+} from "./notification.repository";
 
 @Injectable()
 export class NotificationService {
   constructor(
-    @Inject(NotificationRepositoryProvider) private readonly repositories: NotificationRepositoryProvider
+    @Inject(NotificationRepositoryProvider) private readonly repositories: NotificationRepositoryProvider,
+    @Inject(NotificationPreferenceRepositoryProvider)
+    private readonly preferenceRepositories: NotificationPreferenceRepositoryProvider
   ) {}
 
   listForSession(session: DemoSession) {
@@ -48,6 +59,55 @@ export class NotificationService {
       organizationId: session.organizationId,
       notificationId,
       recipientUserId: session.userId
+    });
+  }
+
+  async listPreferences(session: DemoSession) {
+    return this.preferenceRepositories.repository().ensureDefaults({
+      organizationId: session.organizationId,
+      userId: session.userId,
+      roles: [session.role]
+    });
+  }
+
+  async updatePreference(
+    session: DemoSession,
+    input: {
+      category: unknown;
+      channel: unknown;
+      enabled: unknown;
+    }
+  ) {
+    if (session.role === "AI_AGENT_SERVICE") {
+      throw new ForbiddenException("AI service notification preferences are backend controlled");
+    }
+
+    const category = NotificationCategorySchema.parse(input.category);
+    const channel = NotificationChannelSchema.parse(input.channel);
+    if (typeof input.enabled !== "boolean") {
+      throw new BadRequestException("Notification preference enabled must be a boolean");
+    }
+
+    const defaultPreference = RoleNotificationPreferenceDefaults[session.role].find(
+      (preference) => preference.category === category && preference.channel === channel
+    );
+    if (!defaultPreference) {
+      throw new ForbiddenException("This notification channel is not available for the current role");
+    }
+    if (defaultPreference.required && !input.enabled) {
+      throw new BadRequestException("Required notification preferences cannot be disabled");
+    }
+
+    await this.listPreferences(session);
+    return this.preferenceRepositories.repository().upsertPreference({
+      organizationId: session.organizationId,
+      userId: session.userId,
+      role: session.role,
+      category,
+      channel,
+      enabled: input.enabled,
+      required: defaultPreference.required,
+      priority: defaultPreference.priority
     });
   }
 

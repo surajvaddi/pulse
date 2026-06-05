@@ -13,6 +13,23 @@ export class NotificationController {
     return this.notifications.listForSession(session);
   }
 
+  @Get("preferences")
+  preferences(@CurrentSession() session: DemoSession) {
+    return this.notifications.listPreferences(session);
+  }
+
+  @Post("preferences")
+  updatePreference(
+    @CurrentSession() session: DemoSession,
+    @Body() body: { category?: unknown; channel?: unknown; enabled?: unknown }
+  ) {
+    return this.notifications.updatePreference(session, {
+      category: body.category,
+      channel: body.channel,
+      enabled: body.enabled
+    });
+  }
+
   @Post(":notificationId/read")
   markRead(
     @CurrentSession() session: DemoSession,

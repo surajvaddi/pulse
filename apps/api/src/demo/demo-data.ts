@@ -520,7 +520,7 @@ export const demoNotifications: Array<{
 }> = [
   {
     id: "notification_staffing_risk_icu",
-    organizationId: "org_mercy",
+    organizationId: "org_pulseshift_demo",
     recipientUserId: "user_jordan_manager",
     type: "STAFFING_RISK",
     channel: "IN_APP",
@@ -532,7 +532,7 @@ export const demoNotifications: Array<{
   },
   {
     id: "notification_timecard_late_priya",
-    organizationId: "org_mercy",
+    organizationId: "org_pulseshift_demo",
     recipientUserId: "user_priya",
     type: "TIMECARD_EXCEPTION",
     channel: "IN_APP",
@@ -544,7 +544,7 @@ export const demoNotifications: Array<{
   },
   {
     id: "notification_charge_coverage",
-    organizationId: "org_mercy",
+    organizationId: "org_pulseshift_demo",
     recipientUserId: "user_olivia_charge",
     type: "UNIT_COVERAGE",
     channel: "IN_APP",
@@ -556,7 +556,7 @@ export const demoNotifications: Array<{
   },
   {
     id: "notification_workforce_publish",
-    organizationId: "org_mercy",
+    organizationId: "org_pulseshift_demo",
     recipientUserId: "user_wendy_workforce",
     type: "SCHEDULE_PUBLISH_READY",
     channel: "IN_APP",
@@ -568,7 +568,7 @@ export const demoNotifications: Array<{
   },
   {
     id: "notification_float_gap",
-    organizationId: "org_mercy",
+    organizationId: "org_pulseshift_demo",
     recipientUserId: "user_felix_float",
     type: "FLOAT_POOL_CANDIDATES",
     channel: "IN_APP",
@@ -580,7 +580,7 @@ export const demoNotifications: Array<{
   },
   {
     id: "notification_credential_expiring",
-    organizationId: "org_mercy",
+    organizationId: "org_pulseshift_demo",
     recipientUserId: "user_carmen_credentials",
     type: "CREDENTIAL_EXPIRING",
     channel: "IN_APP",
@@ -592,7 +592,7 @@ export const demoNotifications: Array<{
   },
   {
     id: "notification_audit_review",
-    organizationId: "org_mercy",
+    organizationId: "org_pulseshift_demo",
     recipientUserId: "user_avery_auditor",
     type: "AUDIT_REVIEW",
     channel: "IN_APP",
@@ -604,7 +604,7 @@ export const demoNotifications: Array<{
   },
   {
     id: "notification_exec_summary",
-    organizationId: "org_mercy",
+    organizationId: "org_pulseshift_demo",
     recipientUserId: "user_evan_exec",
     type: "WORKFORCE_SUMMARY",
     channel: "EMAIL",
@@ -616,7 +616,7 @@ export const demoNotifications: Array<{
   },
   {
     id: "notification_agency_open_shift",
-    organizationId: "org_mercy",
+    organizationId: "org_pulseshift_demo",
     recipientUserId: "user_aria_agency",
     type: "AGENCY_OPEN_SHIFT",
     channel: "IN_APP",

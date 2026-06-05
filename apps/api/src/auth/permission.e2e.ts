@@ -573,6 +573,44 @@ async function main() {
     .expect(201);
   assert.equal(readNotification.body.status, "READ");
 
+  const employeePreferences = await request(server)
+    .get("/notifications/preferences")
+    .set("x-demo-user-id", "user_priya")
+    .expect(200);
+  assert.ok(
+    employeePreferences.body.some(
+      (preference: { category: string; channel: string; required: boolean }) =>
+        preference.category === "SCHEDULE" &&
+        preference.channel === "IN_APP" &&
+        preference.required === true
+    )
+  );
+
+  const optionalPreferenceUpdate = await request(server)
+    .post("/notifications/preferences")
+    .set("x-demo-user-id", "user_priya")
+    .send({ category: "SYSTEM", channel: "EMAIL", enabled: false })
+    .expect(201);
+  assert.equal(optionalPreferenceUpdate.body.enabled, false);
+
+  await request(server)
+    .post("/notifications/preferences")
+    .set("x-demo-user-id", "user_priya")
+    .send({ category: "SCHEDULE", channel: "IN_APP", enabled: false })
+    .expect(400);
+
+  await request(server)
+    .post("/notifications/preferences")
+    .set("x-demo-user-id", "user_priya")
+    .send({ category: "STAFFING", channel: "SMS", enabled: true })
+    .expect(403);
+
+  await request(server)
+    .post("/notifications/preferences")
+    .set("x-demo-user-id", "user_ai_service")
+    .send({ category: "SYSTEM", channel: "IN_APP", enabled: false })
+    .expect(403);
+
   const scheduleAnswer = await request(server)
     .post("/copilot/messages")
     .set("x-demo-user-id", "user_priya")

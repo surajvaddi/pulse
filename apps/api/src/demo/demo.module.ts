@@ -25,8 +25,11 @@ import {
 } from "./integration.repository";
 import { IntegrationService } from "./integration.service";
 import {
+  InMemoryNotificationPreferenceRepository,
   InMemoryNotificationRepository,
+  NotificationPreferenceRepositoryProvider,
   NotificationRepositoryProvider,
+  PrismaNotificationPreferenceRepository,
   PrismaNotificationRepository
 } from "./notification.repository";
 import { NotificationController } from "./notification.controller";
@@ -91,6 +94,9 @@ import { TimeclockService } from "./timeclock.service";
     InMemoryNotificationRepository,
     PrismaNotificationRepository,
     NotificationRepositoryProvider,
+    InMemoryNotificationPreferenceRepository,
+    PrismaNotificationPreferenceRepository,
+    NotificationPreferenceRepositoryProvider,
     InMemoryOperationsRepository,
     PrismaOperationsRepository,
     OperationsRepositoryProvider,

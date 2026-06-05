@@ -1,13 +1,21 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { prisma } from "@pulseshift/db";
 import type {
+  AccountRole,
   NotificationCategory,
   NotificationChannel,
+  NotificationPreference,
   NotificationPriority
 } from "@pulseshift/domain";
+import { RoleNotificationPreferenceDefaults } from "@pulseshift/domain";
 
 import { demoNotifications } from "./demo-data";
-import type { NotificationRecord, NotificationRepository } from "../workflows/repository-contracts";
+import type {
+  NotificationPreferenceRecord,
+  NotificationPreferenceRepository,
+  NotificationRecord,
+  NotificationRepository
+} from "../workflows/repository-contracts";
 
 type NotificationType =
   | "SHIFT_ASSIGNED"
@@ -68,6 +76,34 @@ function optionalIso(date: Date | string | null | undefined) {
 function mapProviderMetadata(metadata: unknown): Record<string, string> | undefined {
   const payload = mapPayload(metadata);
   return Object.keys(payload).length ? payload : undefined;
+}
+
+const demoNotificationPreferences: NotificationPreferenceRecord[] = [];
+
+function preferenceKey(input: Pick<NotificationPreference, "userId" | "category" | "channel">) {
+  return `${input.userId}:${input.category}:${input.channel}`;
+}
+
+function mapPrismaPreference(preference: {
+  id: string;
+  userId: string;
+  role: AccountRole;
+  category: NotificationCategory;
+  channel: NotificationChannel;
+  enabled: boolean;
+  required: boolean;
+  priority: NotificationPriority;
+}): NotificationPreferenceRecord {
+  return {
+    id: preference.id,
+    userId: preference.userId,
+    role: preference.role,
+    category: preference.category,
+    channel: preference.channel,
+    enabled: preference.enabled,
+    required: preference.required,
+    priority: preference.priority
+  };
 }
 
 function mapNotification(notification: PrismaNotificationRecord): NotificationRecord {
@@ -268,6 +304,62 @@ export class InMemoryNotificationRepository implements NotificationRepository {
 }
 
 @Injectable()
+export class InMemoryNotificationPreferenceRepository implements NotificationPreferenceRepository {
+  async listPreferences(query: { organizationId: string; userId: string }) {
+    void query.organizationId;
+    return demoNotificationPreferences.filter((preference) => preference.userId === query.userId);
+  }
+
+  async upsertPreference(input: {
+    organizationId: string;
+    userId: string;
+    role: AccountRole;
+    category: NotificationCategory;
+    channel: NotificationChannel;
+    enabled: boolean;
+    required: boolean;
+    priority: NotificationPriority;
+  }) {
+    void input.organizationId;
+    const existing = demoNotificationPreferences.find(
+      (preference) => preferenceKey(preference) === preferenceKey(input)
+    );
+    if (existing) {
+      existing.role = input.role;
+      existing.enabled = input.enabled;
+      existing.required = input.required;
+      existing.priority = input.priority;
+      return existing;
+    }
+    const preference: NotificationPreferenceRecord = {
+      id: `notification_preference_${demoNotificationPreferences.length + 1}`,
+      userId: input.userId,
+      role: input.role,
+      category: input.category,
+      channel: input.channel,
+      enabled: input.enabled,
+      required: input.required,
+      priority: input.priority
+    };
+    demoNotificationPreferences.push(preference);
+    return preference;
+  }
+
+  async ensureDefaults(input: { organizationId: string; userId: string; roles: AccountRole[] }) {
+    for (const role of input.roles) {
+      for (const preference of RoleNotificationPreferenceDefaults[role]) {
+        await this.upsertPreference({
+          organizationId: input.organizationId,
+          userId: input.userId,
+          ...preference
+        });
+      }
+    }
+    return this.listPreferences(input);
+  }
+}
+
+@Injectable()
 export class PrismaNotificationRepository implements NotificationRepository {
   async listNotifications(query: {
     organizationId: string;
@@ -392,10 +484,95 @@ export class PrismaNotificationRepository implements NotificationRepository {
 }
 
 @Injectable()
+export class PrismaNotificationPreferenceRepository implements NotificationPreferenceRepository {
+  async listPreferences(query: { organizationId: string; userId: string }) {
+    const preferences = await prisma.notificationPreference.findMany({
+      where: {
+        userId: query.userId,
+        user: { organizationId: query.organizationId }
+      },
+      orderBy: [{ category: "asc" }, { channel: "asc" }]
+    });
+    return preferences.map(mapPrismaPreference);
+  }
+
+  async upsertPreference(input: {
+    organizationId: string;
+    userId: string;
+    role: AccountRole;
+    category: NotificationCategory;
+    channel: NotificationChannel;
+    enabled: boolean;
+    required: boolean;
+    priority: NotificationPriority;
+  }) {
+    const user = await prisma.user.findFirst({
+      where: { id: input.userId, organizationId: input.organizationId },
+      select: { id: true }
+    });
+    if (!user) {
+      throw new Error("Notification preference user is outside organization scope");
+    }
+    const preference = await prisma.notificationPreference.upsert({
+      where: {
+        userId_category_channel: {
+          userId: input.userId,
+          category: input.category,
+          channel: input.channel
+        }
+      },
+      update: {
+        role: input.role,
+        enabled: input.enabled,
+        required: input.required,
+        priority: input.priority
+      },
+      create: {
+        userId: input.userId,
+        role: input.role,
+        category: input.category,
+        channel: input.channel,
+        enabled: input.enabled,
+        required: input.required,
+        priority: input.priority
+      }
+    });
+    return mapPrismaPreference(preference);
+  }
+
+  async ensureDefaults(input: { organizationId: string; userId: string; roles: AccountRole[] }) {
+    for (const role of input.roles) {
+      for (const preference of RoleNotificationPreferenceDefaults[role]) {
+        await this.upsertPreference({
+          organizationId: input.organizationId,
+          userId: input.userId,
+          ...preference
+        });
+      }
+    }
+    return this.listPreferences(input);
+  }
+}
+
+@Injectable()
 export class NotificationRepositoryProvider {
   constructor(
     @Inject(InMemoryNotificationRepository) private readonly memory: InMemoryNotificationRepository,
     @Inject(PrismaNotificationRepository) private readonly persistent: PrismaNotificationRepository
+  ) {}
+
+  repository() {
+    return persistenceEnabled() ? this.persistent : this.memory;
+  }
+}
+
+@Injectable()
+export class NotificationPreferenceRepositoryProvider {
+  constructor(
+    @Inject(InMemoryNotificationPreferenceRepository)
+    private readonly memory: InMemoryNotificationPreferenceRepository,
+    @Inject(PrismaNotificationPreferenceRepository)
+    private readonly persistent: PrismaNotificationPreferenceRepository
   ) {}
 
   repository() {

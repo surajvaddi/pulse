@@ -6,7 +6,7 @@ async function main() {
   const repository = new InMemoryNotificationRepository();
 
   const created = await repository.createNotification({
-    organizationId: "org_mercy",
+    organizationId: "org_pulseshift_demo",
     recipientUserId: "user_priya",
     channel: "IN_APP",
     type: "SHIFT_UPDATED",
@@ -15,14 +15,14 @@ async function main() {
     payload: { shiftId: "shift_priya_friday_icu_night" }
   });
 
-  assert.equal(created.organizationId, "org_mercy");
+  assert.equal(created.organizationId, "org_pulseshift_demo");
   assert.equal(created.status, "QUEUED");
   assert.equal(created.category, "SCHEDULE");
   assert.equal(created.priority, "HIGH");
   assert.equal(created.retryCount, 0);
 
   const unreadBefore = await repository.countUnread({
-    organizationId: "org_mercy",
+    organizationId: "org_pulseshift_demo",
     recipientUserId: "user_priya"
   });
   assert.ok(unreadBefore >= 1);
@@ -34,7 +34,7 @@ async function main() {
   assert.equal(otherTenantList.length, 0);
 
   const otherRecipientList = await repository.listNotifications({
-    organizationId: "org_mercy",
+    organizationId: "org_pulseshift_demo",
     recipientUserId: "user_maya"
   });
   assert.equal(
@@ -43,7 +43,7 @@ async function main() {
   );
 
   const delivered = await repository.updateDeliveryStatus({
-    organizationId: "org_mercy",
+    organizationId: "org_pulseshift_demo",
     notificationId: created.id,
     recipientUserId: "user_priya",
     status: "DELIVERED",
@@ -55,7 +55,7 @@ async function main() {
   assert.ok(delivered.deliveredAt);
 
   const read = await repository.markRead({
-    organizationId: "org_mercy",
+    organizationId: "org_pulseshift_demo",
     notificationId: created.id,
     recipientUserId: "user_priya"
   });
@@ -63,7 +63,7 @@ async function main() {
   assert.ok(read.readAt);
 
   const unreadAfter = await repository.countUnread({
-    organizationId: "org_mercy",
+    organizationId: "org_pulseshift_demo",
     recipientUserId: "user_priya"
   });
   assert.equal(unreadAfter, unreadBefore - 1);
