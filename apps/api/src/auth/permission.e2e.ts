@@ -496,11 +496,13 @@ async function main() {
     .expect(403);
   delete process.env.ENABLE_DEMO_RESET;
   process.env.APP_ENV = "production";
-  await request(server)
-    .post("/demo/reset")
-    .set("x-demo-user-id", "user_admin")
-    .send({})
-    .expect(403);
+  for (const userId of ["user_admin", "user_avery_auditor", "user_priya", "user_aria_agency", "user_ai_service"]) {
+    await request(server)
+      .post("/demo/reset")
+      .set("x-demo-user-id", userId)
+      .send({})
+      .expect(403);
+  }
   delete process.env.APP_ENV;
 
   await request(server)

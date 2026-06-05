@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { apiPatch, apiPost, type DemoUserId } from "@/lib/api";
+import { demoResetEnabledForEnv } from "@/lib/demo-controls";
 
 export async function claimOpenShiftAction(formData: FormData) {
   const shiftId = String(formData.get("shiftId"));
@@ -112,10 +113,7 @@ export async function runCopilotEvalAction() {
 }
 
 export async function resetDemoAction() {
-  if (process.env.APP_ENV === "production" || process.env.NODE_ENV === "production") {
-    return;
-  }
-  if (process.env.ENABLE_DEMO_RESET === "false") {
+  if (!demoResetEnabledForEnv()) {
     return;
   }
   await apiPost("/demo/reset", {}, "user_admin");

@@ -2,6 +2,7 @@ import { RotateCcw } from "lucide-react";
 
 import { resetDemoAction } from "@/app/app/actions";
 import { apiGet, type AIToolCall, type AuditLog, type SessionSummary } from "@/lib/api";
+import { demoResetEnabledForEnv } from "@/lib/demo-controls";
 
 export default async function AdminAuditPage() {
   const session = await apiGet<SessionSummary>("/auth/me");
@@ -10,11 +11,7 @@ export default async function AdminAuditPage() {
     apiGet<AuditLog[]>("/demo/audit"),
     canReadAiToolCalls ? apiGet<AIToolCall[]>("/demo/ai-tool-calls") : Promise.resolve([])
   ]);
-  const canResetDemo =
-    process.env.APP_ENV !== "production" &&
-    process.env.NODE_ENV !== "production" &&
-    process.env.ENABLE_DEMO_RESET !== "false" &&
-    session.permissions.includes("ai:admin");
+  const canResetDemo = demoResetEnabledForEnv() && session.permissions.includes("ai:admin");
 
   return (
     <section className="page-stack">
