@@ -12,13 +12,15 @@ import {
   NotificationPreferenceRepositoryProvider,
   NotificationRepositoryProvider
 } from "./notification.repository";
+import { MonitoringService } from "../security/monitoring.service";
 
 @Injectable()
 export class NotificationService {
   constructor(
     @Inject(NotificationRepositoryProvider) private readonly repositories: NotificationRepositoryProvider,
     @Inject(NotificationPreferenceRepositoryProvider)
-    private readonly preferenceRepositories: NotificationPreferenceRepositoryProvider
+    private readonly preferenceRepositories: NotificationPreferenceRepositoryProvider,
+    @Inject(MonitoringService) private readonly monitoring: MonitoringService
   ) {}
 
   listForSession(session: DemoSession) {
@@ -47,14 +49,28 @@ export class NotificationService {
     };
   }
 
-  listDeliveryFailuresForSession(session: DemoSession) {
+  async listDeliveryFailuresForSession(session: DemoSession) {
     if (!["ORGANIZATION_OWNER", "SYSTEM_ADMIN", "WORKFORCE_ADMIN"].includes(session.role)) {
       throw new ForbiddenException("Notification delivery failures require operator access");
     }
 
-    return this.repositories.repository().listDeliveryFailures({
+    const failures = await this.repositories.repository().listDeliveryFailures({
       organizationId: session.organizationId
     });
+    if (failures.length) {
+      this.monitoring.emitForSession({
+        name: "notification.delivery_failure",
+        severity: "WARN",
+        session,
+        route: "/notifications/delivery-failures",
+        metadata: {
+          failureCount: failures.length,
+          notificationIds: failures.map((failure) => failure.id)
+        }
+      });
+    }
+
+    return failures;
   }
 
   create(input: {

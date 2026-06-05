@@ -1,6 +1,7 @@
 const sensitiveKeyPattern = /(authorization|cookie|token|secret|service_role|apikey|api_key|jwt|password)/i;
 const bearerPattern = /Bearer\s+[A-Za-z0-9._~+/=-]+/gi;
 const jwtPattern = /\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b/g;
+const secretTokenPattern = /\bsecret-[A-Za-z0-9._~+/=-]+\b/gi;
 const sqlPattern = /\b(select|insert|update|delete|drop|alter|truncate)\b[\s\S]{0,160}/gi;
 
 export function redactValue(value: unknown): unknown {
@@ -29,5 +30,6 @@ function redactString(value: string): string {
   return value
     .replaceAll(bearerPattern, "Bearer [REDACTED]")
     .replaceAll(jwtPattern, "[REDACTED_JWT]")
+    .replaceAll(secretTokenPattern, "[REDACTED_SECRET]")
     .replaceAll(sqlPattern, "[REDACTED_SQL]");
 }

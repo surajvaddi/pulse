@@ -13,12 +13,14 @@ import {
   demoTimecardExceptions
 } from "./demo-data";
 import { IntegrationRepositoryProvider } from "./integration.repository";
+import { MonitoringService } from "../security/monitoring.service";
 
 @Injectable()
 export class IntegrationService {
   constructor(
     @Inject(IntegrationRepositoryProvider) private readonly repositories: IntegrationRepositoryProvider,
-    @Inject(AuditService) private readonly auditLogs: AuditService
+    @Inject(AuditService) private readonly auditLogs: AuditService,
+    @Inject(MonitoringService) private readonly monitoring: MonitoringService
   ) {}
 
   connections(session: DemoSession) {
@@ -124,6 +126,21 @@ export class IntegrationService {
         failed: persistedRun.failed
       }
     });
+
+    if (persistedRun.status !== "SUCCEEDED" || persistedRun.failed > 0) {
+      this.monitoring.emitForSession({
+        name: "integration.failure",
+        severity: "ERROR",
+        session,
+        route: `/integrations/${integrationId}/sync`,
+        metadata: {
+          integrationId,
+          status: persistedRun.status,
+          failed: persistedRun.failed,
+          skipped: persistedRun.skipped
+        }
+      });
+    }
 
     return persistedRun;
   }

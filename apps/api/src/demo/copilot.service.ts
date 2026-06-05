@@ -13,6 +13,7 @@ import type { Permission } from "@pulseshift/domain";
 
 import type { DemoSession } from "../auth/demo-users";
 import { PermissionService, type ObjectScope } from "../auth/permission.service";
+import { MonitoringService } from "../security/monitoring.service";
 import { demoAIToolCalls, demoSchedules, demoTimecardExceptions } from "./demo-data";
 import { llmSqlReportTools } from "../workflows/llm-sql-tool.registry";
 import { llmWorkflowTools } from "../workflows/llm-workflow-tool.registry";
@@ -52,7 +53,10 @@ export class CopilotService {
   private readonly router = new LlmModelRouter(parseLlmRouteOverrides(process.env));
   private readonly gateway: LlmGateway = new MockLlmGateway();
 
-  constructor(@Inject(PermissionService) private readonly permissions: PermissionService) {}
+  constructor(
+    @Inject(PermissionService) private readonly permissions: PermissionService,
+    @Inject(MonitoringService) private readonly monitoring: MonitoringService
+  ) {}
 
   async handleMessage(session: DemoSession, message: string) {
     const normalized = message.toLowerCase();
@@ -244,15 +248,31 @@ export class CopilotService {
 
   private blockedTool(session: DemoSession, toolName: string, message: string, llmContext: CopilotLlmContext) {
     const tool = this.findTool(toolName);
+    const deniedReason =
+      toolName === "blocked_database_request"
+        ? "AI cannot run direct SQL or database changes."
+        : "AI cannot directly edit payroll-impacting timecard events.";
+    this.monitoring.emitForSession({
+      name: "ai.blocked_action",
+      severity: "WARN",
+      session,
+      route: "/copilot/messages",
+      metadata: {
+        toolName,
+        riskLevel: tool.riskLevel,
+        reason: deniedReason,
+        prompt: message
+      }
+    });
     const toolCall = this.logTool(
       session,
       toolName,
       { message },
-      { blockedReason: "AI cannot directly edit payroll-impacting timecard events." },
+      { blockedReason: deniedReason },
       llmContext,
       "BLOCKED",
       tool.riskLevel,
-      "AI cannot directly edit payroll-impacting timecard events."
+      deniedReason
     );
     return {
       mode: "BLOCKED",
