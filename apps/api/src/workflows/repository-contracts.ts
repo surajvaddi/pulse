@@ -1,6 +1,14 @@
 import type { CopilotEvalRun } from "@pulseshift/evals";
 import type { CsvPreviewRow, IntegrationConnection, IntegrationSyncRun } from "@pulseshift/integrations";
-import type { Permission, Scope } from "@pulseshift/domain";
+import type {
+  AccountRole,
+  NotificationCategory,
+  NotificationChannel,
+  NotificationPreference,
+  NotificationPriority,
+  Permission,
+  Scope
+} from "@pulseshift/domain";
 
 import type {
   DemoApprovalRecord,
@@ -115,6 +123,32 @@ export interface NotificationRepository {
     notificationId: string;
     recipientUserId: string;
   }): Promise<NotificationRecord>;
+}
+
+export type NotificationPreferenceRecord = NotificationPreference & {
+  id: string;
+};
+
+export interface NotificationPreferenceRepository {
+  listPreferences(query: {
+    organizationId: string;
+    userId: string;
+  }): Promise<NotificationPreferenceRecord[]>;
+  upsertPreference(input: {
+    organizationId: string;
+    userId: string;
+    role: AccountRole;
+    category: NotificationCategory;
+    channel: NotificationChannel;
+    enabled: boolean;
+    required: boolean;
+    priority: NotificationPriority;
+  }): Promise<NotificationPreferenceRecord>;
+  ensureDefaults(input: {
+    organizationId: string;
+    userId: string;
+    roles: AccountRole[];
+  }): Promise<NotificationPreferenceRecord[]>;
 }
 
 export type AuditLogInput = Omit<DemoAuditLogRecord, "id" | "createdAt" | "organizationId"> & {

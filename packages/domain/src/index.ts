@@ -130,6 +130,22 @@ export const NotificationStatusSchema = z.enum([
 ]);
 export type NotificationStatus = z.infer<typeof NotificationStatusSchema>;
 
+export const NotificationCategorySchema = z.enum([
+  "SCHEDULE",
+  "SWAP",
+  "APPROVAL",
+  "STAFFING",
+  "TIMECARD",
+  "CREDENTIAL",
+  "INTEGRATION",
+  "AI_SAFETY",
+  "SYSTEM"
+]);
+export type NotificationCategory = z.infer<typeof NotificationCategorySchema>;
+
+export const NotificationPrioritySchema = z.enum(["LOW", "NORMAL", "HIGH", "URGENT"]);
+export type NotificationPriority = z.infer<typeof NotificationPrioritySchema>;
+
 export const ToolRiskLevelSchema = z.enum([
   "READ_ONLY",
   "LOW_RISK_WRITE",
@@ -409,9 +425,129 @@ export const NotificationSchema = z.object({
   channel: NotificationChannelSchema,
   type: z.string(),
   status: NotificationStatusSchema,
+  category: NotificationCategorySchema.default("SYSTEM"),
+  priority: NotificationPrioritySchema.default("NORMAL"),
   payload: JsonRecordSchema
 });
 export type Notification = z.infer<typeof NotificationSchema>;
+
+export const NotificationPreferenceSchema = z.object({
+  userId: z.string(),
+  role: AccountRoleSchema,
+  category: NotificationCategorySchema,
+  channel: NotificationChannelSchema,
+  enabled: z.boolean(),
+  required: z.boolean(),
+  priority: NotificationPrioritySchema
+});
+export type NotificationPreference = z.infer<typeof NotificationPreferenceSchema>;
+
+type RoleNotificationDefault = Omit<NotificationPreference, "userId">;
+
+const baseHumanNotificationDefaults: RoleNotificationDefault[] = [
+  {
+    role: "EMPLOYEE",
+    category: "SCHEDULE",
+    channel: "IN_APP",
+    enabled: true,
+    required: true,
+    priority: "HIGH"
+  },
+  {
+    role: "EMPLOYEE",
+    category: "SWAP",
+    channel: "IN_APP",
+    enabled: true,
+    required: true,
+    priority: "HIGH"
+  },
+  {
+    role: "EMPLOYEE",
+    category: "TIMECARD",
+    channel: "IN_APP",
+    enabled: true,
+    required: true,
+    priority: "HIGH"
+  },
+  {
+    role: "EMPLOYEE",
+    category: "SYSTEM",
+    channel: "EMAIL",
+    enabled: true,
+    required: false,
+    priority: "NORMAL"
+  }
+];
+
+function defaultsForRole(role: AccountRole): RoleNotificationDefault[] {
+  const shared = baseHumanNotificationDefaults.map((preference) => ({ ...preference, role }));
+  switch (role) {
+    case "ORGANIZATION_OWNER":
+    case "SYSTEM_ADMIN":
+      return [
+        ...shared,
+        { role, category: "INTEGRATION", channel: "EMAIL", enabled: true, required: true, priority: "HIGH" },
+        { role, category: "AI_SAFETY", channel: "IN_APP", enabled: true, required: true, priority: "URGENT" },
+        { role, category: "SYSTEM", channel: "SMS", enabled: true, required: false, priority: "URGENT" }
+      ];
+    case "WORKFORCE_ADMIN":
+    case "FLOAT_POOL_COORDINATOR":
+      return [
+        ...shared,
+        { role, category: "STAFFING", channel: "IN_APP", enabled: true, required: true, priority: "HIGH" },
+        { role, category: "STAFFING", channel: "EMAIL", enabled: true, required: false, priority: "HIGH" }
+      ];
+    case "UNIT_MANAGER":
+    case "CHARGE_NURSE":
+      return [
+        ...shared,
+        { role, category: "APPROVAL", channel: "IN_APP", enabled: true, required: true, priority: "URGENT" },
+        { role, category: "STAFFING", channel: "SMS", enabled: true, required: false, priority: "URGENT" }
+      ];
+    case "PAYROLL_ADMIN":
+      return [
+        ...shared,
+        { role, category: "TIMECARD", channel: "EMAIL", enabled: true, required: true, priority: "HIGH" }
+      ];
+    case "CREDENTIALING_ADMIN":
+      return [
+        ...shared,
+        { role, category: "CREDENTIAL", channel: "EMAIL", enabled: true, required: true, priority: "HIGH" }
+      ];
+    case "COMPLIANCE_AUDITOR":
+      return [
+        ...shared,
+        { role, category: "AI_SAFETY", channel: "IN_APP", enabled: true, required: true, priority: "HIGH" }
+      ];
+    case "EXECUTIVE_VIEWER":
+      return [
+        ...shared,
+        { role, category: "STAFFING", channel: "EMAIL", enabled: true, required: false, priority: "NORMAL" }
+      ];
+    case "EXTERNAL_AGENCY_ADMIN":
+      return [
+        ...shared,
+        { role, category: "STAFFING", channel: "IN_APP", enabled: true, required: true, priority: "HIGH" }
+      ];
+    case "AI_AGENT_SERVICE":
+      return [
+        { role, category: "AI_SAFETY", channel: "IN_APP", enabled: true, required: true, priority: "URGENT" },
+        { role, category: "SYSTEM", channel: "IN_APP", enabled: true, required: true, priority: "HIGH" }
+      ];
+    case "EMPLOYEE":
+    default:
+      return shared;
+  }
+}
+
+export const RoleNotificationPreferenceDefaults: Record<AccountRole, RoleNotificationDefault[]> =
+  AccountRoleSchema.options.reduce(
+    (defaults, role) => ({
+      ...defaults,
+      [role]: defaultsForRole(role)
+    }),
+    {} as Record<AccountRole, RoleNotificationDefault[]>
+  );
 
 export const AIToolCallSchema = z.object({
   id: z.string(),

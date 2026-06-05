@@ -8,7 +8,7 @@
     "build": "nest build",
     "typecheck": "tsc --noEmit",
     "lint": "eslint \"src/**/*.ts\"",
-    "test": "tsx src/demo/demo-sandbox.assert.ts && tsx src/auth/permission.e2e.ts && tsx src/auth/supabase-auth.e2e.ts",
+    "test": "tsx src/demo/demo-sandbox.assert.ts && tsx src/demo/notification-preferences.assert.ts && tsx src/auth/permission.e2e.ts && tsx src/auth/supabase-auth.e2e.ts",
     "test:demo": "tsx src/demo/demo-flow.e2e.ts"
   },
   "dependencies": {

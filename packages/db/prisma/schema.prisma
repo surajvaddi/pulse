@@ -223,6 +223,25 @@ enum NotificationStatus {
   READ
 }
 
+enum NotificationCategory {
+  SCHEDULE
+  SWAP
+  APPROVAL
+  STAFFING
+  TIMECARD
+  CREDENTIAL
+  INTEGRATION
+  AI_SAFETY
+  SYSTEM
+}
+
+enum NotificationPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
 enum AIContextType {
   SELF_SERVICE
   MANAGER_OPS
@@ -326,6 +345,7 @@ model User {
   roles                UserRole[]
   employeeProfile      EmployeeProfile?
   notifications        Notification[]
+  notificationPreferences NotificationPreference[]
   aiConversations      AIConversation[]
   aiToolCalls          AIToolCall[]
   requestedApprovals   ApprovalRequest[]  @relation("RequestedApprovals")
@@ -608,12 +628,42 @@ model Notification {
   channel         NotificationChannel
   type            NotificationType
   status          NotificationStatus  @default(QUEUED)
+  category        NotificationCategory @default(SYSTEM)
+  priority        NotificationPriority @default(NORMAL)
   payload         Json
+  readAt          DateTime?
+  deliveredAt     DateTime?
+  failedAt        DateTime?
+  failureReason   String?
+  retryCount      Int                 @default(0)
+  lastAttemptedAt DateTime?
+  nextRetryAt     DateTime?
+  providerMessageId String?
+  providerMetadata Json?
   createdAt       DateTime            @default(now())
   updatedAt       DateTime            @updatedAt
 
   @@index([recipientUserId, status])
+  @@index([recipientUserId, category])
   @@map("notifications")
+}
+
+model NotificationPreference {
+  id             String               @id @default(cuid())
+  userId         String
+  user           User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role           AccountRole
+  category       NotificationCategory
+  channel        NotificationChannel
+  enabled        Boolean              @default(true)
+  required       Boolean              @default(false)
+  priority       NotificationPriority @default(NORMAL)
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+
+  @@unique([userId, category, channel])
+  @@index([userId, role])
+  @@map("notification_preferences")
 }
 
 model AIConversation {
