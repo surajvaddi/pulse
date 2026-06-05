@@ -2,35 +2,26 @@
 
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
+import { accessTokenCookieOptions, demoUserCookieOptions, sessionCookieNames } from "@pulseshift/tools";
 
 import { apiPost, apiPostWithAccessToken, type DemoUserId, type Invitation } from "@/lib/api";
 
 export async function startDemoSessionAction(formData: FormData) {
   const userId = String(formData.get("userId") ?? "user_priya");
-  (await cookies()).set("ps_demo_user_id", userId, {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-    maxAge: 60 * 60 * 8
-  });
+  (await cookies()).set(sessionCookieNames.demoUserId, userId, demoUserCookieOptions(process.env));
   redirect("/app");
 }
 
 export async function logoutAction() {
   await apiPost("/auth/logout", {}, "user_priya");
-  (await cookies()).delete("ps_access_token");
+  const cookieStore = await cookies();
+  cookieStore.delete(sessionCookieNames.accessToken);
+  cookieStore.delete(sessionCookieNames.demoUserId);
   redirect("/login");
 }
 
 export async function establishSupabaseSessionAction(accessToken: string) {
-  (await cookies()).set("ps_access_token", accessToken, {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-    maxAge: 60 * 60
-  });
+  (await cookies()).set(sessionCookieNames.accessToken, accessToken, accessTokenCookieOptions(process.env));
   redirect("/app");
 }
 

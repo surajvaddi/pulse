@@ -8,7 +8,7 @@
     "build": "nest build",
     "typecheck": "tsc --noEmit",
     "lint": "eslint \"src/**/*.ts\"",
-    "test": "tsx src/demo/demo-sandbox.assert.ts && tsx src/demo/notification-preferences.assert.ts && tsx src/demo/notification-repository.assert.ts && tsx src/workflows/llm-sql-tool.assert.ts && tsx src/workflows/llm-workflow-tool.assert.ts && tsx src/auth/permission.e2e.ts && tsx src/auth/supabase-auth.e2e.ts",
+    "test": "tsx src/auth/session-cookie.assert.ts && tsx src/demo/demo-sandbox.assert.ts && tsx src/demo/notification-preferences.assert.ts && tsx src/demo/notification-repository.assert.ts && tsx src/workflows/llm-sql-tool.assert.ts && tsx src/workflows/llm-workflow-tool.assert.ts && tsx src/auth/permission.e2e.ts && tsx src/auth/supabase-auth.e2e.ts",
     "test:demo": "tsx src/demo/demo-flow.e2e.ts"
   },
   "dependencies": {
@@ -19,6 +19,7 @@
     "@pulseshift/domain": "*",
     "@pulseshift/evals": "^0.1.0",
     "@pulseshift/integrations": "^0.1.0",
+    "@pulseshift/tools": "*",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
     "zod": "^3.24.1"

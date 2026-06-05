@@ -482,6 +482,11 @@ async function main() {
     .send({})
     .expect(201);
   assert.equal(logout.body.status, "SIGNED_OUT");
+  const logoutCookies = logout.headers["set-cookie"] as string[] | undefined;
+  assert.ok(logoutCookies);
+  assert.ok(logoutCookies.some((cookie) => cookie.startsWith("ps_access_token=")));
+  assert.ok(logoutCookies.some((cookie) => cookie.startsWith("ps_demo_user_id=")));
+  assert.ok(logoutCookies.every((cookie) => cookie.includes("Max-Age=0")));
 
   process.env.ENABLE_DEMO_RESET = "false";
   await request(server)

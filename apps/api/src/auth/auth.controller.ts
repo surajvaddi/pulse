@@ -1,4 +1,6 @@
-import { Controller, Get, Inject, Post } from "@nestjs/common";
+import { Controller, Get, Inject, Post, Res } from "@nestjs/common";
+import { clearSessionCookieHeaders } from "@pulseshift/tools";
+import type { Response } from "express";
 
 import { CurrentSession } from "./session.decorator";
 import type { DemoSession } from "./demo-users";
@@ -18,7 +20,8 @@ export class AuthController {
   }
 
   @Post("logout")
-  logout() {
+  logout(@Res({ passthrough: true }) response: Response) {
+    response.setHeader("Set-Cookie", clearSessionCookieHeaders(process.env));
     return { status: "SIGNED_OUT" };
   }
 }
