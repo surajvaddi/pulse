@@ -101,6 +101,9 @@ npm run db:seed
 
 For staging and production, run migrations with the direct database URL and keep application runtime traffic on the pooled URL.
 
+Backup, restore, restore-drill, and migration rollback expectations are documented in
+[Backup And Restore Runbook](./backup-restore.md).
+
 ## Seed And Reset Policy
 
 Local and staging may seed demo data for development and smoke tests. The seed set must cover every Phase 16B persona, multi-week schedule context, open shifts, approvals, timecard exceptions, credential warnings, audit records, notifications, and Copilot/reporting examples. Production must not expose a destructive reset endpoint, a public seed workflow, or the demo identity switcher.
