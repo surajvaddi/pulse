@@ -55,6 +55,8 @@ Release preflight, staging smoke, final quality gates, and go/no-go criteria are
 [Deployment Checklist](./deployment-checklist.md).
 Rollback triggers, containment actions, validation commands, and evidence requirements are
 documented in [Rollback Checklist](./rollback-checklist.md).
+Monitoring dashboards, alert routing, event names, and future provider wiring are documented in
+[Monitoring Dashboard Plan](./monitoring-dashboard-plan.md).
 
 Run the opt-in live LLM smoke gate only after staging credentials are loaded:
 

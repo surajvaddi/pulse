@@ -92,4 +92,5 @@ Do not send PHI-like free text to vendors unless the vendor relationship, BAA st
 - Phase 16B role baseline: `docs/phase-16b-role-demo.md`
 - Production readiness: `docs/production-readiness.md`
 - Backup and restore: `docs/backup-restore.md`
+- Monitoring dashboard plan: `docs/monitoring-dashboard-plan.md`
 - Phase 18 LLM tool registry and eval gates: `implement.md`
