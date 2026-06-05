@@ -17,6 +17,7 @@
     "test": "npm run test --workspaces --if-present",
     "test:demo": "npm run test:demo --workspace @pulseshift/api",
     "test:llm:live": "npm run test:live --workspace @pulseshift/ai",
+    "test:staging-smoke": "npm run test:staging-smoke --workspace @pulseshift/api && npm run test:staging-smoke --workspace @pulseshift/web",
     "db:generate": "npm run db:generate --workspace @pulseshift/db",
     "db:validate": "npm run db:validate --workspace @pulseshift/db",
     "db:migrate": "npm run db:migrate --workspace @pulseshift/db",
