@@ -24,7 +24,7 @@ export class EvalService {
     const responses: Record<string, CopilotEvalResponse> = {};
     for (const task of copilotEvalTasks) {
       const session = findDemoSession(task.actorUserId);
-      responses[task.id] = this.copilot.handleMessage(session, task.prompt) as CopilotEvalResponse;
+      responses[task.id] = (await this.copilot.handleMessage(session, task.prompt)) as CopilotEvalResponse;
     }
 
     const run = createCopilotEvalRun({

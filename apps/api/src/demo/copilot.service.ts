@@ -1,8 +1,18 @@
 import { ForbiddenException, Inject, Injectable } from "@nestjs/common";
+import {
+  LlmModelRouter,
+  MockLlmGateway,
+  parseLlmRouteOverrides,
+  type LlmGateway,
+  type LlmModelRoute,
+  type LlmRoleContext
+} from "@pulseshift/ai";
 
 import type { DemoSession } from "../auth/demo-users";
 import { PermissionService } from "../auth/permission.service";
 import { demoAIToolCalls, demoSchedules, demoTimecardExceptions } from "./demo-data";
+import { llmSqlReportTools } from "../workflows/llm-sql-tool.registry";
+import { llmWorkflowTools } from "../workflows/llm-workflow-tool.registry";
 
 type ToolRiskLevel = "READ_ONLY" | "LOW_RISK_WRITE" | "APPROVAL_REQUIRED" | "BLOCKED";
 
@@ -22,13 +32,20 @@ const tools: ToolDefinition[] = [
 
 @Injectable()
 export class CopilotService {
+  private readonly router = new LlmModelRouter(parseLlmRouteOverrides(process.env));
+  private readonly gateway: LlmGateway = new MockLlmGateway();
+
   constructor(@Inject(PermissionService) private readonly permissions: PermissionService) {}
 
-  handleMessage(session: DemoSession, message: string) {
+  async handleMessage(session: DemoSession, message: string) {
     const normalized = message.toLowerCase();
+    const llmContext = await this.prepareLlmContext(session, message, normalized);
 
     if (normalized.includes("clock-in") && normalized.includes("change")) {
-      return this.blockedTool(session, "edit_timecard_event", message);
+      return {
+        ...this.blockedTool(session, "edit_timecard_event", message),
+        llm: llmContext
+      };
     }
 
     if (normalized.includes("swap")) {
@@ -37,7 +54,8 @@ export class CopilotService {
         mode: "ACTION_PREVIEW",
         answer:
           "I can create a swap request for Priya's Friday ICU night shift with Maya. Maya must accept, then Jordan must approve before the schedule changes.",
-        toolCalls: [this.logTool(session, "create_shift_swap_request", { message }, { preview: true })]
+        toolCalls: [this.logTool(session, "create_shift_swap_request", { message }, { preview: true })],
+        llm: llmContext
       };
     }
 
@@ -53,7 +71,8 @@ export class CopilotService {
             { unitId: "unit_icu" },
             { gapCount: 1, severity: "HIGH" }
           )
-        ]
+        ],
+        llm: llmContext
       };
     }
 
@@ -66,7 +85,8 @@ export class CopilotService {
           this.logTool(session, "get_timecard_exceptions", { userId: session.userId }, {
             exceptionIds: demoTimecardExceptions.map((exception) => exception.id)
           })
-        ]
+        ],
+        llm: llmContext
       };
     }
 
@@ -81,7 +101,8 @@ export class CopilotService {
         this.logTool(session, "get_my_schedule", { userId: session.userId }, {
           shiftIds: visibleShift ? [visibleShift.id] : []
         })
-      ]
+      ],
+      llm: llmContext
     };
   }
 
@@ -153,5 +174,57 @@ export class CopilotService {
       throw new Error(`Unknown tool: ${toolName}`);
     }
     return tool;
+  }
+
+  private async prepareLlmContext(session: DemoSession, message: string, normalized: string) {
+    const route = this.routeForMessage(normalized);
+    const roleContext: LlmRoleContext = {
+      actorUserId: session.userId,
+      organizationId: session.organizationId,
+      role: session.role,
+      permissions: session.grants.map((grant) => grant.permission),
+      scopes: session.grants.map((grant) => grant.scope),
+      currentPage: "/app/copilot",
+      mode: process.env.ENABLE_DEMO_AUTH === "false" ? "PRODUCTION" : "DEMO"
+    };
+    const modelRoute = this.router.route(route);
+    const availableTools = [...llmWorkflowTools, ...llmSqlReportTools]
+      .filter((tool) =>
+        tool.routeAvailability.includes(route) &&
+        tool.roleAccess[session.role] !== "BLOCKED" &&
+        (tool.pageContexts.includes("*") || tool.pageContexts.includes(roleContext.currentPage))
+      )
+      .map((tool) => tool.name);
+    const response = await this.gateway.complete({
+      route: modelRoute.route,
+      messages: [{ role: "user", content: message }],
+      roleContext,
+      availableTools
+    });
+
+    return {
+      provider: response.provider,
+      model: response.model,
+      route: response.route,
+      latencyMs: response.latencyMs,
+      availableTools,
+      fallback: true
+    };
+  }
+
+  private routeForMessage(normalized: string): LlmModelRoute {
+    if (normalized.includes("short") || normalized.includes("gap") || normalized.includes("staffing")) {
+      return "MANAGER_OPERATIONS";
+    }
+    if (normalized.includes("swap") || normalized.includes("claim")) {
+      return "WORKFLOW_PREVIEW";
+    }
+    if (normalized.includes("audit") || normalized.includes("summary")) {
+      return "SQL_REPORT_SUMMARY";
+    }
+    if (normalized.includes("change") || normalized.includes("delete") || normalized.includes("sql")) {
+      return "SAFETY_REVIEW";
+    }
+    return "SELF_SERVICE_CHAT";
   }
 }
