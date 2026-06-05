@@ -2,11 +2,13 @@ import assert from "node:assert/strict";
 
 import {
   LlmAccountRoleSchema,
+  LlmModelRouter,
   MockLlmGateway,
   OpenAICompatibleGateway,
   assertRoleContextComplete,
   normalizeProviderError,
   serializeRoleContext,
+  parseLlmRouteOverrides,
   type LlmRoleContext
 } from "./index.js";
 
@@ -123,3 +125,32 @@ const rateLimited = await rateLimitedProvider.complete({
 
 assert.equal(rateLimited.error?.code, "RATE_LIMIT");
 assert.equal(rateLimited.error?.retryable, true);
+
+const router = new LlmModelRouter({
+  MANAGER_OPERATIONS: {
+    provider: "openai-compatible",
+    model: "manager-model",
+    enabled: true,
+    budget: { maxEstimatedCostUsd: 0.04 }
+  },
+  WORKFLOW_PREVIEW: {
+    enabled: false
+  }
+});
+
+assert.equal(router.route("MANAGER_OPERATIONS").model, "manager-model");
+assert.equal(router.route("MANAGER_OPERATIONS").budget.maxEstimatedCostUsd, 0.04);
+assert.equal(router.route("WORKFLOW_PREVIEW").route, "SAFETY_REVIEW");
+assert.equal(router.allRoutes().length, 6);
+
+const overrides = parseLlmRouteOverrides({
+  LLM_PROVIDER: "openai-compatible",
+  LLM_PROVIDER_ENABLED: "true",
+  LLM_MODEL: "global-model",
+  LLM_MODEL_EVAL_RUN: "eval-model",
+  LLM_TIMEOUT_MS: "1234"
+});
+const envRouter = new LlmModelRouter(overrides);
+assert.equal(envRouter.route("SELF_SERVICE_CHAT").provider, "openai-compatible");
+assert.equal(envRouter.route("EVAL_RUN").model, "eval-model");
+assert.equal(envRouter.route("SQL_REPORT_SUMMARY").timeoutMs, 1234);

@@ -100,6 +100,11 @@ export type LlmRouteConfig = {
   maxRetries: number;
   maxInputTokens?: number;
   maxOutputTokens?: number;
+  budget: {
+    maxLatencyMs: number;
+    maxEstimatedCostUsd: number;
+  };
+  enabled: boolean;
 };
 
 export type LlmRequest = {
@@ -124,6 +129,133 @@ export type LlmResponse = {
 
 export interface LlmGateway {
   complete(request: LlmRequest): Promise<LlmResponse>;
+}
+
+export type LlmRouteConfigInput = Partial<Omit<LlmRouteConfig, "route" | "budget">> & {
+  budget?: Partial<LlmRouteConfig["budget"]>;
+};
+
+const defaultRouteConfigs: Record<LlmModelRoute, LlmRouteConfig> = {
+  SELF_SERVICE_CHAT: {
+    route: "SELF_SERVICE_CHAT",
+    provider: "mock",
+    model: "mock-fast",
+    timeoutMs: 3000,
+    maxRetries: 0,
+    maxInputTokens: 4000,
+    maxOutputTokens: 700,
+    budget: { maxLatencyMs: 3000, maxEstimatedCostUsd: 0.01 },
+    enabled: true
+  },
+  MANAGER_OPERATIONS: {
+    route: "MANAGER_OPERATIONS",
+    provider: "mock",
+    model: "mock-reasoning",
+    timeoutMs: 5000,
+    maxRetries: 0,
+    maxInputTokens: 6000,
+    maxOutputTokens: 1200,
+    budget: { maxLatencyMs: 5000, maxEstimatedCostUsd: 0.03 },
+    enabled: true
+  },
+  SQL_REPORT_SUMMARY: {
+    route: "SQL_REPORT_SUMMARY",
+    provider: "mock",
+    model: "mock-fast",
+    timeoutMs: 3000,
+    maxRetries: 0,
+    maxInputTokens: 8000,
+    maxOutputTokens: 900,
+    budget: { maxLatencyMs: 3000, maxEstimatedCostUsd: 0.02 },
+    enabled: true
+  },
+  WORKFLOW_PREVIEW: {
+    route: "WORKFLOW_PREVIEW",
+    provider: "mock",
+    model: "mock-reasoning",
+    timeoutMs: 5000,
+    maxRetries: 0,
+    maxInputTokens: 5000,
+    maxOutputTokens: 900,
+    budget: { maxLatencyMs: 5000, maxEstimatedCostUsd: 0.03 },
+    enabled: true
+  },
+  SAFETY_REVIEW: {
+    route: "SAFETY_REVIEW",
+    provider: "mock",
+    model: "mock-safety",
+    timeoutMs: 2500,
+    maxRetries: 0,
+    maxInputTokens: 3000,
+    maxOutputTokens: 500,
+    budget: { maxLatencyMs: 2500, maxEstimatedCostUsd: 0.01 },
+    enabled: true
+  },
+  EVAL_RUN: {
+    route: "EVAL_RUN",
+    provider: "mock",
+    model: "mock-eval",
+    timeoutMs: 8000,
+    maxRetries: 0,
+    maxInputTokens: 8000,
+    maxOutputTokens: 1500,
+    budget: { maxLatencyMs: 8000, maxEstimatedCostUsd: 0.05 },
+    enabled: true
+  }
+};
+
+export class LlmModelRouter {
+  private readonly configs: Record<LlmModelRoute, LlmRouteConfig>;
+
+  constructor(overrides: Partial<Record<LlmModelRoute, LlmRouteConfigInput>> = {}) {
+    this.configs = LlmModelRouteSchema.options.reduce(
+      (configs, route) => {
+        const defaults = defaultRouteConfigs[route];
+        const override = overrides[route] ?? {};
+        return {
+          ...configs,
+          [route]: {
+            ...defaults,
+            ...override,
+            route,
+            budget: {
+              ...defaults.budget,
+              ...(override.budget ?? {})
+            }
+          }
+        };
+      },
+      {} as Record<LlmModelRoute, LlmRouteConfig>
+    );
+  }
+
+  route(route: LlmModelRoute) {
+    const config = this.configs[route];
+    return config.enabled ? config : this.configs.SAFETY_REVIEW;
+  }
+
+  allRoutes() {
+    return LlmModelRouteSchema.options.map((route) => this.route(route));
+  }
+}
+
+export function parseLlmRouteOverrides(env: Record<string, string | undefined>) {
+  const provider = env.LLM_PROVIDER === "openai-compatible" ? "openai-compatible" : "mock";
+  const enabled = env.LLM_PROVIDER_ENABLED === "true";
+  const model = env.LLM_MODEL ?? (provider === "mock" ? "mock-fast" : "gpt-4.1-mini");
+
+  return LlmModelRouteSchema.options.reduce(
+    (overrides, route) => ({
+      ...overrides,
+      [route]: {
+        provider,
+        model: env[`LLM_MODEL_${route}`] ?? model,
+        enabled: provider === "mock" ? true : enabled,
+        timeoutMs: Number(env[`LLM_TIMEOUT_MS_${route}`] ?? env.LLM_TIMEOUT_MS ?? defaultRouteConfigs[route].timeoutMs)
+      }
+    }),
+    {} as Partial<Record<LlmModelRoute, LlmRouteConfigInput>>
+  );
 }
 
 export type OpenAICompatibleProviderConfig = {
