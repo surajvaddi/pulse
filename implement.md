@@ -1836,40 +1836,106 @@ Phase 20 must treat Phase 16B role walkthroughs as a launch blocker. Staging and
 
 1. `Launch: Write environment runbook`
    - Purpose: Document staging and production environment variables and secrets.
-   - Build: environment setup doc.
-   - Verify: compare against `.env.example` and deployment needs.
+   - Sub-steps:
+     - Add a deployment environment runbook that separates local, staging, and production settings.
+     - Document required API, web, Supabase, Prisma, CORS, cookie, rate-limit, LLM, monitoring, and demo-control variables.
+     - Mark browser-safe variables separately from server-only secrets.
+     - Include rotation and owner notes for service-role, JWT, LLM, integration, email/SMS, and monitoring keys.
+     - Link the runbook from production readiness.
+   - Tests:
+     - Manual cross-check against `.env.example`, `package.json`, Phase 19 security settings, and `docs/production-readiness.md`.
+     - `npm run typecheck --workspace @pulseshift/tools`
+   - Commit: `Launch: Write environment runbook`
 
 2. `Launch: Write migration runbook`
    - Purpose: Document database migration, seed/bootstrap, rollback, and Supabase settings.
-   - Build: migration runbook.
-   - Verify: dry-run commands documented and reviewed.
+   - Sub-steps:
+     - Add migration runbook for staging and production using `DIRECT_URL` for migrations and `DATABASE_URL` for runtime.
+     - Document preflight checks, backup requirement, migration apply steps, seed/bootstrap policy, rollback decision tree, and post-migration smoke checks.
+     - Include Supabase Auth settings and redirect URL checks.
+     - Cross-link backup/restore runbook and production readiness.
+   - Tests:
+     - `npm run db:validate`
+     - `npm run typecheck --workspace @pulseshift/db`
+     - Manual command cross-check against `package.json` DB scripts.
+   - Commit: `Launch: Write migration runbook`
 
 3. `Launch: Build staging smoke tests`
    - Purpose: Automate login, invite, schedule, swap, approval, notification, audit, integration, copilot, and eval smoke paths.
-   - Build: smoke test script or test suite covering every Phase 16B role persona, including allowed landing/navigation and one denied action per role family.
-   - Verify: smoke tests run against local/staging config and fail if any role lacks a meaningful page.
+   - Sub-steps:
+     - Add API staging smoke assertions that cover health, auth/session, invitation, schedule, swap, approval, notification, audit, integration, Copilot, eval, and denied-action paths.
+     - Add web staging smoke assertions that every Phase 16B role has a landing route, navigation entry, meaningful page, and at least one hidden/denied action.
+     - Add root script `test:staging-smoke` to run both smoke layers locally or in staging.
+     - Ensure AI service identity remains backend-only and direct database requests remain blocked.
+   - Tests:
+     - `npm run test:staging-smoke`
+     - `npm run test --workspace @pulseshift/api`
+     - `npm run test --workspace @pulseshift/web`
+   - Commit: `Launch: Build staging smoke tests`
 
 4. `Launch: Build deployment checklist`
    - Purpose: Create a repeatable pre-release checklist.
-   - Build: release checklist covering migrations, Supabase settings, tenant scoping, full-role smoke tests, backups, monitoring, audit export, evals, dependency audit.
-   - Verify: checklist maps to existing commands and docs, including `docs/phase-16b-role-demo.md`.
+   - Sub-steps:
+     - Add release checklist covering env review, Supabase Auth, migration status, backup evidence, full-role staging smoke tests, tenant scoping, audit integrity, AI evals, monitoring events, dependency audit, and final build.
+     - Map each checklist item to a command, document, or owner.
+     - Link Phase 16B role demo, Phase 19 security docs, environment runbook, migration runbook, backup runbook, and staging smoke command.
+   - Tests:
+     - Documentation cross-check against `docs/phase-16b-role-demo.md`, `docs/production-readiness.md`, and root scripts.
+     - `npm run test:staging-smoke`
+   - Commit: `Launch: Build deployment checklist`
 
 5. `Launch: Build rollback checklist`
    - Purpose: Document rollback paths for web, API, migration, integration, and LLM provider failures.
-   - Build: rollback doc.
-   - Verify: each rollback item has owner, trigger, and command/procedure.
+   - Sub-steps:
+     - Add rollback checklist for web release, API release, database migration, Supabase Auth config, integration sync, notification delivery, LLM provider, and monitoring outage.
+     - For each rollback path, document owner, trigger, first containment action, rollback command/procedure, validation command, and evidence to preserve.
+     - Cross-link backup/restore and incident response docs.
+   - Tests:
+     - Documentation cross-check for owner, trigger, procedure, validation, and evidence sections.
+     - `npm run test --workspace @pulseshift/evals`
+   - Commit: `Launch: Build rollback checklist`
 
 6. `Launch: Gate demo affordances`
    - Purpose: Ensure production cannot access demo-only controls, reset routes, demo switchers, or seed-only shortcuts.
-   - Build: route guards, UI gates, tests.
-   - Verify: production env smoke tests deny demo controls for every role, including admin and AI service identities.
+   - Sub-steps:
+     - Add production-state assertions for demo reset, demo auth switcher, demo cookie action, and seed-only shortcuts.
+     - Ensure production UI hides reset controls unless local/demo mode and admin permissions are present.
+     - Ensure API denies demo reset in production-like env for admin, auditor, employee, agency, and AI service identity.
+     - Ensure `ENABLE_DEMO_AUTH=false` requires Supabase bearer auth.
+   - Tests:
+     - API production demo-control denial tests.
+     - Web production-state assertions.
+     - `npm run test --workspace @pulseshift/api`
+     - `npm run test --workspace @pulseshift/web`
+   - Commit: `Launch: Gate demo affordances`
 
 7. `Launch: Add monitoring dashboard plan`
    - Purpose: Define launch metrics and operational alerts.
-   - Build: monitoring doc/config stubs for auth failures, API errors, blocked AI actions, integration failures, notification failures.
-   - Verify: monitoring event hooks exist and docs reference them.
+   - Sub-steps:
+     - Add monitoring dashboard plan for auth failures, permission denials, rate-limit spikes, API errors, blocked AI actions, provider failures, integration failures, notification failures, and migration/build health.
+     - Map each dashboard metric to existing Phase 19 monitoring event names or future provider wiring.
+     - Define alert thresholds, owner, severity, runbook link, and launch-day watch checklist.
+     - Link from production readiness and security operations docs.
+   - Tests:
+     - Monitoring doc cross-check against monitoring event names in API tests.
+     - `npm run test --workspace @pulseshift/api`
+   - Commit: `Launch: Add monitoring plan`
 
 8. `Launch: Run final production gate`
    - Purpose: Validate the full product before launch.
-   - Build: no feature work unless failures require fixes.
-   - Verify: full-role staging smoke tests, production build, typecheck/lint/test/test:demo, high-severity audit, release checklist complete, rollback checklist complete.
+   - Sub-steps:
+     - Run all Phase 20 final commands and fix only launch-readiness regressions.
+     - Run high-severity dependency audit and record moderate advisories if still present.
+     - Confirm staging smoke, release checklist, rollback checklist, monitoring plan, and demo-control denial gates are complete.
+     - Update `implement.md` with Phase 20 completion gate record.
+   - Tests:
+     - `npm audit --audit-level=high`
+     - `npm run db:validate`
+     - `npm run typecheck`
+     - `npm run lint`
+     - `npm run test`
+     - `npm run test:demo`
+     - `npm run test:staging-smoke`
+     - `npm run build`
+     - `npm run test:llm:live` in default skipped mode
+   - Commit: `Quality: Run phase 20 gate`
