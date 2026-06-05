@@ -10,7 +10,7 @@ import type { DemoSession } from "../auth/demo-users";
 import { PermissionService } from "../auth/permission.service";
 import { demoApprovals, type DemoApprovalRecord } from "./demo-data";
 import { AuditService } from "./audit.service";
-import { NotificationService } from "./notification.service";
+import { NotificationEventPublisher } from "./notification-event.publisher";
 import { PolicyEngineService } from "./policy-engine.service";
 import { ScheduleRepositoryProvider } from "./schedule.repository";
 import { SwapRepositoryProvider } from "./swap.repository";
@@ -22,7 +22,7 @@ export class SchedulingWorkflowService {
     @Inject(PolicyEngineService) private readonly policy: PolicyEngineService,
     @Inject(ScheduleRepositoryProvider) private readonly schedules: ScheduleRepositoryProvider,
     @Inject(SwapRepositoryProvider) private readonly swaps: SwapRepositoryProvider,
-    @Inject(NotificationService) private readonly notifications: NotificationService,
+    @Inject(NotificationEventPublisher) private readonly notifications: NotificationEventPublisher,
     @Inject(AuditService) private readonly auditLogs: AuditService
   ) {}
 
@@ -71,8 +71,12 @@ export class SchedulingWorkflowService {
         status: "PENDING",
         riskFlags: policyDecision.riskFlags
       });
-      await this.queueNotification(session.organizationId, "user_jordan_manager", "APPROVAL_REQUIRED", {
-        approvalId: approval.id
+      await this.notifications.publish({
+        organizationId: session.organizationId,
+        actorUserId: session.userId,
+        recipientUserId: "user_jordan_manager",
+        event: "APPROVAL_REQUIRED",
+        payload: { approvalId: approval.id }
       });
       await this.auditLogs.append({
         organizationId: session.organizationId,
@@ -89,7 +93,13 @@ export class SchedulingWorkflowService {
     shift.employeeId = employeeId;
     shift.userId = session.userId;
     shift.status = "ASSIGNED";
-    await this.queueNotification(session.organizationId, session.userId, "SHIFT_ASSIGNED", { shiftId });
+    await this.notifications.publish({
+      organizationId: session.organizationId,
+      actorUserId: session.userId,
+      recipientUserId: session.userId,
+      event: "SHIFT_ASSIGNED",
+      payload: { shiftId }
+    });
     await this.auditLogs.append({
       organizationId: session.organizationId,
       actorUserId: session.userId,
@@ -141,7 +151,13 @@ export class SchedulingWorkflowService {
       managerApprovalRequired: policyDecision.requiresApproval,
       timeline: ["Created", "Waiting for counterparty"]
     });
-    await this.queueNotification(session.organizationId, proposedUserId, "SWAP_REQUESTED", { swapId: swap.id });
+    await this.notifications.publish({
+      organizationId: session.organizationId,
+      actorUserId: session.userId,
+      recipientUserId: proposedUserId,
+      event: "SWAP_REQUESTED",
+      payload: { swapId: swap.id }
+    });
     await this.auditLogs.append({
       organizationId: session.organizationId,
       actorUserId: session.userId,
@@ -168,7 +184,13 @@ export class SchedulingWorkflowService {
         organizationId: session.organizationId,
         swapId
       });
-      await this.queueNotification(session.organizationId, swap.requesterUserId, "SWAP_DENIED", { swapId });
+      await this.notifications.publish({
+        organizationId: session.organizationId,
+        actorUserId: session.userId,
+        recipientUserId: swap.requesterUserId,
+        event: "SWAP_DENIED",
+        payload: { swapId }
+      });
       await this.auditLogs.append({
         organizationId: session.organizationId,
         actorUserId: session.userId,
@@ -194,8 +216,12 @@ export class SchedulingWorkflowService {
       status: "PENDING",
       riskFlags: acceptedSwap.riskFlags
     });
-    await this.queueNotification(session.organizationId, "user_jordan_manager", "APPROVAL_REQUIRED", {
-      approvalId: approval.id
+    await this.notifications.publish({
+      organizationId: session.organizationId,
+      actorUserId: session.userId,
+      recipientUserId: "user_jordan_manager",
+      event: "APPROVAL_REQUIRED",
+      payload: { approvalId: approval.id }
     });
     await this.auditLogs.append({
       organizationId: session.organizationId,
@@ -238,8 +264,20 @@ export class SchedulingWorkflowService {
       if (reason) {
         approval.decisionReason = reason;
       }
-      await this.queueNotification(session.organizationId, swap.requesterUserId, "SWAP_DENIED", { swapId });
-      await this.queueNotification(session.organizationId, swap.proposedUserId, "SWAP_DENIED", { swapId });
+      await this.notifications.publish({
+        organizationId: session.organizationId,
+        actorUserId: session.userId,
+        recipientUserId: swap.requesterUserId,
+        event: "SWAP_DENIED",
+        payload: { swapId }
+      });
+      await this.notifications.publish({
+        organizationId: session.organizationId,
+        actorUserId: session.userId,
+        recipientUserId: swap.proposedUserId,
+        event: "SWAP_DENIED",
+        payload: { swapId }
+      });
       await this.auditLogs.append({
         organizationId: session.organizationId,
         actorUserId: session.userId,
@@ -275,8 +313,20 @@ export class SchedulingWorkflowService {
     if (reason) {
       approval.decisionReason = reason;
     }
-    await this.queueNotification(session.organizationId, swap.requesterUserId, "SWAP_APPROVED", { swapId });
-    await this.queueNotification(session.organizationId, swap.proposedUserId, "SWAP_APPROVED", { swapId });
+    await this.notifications.publish({
+      organizationId: session.organizationId,
+      actorUserId: session.userId,
+      recipientUserId: swap.requesterUserId,
+      event: "SWAP_APPROVED",
+      payload: { swapId }
+    });
+    await this.notifications.publish({
+      organizationId: session.organizationId,
+      actorUserId: session.userId,
+      recipientUserId: swap.proposedUserId,
+      event: "SWAP_APPROVED",
+      payload: { swapId }
+    });
     await this.auditLogs.append({
       organizationId: session.organizationId,
       actorUserId: session.userId,
@@ -346,17 +396,4 @@ export class SchedulingWorkflowService {
     }
   }
 
-  private queueNotification(
-    organizationId: string,
-    recipientUserId: string,
-    type: string,
-    payload: Record<string, string>
-  ) {
-    return this.notifications.create({
-      organizationId,
-      recipientUserId,
-      type,
-      payload
-    });
-  }
 }

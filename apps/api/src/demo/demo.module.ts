@@ -33,6 +33,7 @@ import {
   PrismaNotificationRepository
 } from "./notification.repository";
 import { NotificationController } from "./notification.controller";
+import { NotificationEventPublisher } from "./notification-event.publisher";
 import { NotificationService } from "./notification.service";
 import { OperationsController } from "./operations.controller";
 import {
@@ -89,6 +90,7 @@ import { TimeclockService } from "./timeclock.service";
     PrismaScheduleRepository,
     ScheduleRepositoryProvider,
     ScheduleService,
+    NotificationEventPublisher,
     NotificationService,
     OperationsService,
     InMemoryNotificationRepository,

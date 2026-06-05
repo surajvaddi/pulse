@@ -557,6 +557,7 @@ async function main() {
   const auditActions = auditAfterWorkflow.body.map((log: { action: string }) => log.action);
   assert.ok(auditActions.includes("shift.claim.approval_requested"));
   assert.ok(auditActions.includes("swap.manager_approved"));
+  assert.ok(auditActions.includes("notification.published"));
   assert.ok(auditActions.includes("timecard.clock_in"));
   assert.ok(auditActions.includes("timecard.clock_out"));
 
@@ -565,6 +566,14 @@ async function main() {
     .set("x-demo-user-id", "user_jordan_manager")
     .expect(200);
   assert.ok(managerNotifications.body.length >= 1);
+  assert.ok(
+    managerNotifications.body.some(
+      (notification: { type: string; category: string; priority: string }) =>
+        notification.type === "APPROVAL_REQUIRED" &&
+        notification.category === "APPROVAL" &&
+        notification.priority === "URGENT"
+    )
+  );
   const firstNotificationId = managerNotifications.body[0].id;
   const readNotification = await request(server)
     .post(`/notifications/${firstNotificationId}/read`)
