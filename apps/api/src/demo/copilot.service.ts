@@ -9,8 +9,10 @@ import {
   type LlmRoleContext
 } from "@pulseshift/ai";
 
+import type { Permission } from "@pulseshift/domain";
+
 import type { DemoSession } from "../auth/demo-users";
-import { PermissionService } from "../auth/permission.service";
+import { PermissionService, type ObjectScope } from "../auth/permission.service";
 import { demoAIToolCalls, demoSchedules, demoTimecardExceptions } from "./demo-data";
 import { llmSqlReportTools } from "../workflows/llm-sql-tool.registry";
 import { llmWorkflowTools } from "../workflows/llm-workflow-tool.registry";
@@ -30,15 +32,19 @@ type CopilotLlmContext = Pick<LlmResponse, "provider" | "model" | "route" | "lat
 type ToolDefinition = {
   name: string;
   riskLevel: ToolRiskLevel;
-  requiredPermission: Parameters<PermissionService["hasPermission"]>[1];
+  requiredPermissions: Permission[];
 };
 
 const tools: ToolDefinition[] = [
-  { name: "get_my_schedule", riskLevel: "READ_ONLY", requiredPermission: "schedule:read:self" },
-  { name: "compute_staffing_gaps", riskLevel: "READ_ONLY", requiredPermission: "schedule:read:unit" },
-  { name: "get_timecard_exceptions", riskLevel: "READ_ONLY", requiredPermission: "timecard:read:self" },
-  { name: "create_shift_swap_request", riskLevel: "LOW_RISK_WRITE", requiredPermission: "shift:swap:create" },
-  { name: "edit_timecard_event", riskLevel: "BLOCKED", requiredPermission: "timecard:resolve" }
+  { name: "get_my_schedule", riskLevel: "READ_ONLY", requiredPermissions: ["schedule:read:self"] },
+  { name: "get_facility_schedule_summary", riskLevel: "READ_ONLY", requiredPermissions: ["schedule:read:facility"] },
+  { name: "compute_staffing_gaps", riskLevel: "READ_ONLY", requiredPermissions: ["schedule:read:unit"] },
+  { name: "get_timecard_exceptions", riskLevel: "READ_ONLY", requiredPermissions: ["timecard:read:self", "timecard:read:unit"] },
+  { name: "get_credential_expiry_report", riskLevel: "READ_ONLY", requiredPermissions: ["credential:read"] },
+  { name: "get_audit_activity_report", riskLevel: "READ_ONLY", requiredPermissions: ["audit:read", "ai:admin"] },
+  { name: "create_shift_swap_request", riskLevel: "LOW_RISK_WRITE", requiredPermissions: ["shift:swap:create"] },
+  { name: "edit_timecard_event", riskLevel: "BLOCKED", requiredPermissions: ["timecard:resolve"] },
+  { name: "blocked_database_request", riskLevel: "BLOCKED", requiredPermissions: ["ai:admin"] }
 ];
 
 @Injectable()
@@ -55,6 +61,13 @@ export class CopilotService {
     if (normalized.includes("clock-in") && normalized.includes("change")) {
       return {
         ...this.blockedTool(session, "edit_timecard_event", message, llmContext),
+        llm: llmContext
+      };
+    }
+
+    if (normalized.includes("direct sql") || normalized.includes("raw sql") || normalized.includes("database")) {
+      return {
+        ...this.blockedTool(session, "blocked_database_request", message, llmContext),
         llm: llmContext
       };
     }
@@ -88,19 +101,79 @@ export class CopilotService {
       };
     }
 
+    if (normalized.includes("facility") || normalized.includes("coverage overview")) {
+      this.authorizeTool(session, "get_facility_schedule_summary");
+      return {
+        mode: "ANSWER",
+        answer:
+          "Mercy Main has a facility coverage overview with ICU night risk, ED day coverage stable, and float pool options visible for staffing review.",
+        toolCalls: [
+          this.logTool(
+            session,
+            "get_facility_schedule_summary",
+            { facilityId: "fac_mercy_main" },
+            { unitsReviewed: ["unit_icu", "unit_ed"], riskUnits: ["unit_icu"] },
+            llmContext
+          )
+        ],
+        llm: llmContext
+      };
+    }
+
     if (normalized.includes("flagged") || normalized.includes("timecard")) {
       this.authorizeTool(session, "get_timecard_exceptions");
       return {
         mode: "ANSWER",
-        answer: demoTimecardExceptions[0]?.explanation ?? "No open timecard exceptions are visible.",
+        answer:
+          session.role === "PAYROLL_ADMIN"
+            ? "There is 1 flagged timecard exception in ICU for Priya. Payroll can review the exception but corrections stay in the approval workflow."
+            : demoTimecardExceptions[0]?.explanation ?? "No open timecard exceptions are visible.",
         toolCalls: [
           this.logTool(
             session,
             "get_timecard_exceptions",
-            { userId: session.userId },
+            session.role === "PAYROLL_ADMIN" ? { unitId: "unit_icu" } : { userId: session.userId },
             {
               exceptionIds: demoTimecardExceptions.map((exception) => exception.id)
             },
+            llmContext
+          )
+        ],
+        llm: llmContext
+      };
+    }
+
+    if (normalized.includes("credential") || normalized.includes("certification")) {
+      this.authorizeTool(session, "get_credential_expiry_report");
+      return {
+        mode: "ANSWER",
+        answer:
+          "Nina Patel has a BLS credential expiring soon. Credentialing can verify renewal status before she is placed into restricted coverage.",
+        toolCalls: [
+          this.logTool(
+            session,
+            "get_credential_expiry_report",
+            { organizationId: session.organizationId },
+            { expiringEmployeeIds: ["emp_nina"] },
+            llmContext
+          )
+        ],
+        llm: llmContext
+      };
+    }
+
+    if (normalized.includes("audit") || normalized.includes("admin summary")) {
+      this.authorizeTool(session, "get_audit_activity_report");
+      return {
+        mode: "ANSWER",
+        answer:
+          "The audit summary shows recent schedule, notification, and AI tool-call events with blocked AI attempts separated for compliance review.",
+        toolCalls: [
+          this.logTool(
+            session,
+            "get_audit_activity_report",
+            { organizationId: session.organizationId },
+            { eventCategories: ["SCHEDULE", "AI_SAFETY", "INTEGRATION"] },
             llmContext
           )
         ],
@@ -147,13 +220,26 @@ export class CopilotService {
     if (tool.riskLevel === "BLOCKED") {
       throw new ForbiddenException("Tool is blocked by AI safety policy");
     }
-    const scope =
-      tool.requiredPermission.endsWith(":self") || tool.requiredPermission.includes(":create")
-        ? ({ type: "SELF", userId: session.userId } as const)
-        : ({ type: "UNIT", unitId: "unit_icu" } as const);
-    if (!this.permissions.hasPermission(session, tool.requiredPermission, scope)) {
+    if (
+      !tool.requiredPermissions.some((permission) =>
+        this.permissions.hasPermission(session, permission, this.scopeForPermission(session, permission))
+      )
+    ) {
       throw new ForbiddenException("Tool is outside the requesting user's effective permissions");
     }
+  }
+
+  private scopeForPermission(session: DemoSession, permission: Permission): ObjectScope {
+    if (permission.endsWith(":self") || permission.includes(":create")) {
+      return { type: "SELF", userId: session.userId };
+    }
+    if (permission.endsWith(":facility")) {
+      return { type: "FACILITY", facilityId: "fac_mercy_main" };
+    }
+    if (permission === "audit:read" || permission === "ai:admin" || permission === "credential:read") {
+      return { type: "ORG", organizationId: session.organizationId };
+    }
+    return { type: "UNIT", unitId: "unit_icu" };
   }
 
   private blockedTool(session: DemoSession, toolName: string, message: string, llmContext: CopilotLlmContext) {
@@ -171,7 +257,9 @@ export class CopilotService {
     return {
       mode: "BLOCKED",
       answer:
-        "I cannot directly edit clock-in events. I can help create a timecard correction request for manager or payroll review.",
+        toolName === "blocked_database_request"
+          ? "I cannot run direct SQL or database changes. I can use predefined reporting tools or create a reviewed workflow request instead."
+          : "I cannot directly edit clock-in events. I can help create a timecard correction request for manager or payroll review.",
       toolCalls: [toolCall]
     };
   }
@@ -287,16 +375,33 @@ export class CopilotService {
   }
 
   private routeForMessage(normalized: string): LlmModelRoute {
-    if (normalized.includes("short") || normalized.includes("gap") || normalized.includes("staffing")) {
+    if (
+      normalized.includes("short") ||
+      normalized.includes("gap") ||
+      normalized.includes("staffing") ||
+      normalized.includes("facility") ||
+      normalized.includes("coverage overview")
+    ) {
       return "MANAGER_OPERATIONS";
     }
     if (normalized.includes("swap") || normalized.includes("claim")) {
       return "WORKFLOW_PREVIEW";
     }
-    if (normalized.includes("audit") || normalized.includes("summary")) {
+    if (
+      normalized.includes("audit") ||
+      normalized.includes("summary") ||
+      normalized.includes("credential") ||
+      normalized.includes("certification") ||
+      normalized.includes("timecard")
+    ) {
       return "SQL_REPORT_SUMMARY";
     }
-    if (normalized.includes("change") || normalized.includes("delete") || normalized.includes("sql")) {
+    if (
+      normalized.includes("change") ||
+      normalized.includes("delete") ||
+      normalized.includes("sql") ||
+      normalized.includes("database")
+    ) {
       return "SAFETY_REVIEW";
     }
     return "SELF_SERVICE_CHAT";

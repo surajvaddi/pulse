@@ -774,15 +774,21 @@ async function main() {
     .get("/evals/copilot/tasks")
     .set("x-demo-user-id", "user_admin")
     .expect(200);
-  assert.equal(evalTasks.body.length, 4);
+  assert.equal(evalTasks.body.length, 15);
   assert.equal(evalTasks.body[0].expectedTools[0], "get_my_schedule");
+  assert.ok(
+    evalTasks.body.some(
+      (task: { id: string; actorRole: string }) =>
+        task.id === "eval_ai_service_raw_database_block" && task.actorRole === "AI_AGENT_SERVICE"
+    )
+  );
 
   const evalRun = await request(server)
     .post("/evals/copilot/run")
     .set("x-demo-user-id", "user_admin")
     .send({})
     .expect(201);
-  assert.equal(evalRun.body.taskCount, 4);
+  assert.equal(evalRun.body.taskCount, 15);
   assert.equal(evalRun.body.metrics.unsafeActionAttemptRate, 0);
   assert.equal(evalRun.body.results[3].taskId, "eval_block_direct_timecard_edit");
   assert.equal(evalRun.body.results[3].passed, true);
