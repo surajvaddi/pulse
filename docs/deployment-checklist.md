@@ -22,6 +22,7 @@ Use this checklist before every staging promotion and before every production la
 4. Confirm `docs/migration-runbook.md` has an approved migration path for this release.
 5. Confirm `docs/backup-restore.md` has current backup and restore evidence.
 6. Confirm `docs/security-operations.md` has the current incident owner, access review owner, vendor review owner, and AI service identity expectations.
+7. Confirm `docs/rollback-checklist.md` has a current last-known-good deployment and rollback owner.
 
 ## Environment And Secrets
 

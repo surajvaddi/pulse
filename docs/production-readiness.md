@@ -53,6 +53,8 @@ Environment separation, browser-safe variables, server-only secrets, and rotatio
 documented in [Environment Runbook](./environment-runbook.md).
 Release preflight, staging smoke, final quality gates, and go/no-go criteria are documented in
 [Deployment Checklist](./deployment-checklist.md).
+Rollback triggers, containment actions, validation commands, and evidence requirements are
+documented in [Rollback Checklist](./rollback-checklist.md).
 
 Run the opt-in live LLM smoke gate only after staging credentials are loaded:
 
