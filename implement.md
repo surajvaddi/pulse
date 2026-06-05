@@ -1655,48 +1655,155 @@ Phase 19 must harden the full role surface from Phase 16B. Security work must co
 
 1. `Security: Harden session cookies`
    - Purpose: Make auth cookies production-safe.
-   - Build: secure cookie settings, expiration handling, logout clearing.
-   - Verify: session unit/e2e tests.
+   - Sub-steps:
+     - Add a shared server-side cookie config helper for API/web auth cookies with environment-aware `secure`, `sameSite`, `httpOnly`, path, and max-age settings.
+     - Ensure production refuses insecure cookie settings when `APP_ENV=production` or `NODE_ENV=production`.
+     - Confirm logout clears the exact same cookie names, path, and domain attributes used at login.
+     - Add session-expiration behavior for stale or malformed session cookies.
+     - Verify demo auth switcher behavior remains demo-only and cannot weaken production cookie settings.
+   - Tests:
+     - Cookie config unit tests for local, staging, and production modes.
+     - Logout e2e test proving cookies are cleared.
+     - Malformed/stale cookie e2e test.
+     - Production-mode denial test for demo/insecure cookie behavior.
+     - `npm run typecheck --workspace @pulseshift/api`
+     - `npm run typecheck --workspace @pulseshift/web`
+     - `npm run test --workspace @pulseshift/api`
+     - `npm run test --workspace @pulseshift/web`
+   - Commit: `Security: Harden session cookies`
 
 2. `Security: Add CORS allowlist`
    - Purpose: Restrict browser origins in production.
-   - Build: env-driven CORS config.
-   - Verify: allowed and denied origin tests.
+   - Sub-steps:
+     - Add an env-driven CORS config module for the API using explicit allowed origins.
+     - Allow localhost defaults only outside production.
+     - Reject wildcard origins in production.
+     - Apply CORS config during API bootstrap without changing route behavior.
+     - Add `.env.example` entries for staging and production web origins.
+   - Tests:
+     - CORS config unit tests for allowed origin, denied origin, missing origin, and production wildcard rejection.
+     - API e2e test for preflight allowed and denied origins.
+     - `npm run typecheck --workspace @pulseshift/api`
+     - `npm run lint --workspace @pulseshift/api`
+     - `npm run test --workspace @pulseshift/api`
+   - Commit: `Security: Add CORS allowlist`
 
 3. `Security: Add rate limits`
    - Purpose: Protect auth, invites, copilot, and write-heavy endpoints.
-   - Build: rate-limit middleware/config.
-   - Verify: rate-limit e2e tests.
+   - Sub-steps:
+     - Add a small rate-limit policy module with route categories: auth/session, invitations, copilot, workflow writes, integrations, and default API reads.
+     - Implement in-memory local limiter with a provider-neutral interface so Redis/Supabase-compatible backing can be added later.
+     - Key limits by tenant, user/session, IP fallback, and route category without storing raw auth tokens.
+     - Add safe response headers and consistent `429` error payloads.
+     - Ensure demo tests can reset limiter state between runs.
+   - Tests:
+     - Unit tests for limit windows, key creation, reset behavior, and redaction.
+     - E2E tests showing repeated auth/copilot/write requests receive `429`.
+     - Role-specific tests proving admin, employee, agency, and AI service identities are all rate limited.
+     - `npm run typecheck --workspace @pulseshift/api`
+     - `npm run lint --workspace @pulseshift/api`
+     - `npm run test --workspace @pulseshift/api`
+   - Commit: `Security: Add rate limits`
 
 4. `Security: Add request IDs and structured logs`
    - Purpose: Improve traceability without leaking sensitive data.
-   - Build: request ID middleware, log helpers, redaction rules.
-   - Verify: log redaction checks.
+   - Sub-steps:
+     - Add request ID middleware that accepts a safe inbound request ID or creates one.
+     - Attach request ID, organization ID, actor user ID, role, route, status, and latency to structured log records.
+     - Add redaction helpers for authorization headers, cookies, Supabase keys, service-role keys, LLM keys, JWTs, prompt-sensitive content, and raw SQL-like strings.
+     - Ensure errors include request ID without logging stack traces in production responses.
+     - Add request ID to API responses for support/debug correlation.
+   - Tests:
+     - Unit tests for request ID validation/generation.
+     - Log redaction tests for keys, cookies, JWTs, prompt text, and SQL-like content.
+     - E2E test proving response includes request ID and logs use redacted metadata.
+     - `npm run typecheck --workspace @pulseshift/api`
+     - `npm run lint --workspace @pulseshift/api`
+     - `npm run test --workspace @pulseshift/api`
+   - Commit: `Security: Add request logging`
 
 5. `Security: Protect audit integrity`
    - Purpose: Ensure audit records are append-only through public APIs.
-   - Build: absence tests for delete routes, read-only auditor access, admin export route if needed, and AI tool-call audit visibility.
-   - Verify: audit delete absence e2e tests plus role-specific audit visibility/denial tests.
+   - Sub-steps:
+     - Add explicit tests proving no public API exposes update/delete operations for audit logs or AI tool-call records.
+     - Ensure auditors can read audit/tool-call evidence but cannot mutate users, schedules, credentials, integrations, notifications, or demo reset state.
+     - Ensure admins can view evidence but still cannot delete or rewrite audit records through public routes.
+     - Add an audit export read route only if it can be implemented as read-only and role-gated.
+     - Add retention-policy metadata/docs without implementing destructive retention jobs in this phase.
+   - Tests:
+     - Audit delete/update absence e2e tests.
+     - Auditor read-only role e2e tests.
+     - Admin no-delete e2e tests.
+     - AI tool-call metadata visibility tests for admin/auditor and denial tests for normal roles.
+     - `npm run test --workspace @pulseshift/api`
+     - `npm run test --workspace @pulseshift/web`
+   - Commit: `Security: Protect audit integrity`
 
 6. `Security: Write backup and restore docs`
    - Purpose: Document Supabase backup/restore and migration rollback expectations.
-   - Build: operational doc.
-   - Verify: doc review against environment variables and migration commands.
+   - Sub-steps:
+     - Add a backup/restore runbook for Supabase staging and production.
+     - Include backup schedule, restore drill cadence, owner, required credentials, and safe handling of service-role keys.
+     - Document Prisma migration rollback expectations and the difference between schema rollback and data restoration.
+     - Link required env vars from `.env.example`.
+     - Add a short local-development note for Docker PostgreSQL versus hosted Supabase.
+   - Tests:
+     - Documentation link/path check where available.
+     - Manual cross-check against `.env.example`, `package.json` database scripts, and `docs/production-readiness.md`.
+     - `npm run lint --workspace @pulseshift/db`
+     - `npm run db:validate`
+   - Commit: `Security: Document backups`
 
 7. `Security: Write incident and access review docs`
    - Purpose: Prepare HIPAA-ready operational practices without claiming certification.
-   - Build: incident response, full-role access review, AI service identity review, vendor/BAA checklist docs.
-   - Verify: checklist review, role matrix cross-check, and launch-readiness doc link checks.
+   - Sub-steps:
+     - Add incident response runbook for auth compromise, exposed key, data access anomaly, failed integration, failed notification delivery, and unsafe AI action.
+     - Add access review checklist covering every Phase 16B role, admin role, auditor, external agency user, and AI service identity.
+     - Add AI service identity review checklist for permissions, scopes, provider keys, tool registry access, and blocked direct SQL.
+     - Add vendor/BAA checklist for Supabase, LLM provider, hosting, email/SMS, monitoring, and payroll/timekeeping integrations.
+     - Clearly state HIPAA-ready operational preparation without claiming legal certification.
+   - Tests:
+     - Documentation cross-check against Phase 16B role matrix.
+     - Verify docs link from `docs/production-readiness.md`.
+     - Verify AI service identity controls reference Phase 18 tool registry and eval gates.
+     - `npm run test --workspace @pulseshift/evals`
+   - Commit: `Security: Document incident reviews`
 
 8. `Security: Add monitoring event hooks`
    - Purpose: Emit events for auth failures, permission denials, blocked AI actions, integration failures, workflow errors, and notification delivery failures.
-   - Build: monitoring interface and initial emitters with actor role, scope, tenant, and redacted context.
-   - Verify: unit tests for event emission/redaction and role-specific denied-action monitoring assertions.
+   - Sub-steps:
+     - Add provider-neutral monitoring interface with event name, severity, request ID, organization ID, actor user ID, actor role, scope summary, route, and redacted metadata.
+     - Add local in-memory/no-op implementation for tests and development.
+     - Emit events for auth failures, permission denials, blocked AI actions, provider failures, integration sync failures, workflow rollback errors, and notification delivery failures.
+     - Reuse request ID and redaction helpers from structured logging.
+     - Expose monitoring assertions in tests without introducing an external monitoring dependency.
+   - Tests:
+     - Unit tests for event creation and redaction.
+     - E2E tests for permission denial, blocked AI action, integration failure, and notification failure monitoring events.
+     - Role-specific denied-action monitoring assertions for employee, auditor, agency, admin, and AI service identity.
+     - `npm run typecheck --workspace @pulseshift/api`
+     - `npm run lint --workspace @pulseshift/api`
+     - `npm run test --workspace @pulseshift/api`
+   - Commit: `Security: Add monitoring hooks`
 
 9. `Security: Run production security gate`
    - Purpose: Validate security baseline before launch-readiness work.
-   - Build: fixes only if gate failures appear.
-   - Verify: `npm audit --audit-level=high`, typecheck/lint/test/build, security e2e tests, full-role walkthrough tests, demo-control denial tests, and AI service identity misuse tests.
+   - Sub-steps:
+     - Run all Phase 19 verification commands and fix only security-phase regressions.
+     - Run dependency audit and document remaining advisories if any cannot be safely fixed in this phase.
+     - Run full-role walkthroughs from Phase 16B to prove security controls did not break role-specific navigation.
+     - Run demo-control denial tests in production-like env settings.
+     - Update `implement.md` with a Phase 19 completion gate record.
+   - Tests:
+     - `npm audit --audit-level=high`
+     - `npm run db:validate`
+     - `npm run typecheck`
+     - `npm run lint`
+     - `npm run test`
+     - `npm run test:demo`
+     - `npm run build`
+     - `npm run test:llm:live` in default skipped mode
+   - Commit: `Quality: Run phase 19 gate`
 
 ## Phase 20 Goal Mode Steps: Production Deployment And Launch Readiness
 
