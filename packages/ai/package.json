@@ -9,10 +9,13 @@
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc --noEmit",
     "lint": "eslint \"src/**/*.ts\"",
-    "test": "tsc --noEmit"
+    "test": "tsx src/gateway.assert.ts && tsc --noEmit"
   },
   "dependencies": {
     "@pulseshift/tools": "*",
     "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "tsx": "^4.20.6"
   }
 }
