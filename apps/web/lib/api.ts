@@ -121,10 +121,25 @@ export type AIToolCall = {
 
 export type Notification = {
   id: string;
+  organizationId: string;
   recipientUserId: string;
+  channel: string;
   type: string;
-  status: "QUEUED" | "READ";
+  category: string;
+  priority: string;
+  status: "QUEUED" | "SENT" | "DELIVERED" | "FAILED" | "READ";
   payload: Record<string, string>;
+  createdAt?: string;
+  updatedAt?: string;
+  readAt?: string;
+  deliveredAt?: string;
+  failedAt?: string;
+  failureReason?: string;
+  retryCount: number;
+  lastAttemptedAt?: string;
+  nextRetryAt?: string;
+  providerMessageId?: string;
+  providerMetadata?: Record<string, string>;
 };
 
 export type CopilotResponse = {

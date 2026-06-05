@@ -481,16 +481,22 @@ async function main() {
   await prisma.notification.createMany({
     data: [
       {
+        organizationId: ids.org,
         recipientUserId: ids.userJordan,
         channel: "IN_APP",
         type: "STAFFING_RISK",
+        category: "STAFFING",
+        priority: "HIGH",
         status: "QUEUED",
         payload: { unitId: ids.unitIcu, shiftId: ids.shiftOpenIcuNight }
       },
       {
+        organizationId: ids.org,
         recipientUserId: ids.userPriya,
         channel: "IN_APP",
         type: "TIMECARD_EXCEPTION",
+        category: "TIMECARD",
+        priority: "HIGH",
         status: "QUEUED",
         payload: { exceptionId: ids.timecardLate }
       }

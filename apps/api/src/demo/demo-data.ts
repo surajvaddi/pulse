@@ -489,73 +489,142 @@ export function appendDemoAuditLog(input: {
 
 export const demoNotifications: Array<{
   id: string;
+  organizationId: string;
   recipientUserId: string;
   type: string;
-  status: "QUEUED" | "READ";
+  channel: "IN_APP" | "EMAIL" | "SMS" | "PUSH" | "SLACK" | "TEAMS";
+  category:
+    | "SCHEDULE"
+    | "SWAP"
+    | "APPROVAL"
+    | "STAFFING"
+    | "TIMECARD"
+    | "CREDENTIAL"
+    | "INTEGRATION"
+    | "AI_SAFETY"
+    | "SYSTEM";
+  priority: "LOW" | "NORMAL" | "HIGH" | "URGENT";
+  status: "QUEUED" | "SENT" | "DELIVERED" | "FAILED" | "READ";
   payload: Record<string, string>;
+  retryCount: number;
+  createdAt?: string;
+  updatedAt?: string;
+  readAt?: string;
+  deliveredAt?: string;
+  failedAt?: string;
+  failureReason?: string;
+  lastAttemptedAt?: string;
+  nextRetryAt?: string;
+  providerMessageId?: string;
+  providerMetadata?: Record<string, string>;
 }> = [
   {
     id: "notification_staffing_risk_icu",
+    organizationId: "org_mercy",
     recipientUserId: "user_jordan_manager",
     type: "STAFFING_RISK",
+    channel: "IN_APP",
+    category: "STAFFING",
+    priority: "HIGH",
     status: "QUEUED",
-    payload: { shiftId: "shift_open_icu_night" }
+    payload: { shiftId: "shift_open_icu_night" },
+    retryCount: 0
   },
   {
     id: "notification_timecard_late_priya",
+    organizationId: "org_mercy",
     recipientUserId: "user_priya",
     type: "TIMECARD_EXCEPTION",
+    channel: "IN_APP",
+    category: "TIMECARD",
+    priority: "HIGH",
     status: "QUEUED",
-    payload: { exceptionId: "timecard_exception_late_priya" }
+    payload: { exceptionId: "timecard_exception_late_priya" },
+    retryCount: 0
   },
   {
     id: "notification_charge_coverage",
+    organizationId: "org_mercy",
     recipientUserId: "user_olivia_charge",
     type: "UNIT_COVERAGE",
+    channel: "IN_APP",
+    category: "STAFFING",
+    priority: "HIGH",
     status: "QUEUED",
-    payload: { unitId: "unit_icu", shiftId: "shift_open_icu_week3" }
+    payload: { unitId: "unit_icu", shiftId: "shift_open_icu_week3" },
+    retryCount: 0
   },
   {
     id: "notification_workforce_publish",
+    organizationId: "org_mercy",
     recipientUserId: "user_wendy_workforce",
     type: "SCHEDULE_PUBLISH_READY",
+    channel: "IN_APP",
+    category: "SCHEDULE",
+    priority: "NORMAL",
     status: "QUEUED",
-    payload: { facilityId: "fac_mercy_main" }
+    payload: { facilityId: "fac_mercy_main" },
+    retryCount: 0
   },
   {
     id: "notification_float_gap",
+    organizationId: "org_mercy",
     recipientUserId: "user_felix_float",
     type: "FLOAT_POOL_CANDIDATES",
+    channel: "IN_APP",
+    category: "STAFFING",
+    priority: "HIGH",
     status: "QUEUED",
-    payload: { gapId: "gap_icu_night_rn" }
+    payload: { gapId: "gap_icu_night_rn" },
+    retryCount: 0
   },
   {
     id: "notification_credential_expiring",
+    organizationId: "org_mercy",
     recipientUserId: "user_carmen_credentials",
     type: "CREDENTIAL_EXPIRING",
+    channel: "IN_APP",
+    category: "CREDENTIAL",
+    priority: "HIGH",
     status: "QUEUED",
-    payload: { employeeId: "emp_nina" }
+    payload: { employeeId: "emp_nina" },
+    retryCount: 0
   },
   {
     id: "notification_audit_review",
+    organizationId: "org_mercy",
     recipientUserId: "user_avery_auditor",
     type: "AUDIT_REVIEW",
+    channel: "IN_APP",
+    category: "AI_SAFETY",
+    priority: "NORMAL",
     status: "QUEUED",
-    payload: { auditId: "audit_seed_integration_attention" }
+    payload: { auditId: "audit_seed_integration_attention" },
+    retryCount: 0
   },
   {
     id: "notification_exec_summary",
+    organizationId: "org_mercy",
     recipientUserId: "user_evan_exec",
     type: "WORKFORCE_SUMMARY",
+    channel: "EMAIL",
+    category: "STAFFING",
+    priority: "NORMAL",
     status: "QUEUED",
-    payload: { facilityId: "fac_mercy_main" }
+    payload: { facilityId: "fac_mercy_main" },
+    retryCount: 0
   },
   {
     id: "notification_agency_open_shift",
+    organizationId: "org_mercy",
     recipientUserId: "user_aria_agency",
     type: "AGENCY_OPEN_SHIFT",
+    channel: "IN_APP",
+    category: "STAFFING",
+    priority: "HIGH",
     status: "QUEUED",
-    payload: { shiftId: "shift_open_ed_day_week2" }
+    payload: { shiftId: "shift_open_ed_day_week2" },
+    retryCount: 0
   }
 ];
 

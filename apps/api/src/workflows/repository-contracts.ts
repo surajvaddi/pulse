@@ -105,10 +105,25 @@ export interface ApprovalRepository {
 
 export type NotificationRecord = {
   id: string;
+  organizationId: string;
   recipientUserId: string;
   type: string;
-  status: "QUEUED" | "READ";
+  channel: NotificationChannel;
+  category: NotificationCategory;
+  priority: NotificationPriority;
+  status: "QUEUED" | "SENT" | "DELIVERED" | "FAILED" | "READ";
   payload: Record<string, string>;
+  createdAt?: string;
+  updatedAt?: string;
+  readAt?: string;
+  deliveredAt?: string;
+  failedAt?: string;
+  failureReason?: string;
+  retryCount: number;
+  lastAttemptedAt?: string;
+  nextRetryAt?: string;
+  providerMessageId?: string;
+  providerMetadata?: Record<string, string>;
 };
 
 export interface NotificationRepository {
@@ -117,11 +132,28 @@ export interface NotificationRepository {
     recipientUserId: string;
     status?: NotificationRecord["status"];
   }): Promise<NotificationRecord[]>;
-  createNotification(input: Omit<NotificationRecord, "id" | "status"> & { status?: NotificationRecord["status"] }): Promise<NotificationRecord>;
+  countUnread(query: {
+    organizationId: string;
+    recipientUserId: string;
+  }): Promise<number>;
+  createNotification(
+    input: Omit<NotificationRecord, "id" | "status" | "retryCount"> &
+      Partial<Pick<NotificationRecord, "status" | "retryCount">>
+  ): Promise<NotificationRecord>;
   markRead(input: {
     organizationId: string;
     notificationId: string;
     recipientUserId: string;
+  }): Promise<NotificationRecord>;
+  updateDeliveryStatus(input: {
+    organizationId: string;
+    notificationId: string;
+    recipientUserId: string;
+    status: Extract<NotificationRecord["status"], "SENT" | "DELIVERED" | "FAILED">;
+    failureReason?: string;
+    providerMessageId?: string;
+    providerMetadata?: Record<string, string>;
+    nextRetryAt?: string;
   }): Promise<NotificationRecord>;
 }
 

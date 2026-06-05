@@ -291,6 +291,7 @@ model Organization {
   certifications     Certification[]
   shifts             Shift[]
   approvalRequests   ApprovalRequest[]
+  notifications      Notification[]
   aiConversations    AIConversation[]
   auditLogs          AuditLog[]
   invitations        Invitation[]
@@ -623,6 +624,8 @@ model TimecardException {
 
 model Notification {
   id              String              @id @default(cuid())
+  organizationId  String
+  organization    Organization        @relation(fields: [organizationId], references: [id])
   recipientUserId String
   recipientUser   User                @relation(fields: [recipientUserId], references: [id])
   channel         NotificationChannel
@@ -644,6 +647,7 @@ model Notification {
   updatedAt       DateTime            @updatedAt
 
   @@index([recipientUserId, status])
+  @@index([organizationId, recipientUserId])
   @@index([recipientUserId, category])
   @@map("notifications")
 }
