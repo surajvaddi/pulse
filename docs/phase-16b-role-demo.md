@@ -32,6 +32,21 @@ Use the demo identity selector to walk each role through its landing page and th
 - Organization owner and system admin should land on Admin and see administration, integrations, audit, evals, and user management.
 - AI service identity should land on Copilot only and should not be used as a human account in production.
 
+## Standing Gate For Future Phases
+
+Phase 16B is the baseline for all future production work. Phases 17 through 20 must reuse this checklist for notifications, LLM tooling, SQL reporting, security hardening, staging launch checks, and deployment readiness.
+
+For each new feature, answer and test:
+
+1. Which roles can see it?
+2. Which roles can act on it?
+3. Which roles have read-only visibility?
+4. Which roles are blocked or hidden?
+5. Which organization, unit, employee, agency, or service scope is enforced?
+6. Which audit, monitoring, notification, Copilot, or SQL-reporting context is emitted?
+
+No phase is complete until the full-role walkthrough, role/page contract assertions, allowed workflow checks, and denied-action checks are passing.
+
 ## Verification Commands
 
 ```text

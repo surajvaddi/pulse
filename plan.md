@@ -139,13 +139,50 @@ Phase 16: Redesign the operational UI around role-specific workflows for employe
 
 Phase 16B: Complete full role-view coverage for every production role with sandbox data, role-specific landing pages, scoped schedule modes, secondary workflow pages, walkthrough assertions, and final responsive/integration QA so every seeded role can be demoed end to end.
 
-Phase 17: Persist notifications, add communication preferences, and introduce realtime or near-realtime updates for approvals, swaps, schedule changes, staffing gaps, and notification reads.
+Phase 17: Persist notifications, add communication preferences, and introduce realtime or near-realtime updates for approvals, swaps, schedule changes, staffing gaps, and notification reads, with role-specific notification preferences, delivery visibility, and walkthrough tests for every Phase 16B persona.
 
-Phase 18: Integrate a real OpenAI-compatible LLM gateway behind the existing tool permission, policy, preview, approval, audit, and evaluation boundaries.
+Phase 18: Integrate a real OpenAI-compatible LLM gateway behind the existing tool permission, policy, preview, approval, audit, and evaluation boundaries, using the Phase 16B role matrix as the required eval surface for allowed, blocked, read-only, and approval-required tool behavior.
 
-Phase 19: Add production security and HIPAA-ready controls while continuing to exclude PHI: secure session handling, CORS allowlists, rate limits, structured logs, audit retention, access reviews, incident response docs, backup/restore docs, and dependency audit policy.
+Phase 19: Add production security and HIPAA-ready controls while continuing to exclude PHI: secure session handling, CORS allowlists, rate limits, structured logs, audit retention, full-role access reviews, AI service identity controls, incident response docs, backup/restore docs, and dependency audit policy.
 
-Phase 20: Prepare production deployment and launch readiness with staging/production environment docs, migration runbooks, smoke tests, release checklists, rollback plans, monitoring, and removal or strict gating of demo-only affordances.
+Phase 20: Prepare production deployment and launch readiness with staging/production environment docs, migration runbooks, full-role smoke tests, release checklists, rollback plans, monitoring, and removal or strict gating of demo-only affordances.
+
+## Phase 16B Role Coverage Gate
+
+Phase 16B is now a standing acceptance gate for every later phase. Future work must not treat role coverage as optional UI polish. Every new feature, page, API, notification, LLM tool, security rule, integration, and smoke test must explicitly declare:
+
+- which roles can see it
+- which roles can act on it
+- which roles receive read-only context
+- which roles must not see it
+- required permission and scope
+- relevant empty, forbidden, loading, and error states
+- audit events or monitoring events created by mutations or denied actions
+- whether Copilot or predefined SQL reporting tools can read or act in that page context
+
+Every future phase must keep the Phase 16B personas usable:
+
+- organization owner
+- system admin
+- workforce admin
+- unit manager
+- charge nurse
+- employee
+- float pool coordinator
+- payroll admin
+- credentialing admin
+- compliance auditor
+- executive viewer
+- external agency admin
+- AI agent service identity
+
+The minimum recurring verification is:
+
+- role/page contract assertions stay complete
+- role landing and navigation walkthroughs pass
+- API permission tests cover allowed and forbidden access for affected roles
+- UI smoke tests cover at least one meaningful page per affected role
+- production/demo controls remain hidden or denied where inappropriate
 
 ## Production Readiness Interfaces
 
@@ -230,10 +267,11 @@ The production phases should add and maintain these gates:
 - Unit tests for Supabase JWT verification, permission loading, invite token validation, role/scope mapping, and policy decisions.
 - API e2e tests for login/session, invite acceptance, forbidden cross-organization access, employee schedule visibility, manager unit scope, swap lifecycle, audit writes, notification reads, and admin user management.
 - Prisma service tests for transactional workflow correctness, especially swap approval, schedule reassignment, approval updates, notifications, and audit writes.
-- SQL reporting tests for every predefined query: tenant isolation, parameter validation, result limits, timeout behavior, explain-plan review where practical, and denial of arbitrary SQL inputs.
+- SQL reporting tests for every predefined query: tenant isolation, role/scope isolation, parameter validation, result limits, timeout behavior, explain-plan review where practical, and denial of arbitrary SQL inputs.
+- Full-role walkthrough tests for every Phase 16B persona: landing route, navigation, schedule mode, one meaningful allowed workflow, one restricted/denied behavior, and production-hidden demo controls.
 - UI smoke tests for login, onboarding, role-specific dashboards, account controls, admin invite flow, and production empty/error/forbidden states.
-- LLM eval tests for expected tool selection, blocked payroll edits, unauthorized schedule access, approval-required actions, audit persistence, and zero unsafe action attempts on blocked tasks.
-- Staging smoke tests for login, invite acceptance, schedule read, swap workflow, approval workflow, notification read, audit view, integration sync, copilot blocked action, and eval suite execution.
+- LLM eval tests for expected tool selection, blocked payroll edits, unauthorized schedule access, approval-required actions, audit persistence, AI service identity misuse, and zero unsafe action attempts on blocked tasks across the Phase 16B role matrix.
+- Staging smoke tests for login, invite acceptance, schedule read, swap workflow, approval workflow, notification read, audit view, integration sync, copilot blocked action, eval suite execution, and all Phase 16B role walkthroughs.
 
 ## Production Readiness Assumptions
 

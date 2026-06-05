@@ -33,11 +33,20 @@ Production-readiness setup:
 
 Seeded demo users:
 
-- `user_priya`: employee self-schedule, open shifts, swaps, timecards, copilot.
+- `user_owner`: organization owner for account-wide settings, admin workflows, audit, integrations, evals, and user management.
+- `user_admin`: system admin for administration, audit, integrations, evals, and tool-call review.
+- `user_wendy_workforce`: workforce admin for staffing operations, facility schedule coverage, and open-shift coordination.
+- `user_jordan_manager`: ICU/ED unit manager for approvals, staffing risk, schedule review, and team workflows.
+- `user_olivia_charge`: charge nurse for unit coverage visibility and shift-level coordination.
+- `user_priya`: employee self-schedule, open shifts, swaps, timecards, notifications, and Copilot.
 - `user_maya`: employee counterparty for Priya's swap.
-- `user_jordan_manager`: ICU/ED unit manager for approvals and staffing risk.
-- `user_payroll`: payroll admin for timecard exceptions.
-- `user_admin`: system admin for audit, integrations, evals, and tool-call review.
+- `user_felix_float`: float pool coordinator for cross-unit coverage and open-shift workflows.
+- `user_payroll`: payroll admin for timecard exceptions and payroll-facing audit context.
+- `user_carmen_credentials`: credentialing admin for credential warnings and staff compliance context.
+- `user_avery_auditor`: compliance auditor for read-only audit evidence and tool-call review.
+- `user_evan_exec`: executive viewer for read-only workforce and staffing visibility.
+- `user_aria_agency`: external agency admin for agency-scoped schedule and open-shift context.
+- `user_ai_service`: backend-only AI service identity for tool execution auditing; do not use as a human production account.
 
 Default local URLs:
 
@@ -169,6 +178,14 @@ Phase 11 verification status:
 - App-level loading, error, forbidden, keyboard focus, and reduced-motion states are implemented.
 - `npm run test:demo` executes the full MVP demo path: reset, schedule lookup, swap, counterparty accept, manager approval, notifications, blocked AI action, eval run, integration sync, and audit verification.
 
+Phase 16B verification status:
+
+- Full role coverage is implemented for every seeded persona, including organization owner, system admin, workforce admin, unit manager, charge nurse, employee, float coordinator, payroll, credentialing, auditor, executive viewer, external agency admin, and AI service identity.
+- Multi-week sandbox schedule data covers self schedules, unit schedules, facility views, agency-scoped views, open shifts, timecard exceptions, credential warnings, audit events, and notifications.
+- Role-aware landing pages, navigation, dashboards, schedule modes, secondary workflow pages, and production-hidden demo controls are covered by tests.
+- `docs/phase-16b-role-demo.md` defines the standing role walkthrough gate for future production phases.
+- Final role coverage gate is passing through web role-walkthrough tests and `npm run test:demo`.
+
 ## Source Documents
 
 - `spec.md`: full product specification.
@@ -176,7 +193,8 @@ Phase 11 verification status:
 - `implement.md`: phase-by-phase Goal Mode execution guide.
 - `DEMO.md`: repeatable MVP demo script and readiness checklist.
 - `docs/production-readiness.md`: Supabase, CI, migration, and production-readiness runbook.
+- `docs/phase-16b-role-demo.md`: full-role demo matrix and future-phase role coverage gate.
 
 ## Safety Boundaries
 
-The MVP intentionally excludes patient records and PHI. AI actions must be routed through typed backend tools, scoped permissions, policy checks, previews, approvals, and audit logs. AI cannot directly mutate payroll hours, delete audit logs, edit permissions, override credentials, or approve its own proposed actions.
+The MVP intentionally excludes patient records and PHI. AI actions must be routed through typed backend tools, scoped permissions, policy checks, previews, approvals, and audit logs. AI cannot directly mutate payroll hours, delete audit logs, edit permissions, override credentials, or approve its own proposed actions. The AI service identity is backend-only and must not become a human login or a bypass for role permissions.

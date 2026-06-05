@@ -1326,47 +1326,51 @@ Use this protocol for every remaining production step:
 
 ## Phase 17 Goal Mode Steps: Notifications, Realtime, And Communication Preferences
 
+Phase 17 must preserve the Phase 16B role coverage gate. Every notification preference, inbox state, realtime event, and delivery failure view must define role visibility, actionability, read-only context, forbidden behavior, and walkthrough coverage for all demo personas.
+
 1. `Notifications: Define preference schema`
    - Purpose: Model notification preferences per user and channel.
-   - Build: Prisma schema, domain schemas, repository interface.
-   - Verify: db validate/generate and preference unit tests.
+   - Build: Prisma schema, domain schemas, repository interface, and role/channel defaults for every Phase 16B persona.
+   - Verify: db validate/generate, preference unit tests, and role-default assertions for every production role.
 
 2. `Notifications: Build notification repository`
    - Purpose: Persist notification state and delivery metadata.
-   - Build: list, create, mark read, update delivery status methods.
-   - Verify: repository tests and notification API e2e tests.
+   - Build: list, create, mark read, update delivery status methods with tenant, recipient, role, and scope constraints.
+   - Verify: repository tests and notification API e2e tests covering employee, manager, payroll, credentialing, auditor, executive, admin, and agency users.
 
 3. `Notifications: Build preference service`
    - Purpose: Let users update delivery preferences.
-   - Build: get/update preference methods and controller routes.
-   - Verify: self-access tests and cross-user denial.
+   - Build: get/update preference methods and controller routes with role-specific allowed channels and immutable system-critical alerts where needed.
+   - Verify: self-access tests, cross-user denial, role/channel tests, and admin-read-only behavior where applicable.
 
 4. `Notifications: Integrate workflow events`
    - Purpose: Create notifications from swaps, approvals, schedule changes, staffing gaps, and timecard events.
-   - Build: service calls from workflow services.
-   - Verify: workflow e2e tests assert notification creation.
+   - Build: service calls from workflow services mapped to the roles that should receive each event.
+   - Verify: workflow e2e tests assert notification creation and denial/non-delivery for roles outside scope.
 
 5. `Notifications: Add polling or realtime client`
    - Purpose: Surface notification changes without manual refresh.
-   - Build: polling hook or Supabase Realtime subscription wrapper.
-   - Verify: smoke test for read-state update and new notification visibility.
+   - Build: polling hook or Supabase Realtime subscription wrapper scoped to the current user and organization.
+   - Verify: smoke test for read-state update and new notification visibility across representative employee, manager, payroll, credentialing, auditor, executive, and admin personas.
 
 6. `Notifications: Build preferences UI`
    - Purpose: Let users view and edit notification preferences.
-   - Build: preferences page/form and explanatory copy.
-   - Verify: web typecheck/lint and UI smoke test.
+   - Build: preferences page/form, role-aware explanatory copy, and forbidden/read-only states for roles without editable preferences.
+   - Verify: web typecheck/lint and UI smoke tests for every Phase 16B role landing/navigation path.
 
 7. `Notifications: Add delivery failure handling`
    - Purpose: Track and show delivery failures for admin/operator review.
-   - Build: failure fields, retry metadata, admin view.
-   - Verify: failure-state tests and admin UI smoke test.
+   - Build: failure fields, retry metadata, admin/operator view, and user-safe failure messages.
+   - Verify: failure-state tests, admin UI smoke test, non-admin denial, and monitoring event assertions.
 
 ## Phase 18 Goal Mode Steps: Tool-Gated Real LLM Integration
 
+Phase 18 must use the Phase 16B role matrix as the mandatory LLM test surface. Each tool must define allowed roles, read-only roles, approval-required roles, blocked roles, scope requirements, audit/tool-call metadata, and whether a predefined SQL report may be used. The LLM must never generate SQL or bypass backend services.
+
 1. `LLM: Define provider gateway interface`
    - Purpose: Create provider-neutral LLM request/response contracts.
-   - Build: gateway interface, model route config, metadata types.
-   - Verify: AI package typecheck and mocked gateway tests.
+   - Build: gateway interface, model route config, metadata types, and role/scope context envelope.
+   - Verify: AI package typecheck, mocked gateway tests, and role-context serialization tests.
 
 2. `LLM: Build OpenAI-compatible provider`
    - Purpose: Call an OpenAI-compatible chat/completions API safely.
@@ -1380,40 +1384,42 @@ Use this protocol for every remaining production step:
 
 4. `LLM: Define tool registry contracts`
    - Purpose: Make tool schemas typed and permission-aware.
-   - Build: tool definition interface, argument validators, result schemas.
-   - Verify: tool validation tests.
+   - Build: tool definition interface, argument validators, result schemas, role matrix declarations, and page-context declarations.
+   - Verify: tool validation tests and assertions that every tool declares allowed/read-only/blocked/approval-required behavior for every Phase 16B role.
 
 5. `LLM: Register SQL-backed report tools`
    - Purpose: Expose only predefined SQL reports to the LLM.
-   - Build: tool entries for named SQL reports with typed params.
-   - Verify: SQL-backed tool contract tests and arbitrary-SQL absence tests.
+   - Build: tool entries for named SQL reports with typed params, role/scope constraints, tenant injection, and result limits.
+   - Verify: SQL-backed tool contract tests, arbitrary-SQL absence tests, and role-specific allowed/denied report calls.
 
 6. `LLM: Register workflow action tools`
    - Purpose: Expose safe backend actions through policy/preview/approval gates.
-   - Build: tool entries for claim shift, create swap, accept swap, approve swap where allowed.
-   - Verify: permission, preview, approval, and audit tests.
+   - Build: tool entries for claim shift, create swap, accept swap, approve swap, notification/context tools, and timecard/credential read tools where allowed.
+   - Verify: permission, preview, approval, blocked-role, and audit tests across all Phase 16B personas.
 
 7. `LLM: Integrate real copilot service`
    - Purpose: Replace deterministic routing with provider calls while preserving deterministic backend execution.
-   - Build: copilot orchestration service and controller integration.
-   - Verify: copilot API e2e tests with mocked provider.
+   - Build: copilot orchestration service and controller integration that passes role, scope, page context, and tool constraints to the model.
+   - Verify: copilot API e2e tests with mocked provider for employee, manager, payroll, credentialing, auditor, executive, agency, admin, and AI service identity behavior.
 
 8. `LLM: Persist tool metadata`
    - Purpose: Store provider, model, latency, tokens, cost, safety status, and blocked reasons.
-   - Build: persistence methods and metadata writes.
-   - Verify: tool-call persistence assertions.
+   - Build: persistence methods and metadata writes including actor role, scope, page context, tool risk, and denied reason.
+   - Verify: tool-call persistence assertions and audit-view visibility tests for admin/auditor roles.
 
 9. `LLM: Expand eval suite`
    - Purpose: Compare deterministic baseline and real model behavior safely.
-   - Build: eval fixtures for schedule, swap, staffing, timecard, blocked SQL, blocked payroll edits.
-   - Verify: eval suite with zero unsafe action attempts.
+   - Build: eval fixtures for schedule, swap, staffing, timecard, credentialing, audit, executive summaries, agency access, blocked SQL, blocked payroll edits, and AI service identity misuse.
+   - Verify: eval suite with zero unsafe action attempts and per-role expected tool-selection assertions.
 
 10. `LLM: Add live-provider smoke gate`
     - Purpose: Allow optional live API validation when keys are present.
-    - Build: guarded smoke script/test.
-    - Verify: mocked CI path always passes; live path runs only with explicit key.
+    - Build: guarded smoke script/test with a minimal prompt set per role family.
+    - Verify: mocked CI path always passes; live path runs only with explicit key and checks allowed/blocked behavior without performing real unsafe mutations.
 
 ## Phase 19 Goal Mode Steps: Security, Compliance, And HIPAA-Ready Controls
+
+Phase 19 must harden the full role surface from Phase 16B. Security work must cover human roles, admin roles, read-only roles, external agency users, and the AI service identity separately.
 
 1. `Security: Harden session cookies`
    - Purpose: Make auth cookies production-safe.
@@ -1437,8 +1443,8 @@ Use this protocol for every remaining production step:
 
 5. `Security: Protect audit integrity`
    - Purpose: Ensure audit records are append-only through public APIs.
-   - Build: absence tests for delete routes and admin export route if needed.
-   - Verify: audit delete absence e2e tests.
+   - Build: absence tests for delete routes, read-only auditor access, admin export route if needed, and AI tool-call audit visibility.
+   - Verify: audit delete absence e2e tests plus role-specific audit visibility/denial tests.
 
 6. `Security: Write backup and restore docs`
    - Purpose: Document Supabase backup/restore and migration rollback expectations.
@@ -1447,20 +1453,22 @@ Use this protocol for every remaining production step:
 
 7. `Security: Write incident and access review docs`
    - Purpose: Prepare HIPAA-ready operational practices without claiming certification.
-   - Build: incident response, access review, vendor/BAA checklist docs.
-   - Verify: checklist review and launch-readiness doc link checks.
+   - Build: incident response, full-role access review, AI service identity review, vendor/BAA checklist docs.
+   - Verify: checklist review, role matrix cross-check, and launch-readiness doc link checks.
 
 8. `Security: Add monitoring event hooks`
    - Purpose: Emit events for auth failures, permission denials, blocked AI actions, integration failures, workflow errors, and notification delivery failures.
-   - Build: monitoring interface and initial emitters.
-   - Verify: unit tests for event emission and redaction.
+   - Build: monitoring interface and initial emitters with actor role, scope, tenant, and redacted context.
+   - Verify: unit tests for event emission/redaction and role-specific denied-action monitoring assertions.
 
 9. `Security: Run production security gate`
    - Purpose: Validate security baseline before launch-readiness work.
    - Build: fixes only if gate failures appear.
-   - Verify: `npm audit --audit-level=high`, typecheck/lint/test/build, security e2e tests.
+   - Verify: `npm audit --audit-level=high`, typecheck/lint/test/build, security e2e tests, full-role walkthrough tests, demo-control denial tests, and AI service identity misuse tests.
 
 ## Phase 20 Goal Mode Steps: Production Deployment And Launch Readiness
+
+Phase 20 must treat Phase 16B role walkthroughs as a launch blocker. Staging and production smoke tests must verify landing route, navigation, one meaningful page, and one forbidden/denied behavior for every production role.
 
 1. `Launch: Write environment runbook`
    - Purpose: Document staging and production environment variables and secrets.
@@ -1474,13 +1482,13 @@ Use this protocol for every remaining production step:
 
 3. `Launch: Build staging smoke tests`
    - Purpose: Automate login, invite, schedule, swap, approval, notification, audit, integration, copilot, and eval smoke paths.
-   - Build: smoke test script or test suite.
-   - Verify: smoke tests run against local/staging config.
+   - Build: smoke test script or test suite covering every Phase 16B role persona, including allowed landing/navigation and one denied action per role family.
+   - Verify: smoke tests run against local/staging config and fail if any role lacks a meaningful page.
 
 4. `Launch: Build deployment checklist`
    - Purpose: Create a repeatable pre-release checklist.
-   - Build: release checklist covering migrations, Supabase settings, tenant scoping, backups, monitoring, audit export, evals, dependency audit.
-   - Verify: checklist maps to existing commands and docs.
+   - Build: release checklist covering migrations, Supabase settings, tenant scoping, full-role smoke tests, backups, monitoring, audit export, evals, dependency audit.
+   - Verify: checklist maps to existing commands and docs, including `docs/phase-16b-role-demo.md`.
 
 5. `Launch: Build rollback checklist`
    - Purpose: Document rollback paths for web, API, migration, integration, and LLM provider failures.
@@ -1490,7 +1498,7 @@ Use this protocol for every remaining production step:
 6. `Launch: Gate demo affordances`
    - Purpose: Ensure production cannot access demo-only controls, reset routes, demo switchers, or seed-only shortcuts.
    - Build: route guards, UI gates, tests.
-   - Verify: production env smoke tests deny demo controls.
+   - Verify: production env smoke tests deny demo controls for every role, including admin and AI service identities.
 
 7. `Launch: Add monitoring dashboard plan`
    - Purpose: Define launch metrics and operational alerts.
@@ -1500,4 +1508,4 @@ Use this protocol for every remaining production step:
 8. `Launch: Run final production gate`
    - Purpose: Validate the full product before launch.
    - Build: no feature work unless failures require fixes.
-   - Verify: staging smoke tests, production build, typecheck/lint/test/test:demo, high-severity audit, release checklist complete, rollback checklist complete.
+   - Verify: full-role staging smoke tests, production build, typecheck/lint/test/test:demo, high-severity audit, release checklist complete, rollback checklist complete.

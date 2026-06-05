@@ -2,6 +2,23 @@
 
 PulseShift production uses Supabase for hosted PostgreSQL and Supabase Auth, while the application API remains the source of truth for workflow mutations, authorization, policy checks, audit writes, and AI tool execution.
 
+## Role Coverage Baseline
+
+Phase 16B is now a standing production-readiness gate. Every new page, API endpoint, workflow, notification, integration, SQL report, LLM tool, audit event, and smoke test must declare how the full role matrix interacts with it.
+
+The required recurring personas are organization owner, system admin, workforce admin, unit manager, charge nurse, employee, float pool coordinator, payroll admin, credentialing admin, compliance auditor, executive viewer, external agency admin, and the backend-only AI service identity.
+
+For each feature, document and test:
+
+1. Which roles can see it.
+2. Which roles can mutate it.
+3. Which roles have read-only access.
+4. Which roles must be explicitly denied or hidden.
+5. Which organization, unit, employee, agency, or service scope is enforced.
+6. Which audit, monitoring, notification, Copilot, or SQL-reporting context is emitted.
+
+Phases 17 through 20 must keep the Phase 16B role walkthroughs green before the work can be considered complete.
+
 ## Environments
 
 Local development may use Docker PostgreSQL or a local Supabase project. Staging and production should use separate Supabase projects with separate API, web, and LLM provider credentials.
@@ -74,7 +91,7 @@ For staging and production, run migrations with the direct database URL and keep
 
 ## Seed And Reset Policy
 
-Local and staging may seed demo data for development and smoke tests. Production must not expose a destructive reset endpoint or a public seed workflow.
+Local and staging may seed demo data for development and smoke tests. The seed set must cover every Phase 16B persona, multi-week schedule context, open shifts, approvals, timecard exceptions, credential warnings, audit records, notifications, and Copilot/reporting examples. Production must not expose a destructive reset endpoint, a public seed workflow, or the demo identity switcher.
 
 The current in-memory `demo-data.ts` state is a temporary MVP implementation. Production phases must migrate each array-backed workflow behind repository/service interfaces and then replace those repositories with Prisma-backed implementations.
 
@@ -110,7 +127,9 @@ Rules:
 4. The server injects organization/tenant scope. The caller cannot override it.
 5. Every report enforces permission checks, row limits, and query timeouts.
 6. LLM-triggered report calls write AI tool-call metadata and audit-relevant context.
-7. Workflow writes remain behind Prisma-backed services, policy checks, approvals, and audit writes.
+7. Every report/tool declares allowed, read-only, approval-required, and blocked behavior for the Phase 16B role matrix.
+8. The AI service identity is backend-only and cannot be used as a human demo or production account.
+9. Workflow writes remain behind Prisma-backed services, policy checks, approvals, and audit writes.
 
 Initial report candidates:
 
@@ -121,8 +140,7 @@ Initial report candidates:
 - `get_audit_activity_report(actorUserId, action, startAt, endAt)`
 
 Each report should have tests for tenant isolation, parameter validation, bounded result size,
-timeout behavior, and expected query shape. High-traffic reports should receive EXPLAIN-plan review
-before production rollout.
+timeout behavior, expected query shape, allowed role access, denied role access, and AI service misuse. High-traffic reports should receive EXPLAIN-plan review before production rollout.
 
 ## CI Quality Gate
 
@@ -139,5 +157,7 @@ npm run test:demo
 npm run build
 npm audit --audit-level=high
 ```
+
+CI must include role/page contract assertions, full-role landing and navigation walkthroughs, one meaningful allowed workflow per role family, and at least one denied-action check per restricted role family.
 
 The web production build requires the API to be available because server-rendered pages fetch API-backed data during prerender.
