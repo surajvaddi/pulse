@@ -35,6 +35,18 @@ export class NotificationService {
     });
   }
 
+  async summaryForSession(session: DemoSession) {
+    const [notifications, unreadCount] = await Promise.all([
+      this.listForSession(session),
+      this.unreadCountForSession(session)
+    ]);
+
+    return {
+      unreadCount,
+      recent: notifications.slice(0, 3)
+    };
+  }
+
   create(input: {
     organizationId: string;
     recipientUserId: string;

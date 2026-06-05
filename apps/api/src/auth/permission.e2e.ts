@@ -574,6 +574,12 @@ async function main() {
         notification.priority === "URGENT"
     )
   );
+  const managerNotificationSummary = await request(server)
+    .get("/notifications/summary")
+    .set("x-demo-user-id", "user_jordan_manager")
+    .expect(200);
+  assert.ok(managerNotificationSummary.body.unreadCount >= 1);
+  assert.ok(managerNotificationSummary.body.recent.length <= 3);
   const firstNotificationId = managerNotifications.body[0].id;
   const readNotification = await request(server)
     .post(`/notifications/${firstNotificationId}/read`)

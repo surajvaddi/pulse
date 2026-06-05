@@ -51,6 +51,7 @@ export async function markNotificationReadAction(formData: FormData) {
   const userId = String(formData.get("userId") ?? "user_priya") as DemoUserId;
   await apiPost(`/notifications/${notificationId}/read`, {}, userId);
   revalidatePath("/app/notifications");
+  revalidatePath("/app", "layout");
 }
 
 export async function askCopilotAction(formData: FormData) {

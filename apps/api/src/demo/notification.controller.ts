@@ -13,6 +13,11 @@ export class NotificationController {
     return this.notifications.listForSession(session);
   }
 
+  @Get("summary")
+  summary(@CurrentSession() session: DemoSession) {
+    return this.notifications.summaryForSession(session);
+  }
+
   @Get("preferences")
   preferences(@CurrentSession() session: DemoSession) {
     return this.notifications.listPreferences(session);

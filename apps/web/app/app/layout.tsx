@@ -19,7 +19,14 @@ import {
 } from "lucide-react";
 
 import { startDemoSessionAction } from "@/app/account-actions";
-import { apiGet, demoAuthEnabled, demoUsers, type DemoUserId, type SessionSummary } from "@/lib/api";
+import {
+  apiGet,
+  demoAuthEnabled,
+  demoUsers,
+  type DemoUserId,
+  type NotificationSummary,
+  type SessionSummary
+} from "@/lib/api";
 import {
   navigationForSession,
   primaryMobileNavigation,
@@ -58,7 +65,10 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   if (!demoAuthEnabled && !hasSupabaseSession) {
     redirect("/login");
   }
-  const session = await apiGet<SessionSummary>("/auth/me");
+  const [session, notificationSummary] = await Promise.all([
+    apiGet<SessionSummary>("/auth/me"),
+    apiGet<NotificationSummary>("/notifications/summary")
+  ]);
   const navItems = navigationForSession(session);
   const mobileNavItems = primaryMobileNavigation(navItems);
   const currentDemoUserId = (cookieStore.get("ps_demo_user_id")?.value ?? session.userId) as DemoUserId;
@@ -95,6 +105,11 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
           <div className="profile-strip">
             <Link className="icon-button" aria-label="Notifications" href="/app/notifications">
               <Bell size={18} />
+              {notificationSummary.unreadCount ? (
+                <span className="notification-badge" aria-label={`${notificationSummary.unreadCount} unread`}>
+                  {notificationSummary.unreadCount > 9 ? "9+" : notificationSummary.unreadCount}
+                </span>
+              ) : null}
             </Link>
             <Link className="icon-button" aria-label="Sign out" href="/logout">
               <LogOut size={18} />

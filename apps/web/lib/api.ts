@@ -142,6 +142,11 @@ export type Notification = {
   providerMetadata?: Record<string, string>;
 };
 
+export type NotificationSummary = {
+  unreadCount: number;
+  recent: Notification[];
+};
+
 export type CopilotResponse = {
   mode: "ANSWER" | "ACTION_PREVIEW" | "BLOCKED";
   answer: string;
