@@ -508,7 +508,7 @@ async function main() {
         category: "INTEGRATION",
         priority: "HIGH",
         status: "FAILED",
-        payload: { connectionId: ids.integrationKronos },
+        payload: { connectionId: "integration_kronos" },
         failureReason: "Provider rejected the delivery address",
         retryCount: 2,
         failedAt: new Date("2026-06-05T13:30:00.000Z"),
