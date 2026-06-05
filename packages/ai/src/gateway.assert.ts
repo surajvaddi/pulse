@@ -3,14 +3,17 @@ import assert from "node:assert/strict";
 import {
   LlmAccountRoleSchema,
   LlmModelRouter,
+  LlmToolRegistry,
   MockLlmGateway,
   OpenAICompatibleGateway,
   assertRoleContextComplete,
   normalizeProviderError,
   serializeRoleContext,
   parseLlmRouteOverrides,
+  roleAccessFor,
   type LlmRoleContext
 } from "./index.js";
+import { z } from "zod";
 
 const roleContexts: LlmRoleContext[] = LlmAccountRoleSchema.options.map((role) => ({
   actorUserId: `user_${role.toLowerCase()}`,
@@ -154,3 +157,48 @@ const envRouter = new LlmModelRouter(overrides);
 assert.equal(envRouter.route("SELF_SERVICE_CHAT").provider, "openai-compatible");
 assert.equal(envRouter.route("EVAL_RUN").model, "eval-model");
 assert.equal(envRouter.route("SQL_REPORT_SUMMARY").timeoutMs, 1234);
+
+const readTool = {
+  name: "get_my_schedule",
+  description: "Read self-scoped schedule rows.",
+  routeAvailability: ["SELF_SERVICE_CHAT" as const],
+  pageContexts: ["*", "/app/schedule"],
+  inputSchema: z.object({ userId: z.string() }),
+  outputSchema: z.object({ shiftIds: z.array(z.string()) }),
+  riskLevel: "READ_ONLY" as const,
+  scopeRequirement: "SELF" as const,
+  roleAccess: roleAccessFor({ EMPLOYEE: "ALLOWED", SYSTEM_ADMIN: "READ_ONLY" }),
+  auditEvent: "llm.tool.get_my_schedule",
+  usesSqlReport: false
+};
+
+const registry = new LlmToolRegistry([readTool]);
+assert.equal(registry.assertSafe(), true);
+assert.equal(registry.availableFor({ role: "EMPLOYEE", currentPage: "/app/schedule" }, "SELF_SERVICE_CHAT").length, 1);
+assert.equal(registry.availableFor({ role: "PAYROLL_ADMIN", currentPage: "/app/schedule" }, "SELF_SERVICE_CHAT").length, 0);
+
+assert.throws(
+  () =>
+    new LlmToolRegistry([
+      {
+        ...readTool,
+        name: "run_raw_sql_query"
+      }
+    ]).assertSafe(),
+  /Unsafe/
+);
+
+assert.throws(
+  () =>
+    new LlmToolRegistry([
+      {
+        ...readTool,
+        name: "assign_shift",
+        riskLevel: "LOW_RISK_WRITE",
+        allowsMutation: true,
+        requiresPreview: true,
+        requiresPolicyGate: false
+      }
+    ]).assertSafe(),
+  /policy and preview/
+);

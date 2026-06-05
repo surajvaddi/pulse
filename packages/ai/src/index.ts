@@ -31,6 +31,10 @@ export type LlmToolRiskLevel =
   | "APPROVAL_REQUIRED"
   | "BLOCKED";
 
+export type LlmToolRoleAccess = "ALLOWED" | "READ_ONLY" | "APPROVAL_REQUIRED" | "BLOCKED";
+
+export type LlmToolScopeRequirement = "SELF" | "UNIT" | "FACILITY" | "ORG" | "AGENCY" | "SERVICE";
+
 export const LlmMessageRoleSchema = z.enum(["system", "user", "assistant", "tool"]);
 export type LlmMessageRole = z.infer<typeof LlmMessageRoleSchema>;
 
@@ -75,6 +79,89 @@ export type LlmToolProposal = {
   riskLevel: LlmToolRiskLevel;
   requiresApproval: boolean;
 };
+
+export type LlmToolDefinition = {
+  name: string;
+  description: string;
+  routeAvailability: LlmModelRoute[];
+  pageContexts: string[];
+  inputSchema: z.ZodType<unknown>;
+  outputSchema: z.ZodType<unknown>;
+  riskLevel: LlmToolRiskLevel;
+  scopeRequirement: LlmToolScopeRequirement;
+  roleAccess: Record<LlmAccountRole, LlmToolRoleAccess>;
+  auditEvent: string;
+  usesSqlReport?: boolean;
+  allowsMutation?: boolean;
+  requiresPolicyGate?: boolean;
+  requiresPreview?: boolean;
+};
+
+export class LlmToolRegistry {
+  constructor(private readonly tools: LlmToolDefinition[]) {}
+
+  list() {
+    return [...this.tools];
+  }
+
+  get(name: string) {
+    return this.tools.find((tool) => tool.name === name);
+  }
+
+  availableFor(context: Pick<LlmRoleContext, "role" | "currentPage">, route: LlmModelRoute) {
+    return this.tools.filter((tool) => {
+      const access = tool.roleAccess[context.role];
+      return (
+        access !== "BLOCKED" &&
+        tool.routeAvailability.includes(route) &&
+        (tool.pageContexts.includes("*") || tool.pageContexts.includes(context.currentPage))
+      );
+    });
+  }
+
+  assertSafe() {
+    const seenNames = new Set<string>();
+    for (const tool of this.tools) {
+      if (seenNames.has(tool.name)) {
+        throw new Error(`Duplicate LLM tool registered: ${tool.name}`);
+      }
+      seenNames.add(tool.name);
+      assertToolDefinitionSafe(tool);
+    }
+    return true;
+  }
+}
+
+export function roleAccessFor(input: Partial<Record<LlmAccountRole, LlmToolRoleAccess>>) {
+  return LlmAccountRoleSchema.options.reduce(
+    (matrix, role) => ({
+      ...matrix,
+      [role]: input[role] ?? "BLOCKED"
+    }),
+    {} as Record<LlmAccountRole, LlmToolRoleAccess>
+  );
+}
+
+export function assertToolDefinitionSafe(tool: LlmToolDefinition) {
+  if (!tool.name || tool.name.toLowerCase().includes("raw_sql") || tool.name.toLowerCase().includes("query")) {
+    throw new Error(`Unsafe or missing LLM tool name: ${tool.name}`);
+  }
+  for (const role of LlmAccountRoleSchema.options) {
+    if (!tool.roleAccess[role]) {
+      throw new Error(`Missing role access for ${tool.name}.${role}`);
+    }
+  }
+  if (tool.usesSqlReport && tool.allowsMutation) {
+    throw new Error(`SQL-backed LLM tool cannot mutate state: ${tool.name}`);
+  }
+  if (tool.allowsMutation && (!tool.requiresPolicyGate || !tool.requiresPreview)) {
+    throw new Error(`Mutation LLM tool must require policy and preview gates: ${tool.name}`);
+  }
+  if (!tool.inputSchema || !tool.outputSchema) {
+    throw new Error(`LLM tool must declare schemas: ${tool.name}`);
+  }
+  return true;
+}
 
 export type LlmMessage = {
   role: LlmMessageRole;
