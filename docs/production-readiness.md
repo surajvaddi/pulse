@@ -106,6 +106,7 @@ For staging and production, run migrations with the direct database URL and keep
 
 Backup, restore, restore-drill, and migration rollback expectations are documented in
 [Backup And Restore Runbook](./backup-restore.md).
+Staging and production migration procedure is documented in [Migration Runbook](./migration-runbook.md).
 
 Incident response, full-role access review, AI service identity review, and vendor/BAA preparation
 are documented in [Security Operations Runbook](./security-operations.md).
