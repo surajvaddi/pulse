@@ -13,6 +13,13 @@ import { buildRoleDashboard } from "@/lib/role-dashboard";
 import { clockInAction, clockOutAction, createSwapAction } from "../actions";
 import { WorkflowNote } from "../workflow-note";
 
+function workspaceLabel(prefix: string, id: string | undefined) {
+  if (!id) {
+    return `${prefix} not set`;
+  }
+  return `${prefix} ${id.replace(/^(unit|facility)_/, "").replaceAll("_", " ").toUpperCase()}`;
+}
+
 export default async function HomePage() {
   const session = await apiGet<SessionSummary>("/auth/me");
   if (!["EMPLOYEE", "EXTERNAL_AGENCY_ADMIN"].includes(session.role)) {
@@ -48,7 +55,7 @@ export default async function HomePage() {
     apiGet<TimeclockStatus>("/timeclock/status")
   ]);
   const dashboard = buildEmployeeDashboard({ session, shifts, exceptions, clockStatus });
-  const icons = [CalendarDays, Clock3, ShieldCheck];
+  const icons = [Clock3, ShieldCheck];
 
   return (
     <section className="page-stack">
@@ -59,7 +66,7 @@ export default async function HomePage() {
       </div>
       <WorkflowNote route="/app/home" role={session.role} />
       <div className="dashboard-grid">
-        {dashboard.cards.map((card, index) => {
+        {dashboard.cards.slice(1).map((card, index) => {
           const Icon = icons[index] ?? CalendarDays;
           return (
             <article className={`metric-card metric-card-${card.tone}`} key={card.title}>
@@ -72,16 +79,37 @@ export default async function HomePage() {
         })}
       </div>
       <div className="two-column">
-        <section className="panel">
-          <div className="section-heading">
-            <h2>Next shift</h2>
-            <span>{dashboard.nextShift ? "Ready for review" : "No shift selected"}</span>
+        <section className="panel next-shift-panel" aria-labelledby="next-shift-title">
+          <div className="next-shift-header">
+            <div>
+              <p className="eyebrow">Upcoming</p>
+              <h2 id="next-shift-title">Your next shift</h2>
+            </div>
+            <span className="next-shift-badge">{dashboard.nextShift ? "Next on schedule" : "No shift selected"}</span>
           </div>
           {dashboard.nextShift ? (
-            <div className="detail-stack">
-              <strong className="detail-title">{dashboard.nextShift.title}</strong>
-              <span>Starts {formatDashboardDate(dashboard.nextShift.startsAt)}</span>
-              <span>Ends {formatDashboardDate(dashboard.nextShift.endsAt)}</span>
+            <div className="next-shift-spotlight">
+              <div className="next-shift-main">
+                <strong>{dashboard.nextShift.title}</strong>
+                <span>{dashboard.nextShift.status.replaceAll("_", " ").toLowerCase()}</span>
+              </div>
+              <div className="next-shift-details" aria-label="Next shift details">
+                <div>
+                  <span>Starts</span>
+                  <strong>{formatDashboardDate(dashboard.nextShift.startsAt)}</strong>
+                </div>
+                <div>
+                  <span>Ends</span>
+                  <strong>{formatDashboardDate(dashboard.nextShift.endsAt)}</strong>
+                </div>
+                <div>
+                  <span>Location</span>
+                  <strong>
+                    {workspaceLabel("Unit", dashboard.nextShift.unitId)} -{" "}
+                    {workspaceLabel("Facility", dashboard.nextShift.facilityId)}
+                  </strong>
+                </div>
+              </div>
               <div className="action-row">
                 <form action={dashboard.primaryAction === "CLOCK_IN" ? clockInAction : clockOutAction}>
                   <input type="hidden" name="shiftId" value={dashboard.nextShift.id} />
