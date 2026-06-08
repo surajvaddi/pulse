@@ -40,6 +40,16 @@ export class OperationsService {
     });
   }
 
+  timecardExceptions(session: DemoSession) {
+    const unitScope = session.grants.find((grant) => grant.permission === "timecard:read:unit" && grant.scope.type === "UNIT");
+    const unitId = unitScope?.scope.type === "UNIT" ? unitScope.scope.unitIds.at(0) : undefined;
+    return this.repositories.repository().listTimecardExceptions(
+      unitId
+        ? { organizationId: session.organizationId, unitId }
+        : { organizationId: session.organizationId, userId: session.userId }
+    );
+  }
+
   async resolveTimecard(session: DemoSession, exceptionId: string, resolution?: string) {
     const resolved = await this.repositories.repository().resolveTimecardException({
       organizationId: session.organizationId,

@@ -1,6 +1,7 @@
 import { appendDemoAuditLog, demoNotifications } from "../demo/demo-data";
 
 export type ShiftPipelineEventInput = {
+  organizationId: string;
   actorUserId?: string;
   action:
     | "shift_pipeline.claim.pending_approval"
@@ -36,7 +37,7 @@ export function recordShiftPipelineEvent(input: ShiftPipelineEventInput) {
   if (input.notifyUserId && input.notificationType) {
     demoNotifications.push({
       id: `notification_shift_pipeline_${demoNotifications.length + 1}`,
-      organizationId: "org_pulseshift_demo",
+      organizationId: input.organizationId,
       recipientUserId: input.notifyUserId,
       type: input.notificationType,
       channel: "IN_APP",

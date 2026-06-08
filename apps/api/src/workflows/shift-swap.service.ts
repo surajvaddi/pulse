@@ -106,6 +106,7 @@ export class ShiftSwapService {
     assertShiftSwapInvariants({ swap, originalShift });
     demoShiftSwapRequests.push(swap);
     recordShiftPipelineEvent({
+      organizationId: session.organizationId,
       actorUserId: session.userId,
       action: "shift_pipeline.swap.requested",
       objectType: "ShiftSwapRequest",
@@ -130,6 +131,7 @@ export class ShiftSwapService {
       swap.status = "DENIED";
       swap.decidedAt = new Date().toISOString();
       recordShiftPipelineEvent({
+        organizationId: session.organizationId,
         actorUserId: session.userId,
         action: "shift_pipeline.swap.declined",
         objectType: "ShiftSwapRequest",
@@ -147,6 +149,7 @@ export class ShiftSwapService {
     swap.approvalRequestId = approval.id;
     assertShiftSwapInvariants({ swap, originalShift: this.eligibility.evaluateOriginalShift(session, swap.originalSlotId).originalShift });
     recordShiftPipelineEvent({
+      organizationId: session.organizationId,
       actorUserId: session.userId,
       action: "shift_pipeline.swap.accepted",
       objectType: "ShiftSwapRequest",
@@ -184,6 +187,7 @@ export class ShiftSwapService {
       swap.status = "DENIED";
       swap.decidedAt = new Date().toISOString();
       recordShiftPipelineEvent({
+        organizationId: session.organizationId,
         actorUserId: session.userId,
         action: "shift_pipeline.swap.denied",
         objectType: "ShiftSwapRequest",
@@ -235,6 +239,7 @@ export class ShiftSwapService {
       originalShift: this.eligibility.evaluateOriginalShift({ ...session, userId: swap.proposedUserId }, swap.originalSlotId).originalShift
     });
     recordShiftPipelineEvent({
+      organizationId: session.organizationId,
       actorUserId: session.userId,
       action: "shift_pipeline.swap.approved",
       objectType: "ShiftSwapRequest",

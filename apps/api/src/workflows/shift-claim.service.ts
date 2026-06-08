@@ -74,6 +74,7 @@ export class ShiftClaimService {
       });
       await this.assertSlotInvariant(session.organizationId, updatedSlot.id);
       recordShiftPipelineEvent({
+        organizationId: session.organizationId,
         actorUserId: session.userId,
         action: "shift_pipeline.claim.pending_approval",
         objectType: "ShiftClaimRequest",
@@ -110,6 +111,7 @@ export class ShiftClaimService {
     });
     await this.assertSlotInvariant(session.organizationId, updatedSlot.id);
     recordShiftPipelineEvent({
+      organizationId: session.organizationId,
       actorUserId: session.userId,
       action: "shift_pipeline.claim.assigned",
       objectType: "ShiftClaimRequest",
@@ -155,6 +157,7 @@ export class ShiftClaimService {
     }
     await this.assertSlotInvariant(session.organizationId, claim.slotId);
     recordShiftPipelineEvent({
+      organizationId: session.organizationId,
       actorUserId: session.userId,
       action: "shift_pipeline.claim.cancelled",
       objectType: "ShiftClaimRequest",

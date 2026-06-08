@@ -5,11 +5,12 @@ import type { DemoSession } from "../auth/demo-users";
 import { PermissionService } from "../auth/permission.service";
 import {
   demoAIToolCalls,
-  demoTimecardExceptions,
   resetDemoWorkflowState
 } from "./demo-data";
 import { AuditService } from "./audit.service";
+import { OperationsService } from "./operations.service";
 import { ScheduleService } from "./schedule.service";
+import { prisma } from "@pulseshift/db";
 
 function demoResetAllowed() {
   if (process.env.APP_ENV === "production" || process.env.NODE_ENV === "production") {
@@ -23,6 +24,7 @@ export class DemoController {
   constructor(
     @Inject(PermissionService) private readonly permissions: PermissionService,
     @Inject(AuditService) private readonly auditLogs: AuditService,
+    @Inject(OperationsService) private readonly operations: OperationsService,
     @Inject(ScheduleService) private readonly schedules: ScheduleService
   ) {}
 
@@ -54,11 +56,7 @@ export class DemoController {
 
     this.assertAllowed(session, canReadUnit || canReadSelf);
 
-    if (canReadUnit) {
-      return demoTimecardExceptions;
-    }
-
-    return demoTimecardExceptions.filter((exception) => exception.userId === session.userId);
+    return this.operations.timecardExceptions(session);
   }
 
   @Get("audit")
@@ -83,6 +81,13 @@ export class DemoController {
         this.permissions.hasPermission(session, "audit:read", orgScope)
     );
 
+    if (process.env.WORKFLOW_PERSISTENCE === "prisma") {
+      return prisma.aIToolCall.findMany({
+        where: { user: { organizationId: session.organizationId } },
+        orderBy: { createdAt: "desc" },
+        take: 100
+      });
+    }
     return demoAIToolCalls;
   }
 
