@@ -31,6 +31,19 @@ async function main() {
       .expect(200);
     assert.equal(detail.body.decision.allowed, true);
     assert.equal(detail.body.originalShift.employeeId, "emp_priya");
+
+    const candidates = await request(server)
+      .get("/swap-pipeline/shifts/slot_shift_priya_week2_icu_day/candidates")
+      .set("x-demo-user-id", "user_priya")
+      .expect(200);
+    const maya = candidates.body.find((candidate: { userId: string }) => candidate.userId === "user_maya");
+    const priya = candidates.body.find((candidate: { userId: string }) => candidate.userId === "user_priya");
+    const aria = candidates.body.find((candidate: { userId: string }) => candidate.userId === "user_aria_agency");
+    assert.equal(maya.eligible, true);
+    assert.equal(maya.requiresApproval, true);
+    assert.equal(priya.eligible, false);
+    assert.ok(priya.blockingReasons.includes("Candidate cannot be the requesting employee."));
+    assert.equal(aria.eligible, false);
   } finally {
     await app.close();
   }

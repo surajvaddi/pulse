@@ -17,4 +17,9 @@ export class ShiftSwapPipelineController {
   getOriginalShiftEligibility(@CurrentSession() session: DemoSession, @Param("slotId") slotId: string) {
     return this.eligibility.evaluateOriginalShift(session, slotId);
   }
+
+  @Get("shifts/:slotId/candidates")
+  listCandidates(@CurrentSession() session: DemoSession, @Param("slotId") slotId: string) {
+    return this.eligibility.listCandidates(session, slotId);
+  }
 }
