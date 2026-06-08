@@ -95,6 +95,86 @@ export const llmWorkflowTools: LlmToolDefinition[] = [
     requiresPreview: true
   },
   {
+    name: "list_shift_pipeline_slots",
+    description: "Read predefined shift pipeline slots for scoped coverage review.",
+    routeAvailability: ["SELF_SERVICE_CHAT", "MANAGER_OPERATIONS", "WORKFLOW_PREVIEW"],
+    pageContexts: ["*", "/app/open-shifts", "/app/manager", "/app/schedule", "/app/copilot"],
+    inputSchema: z.object({
+      unitId: z.string().min(1).optional(),
+      facilityId: z.string().min(1).optional(),
+      statuses: z.array(z.enum(["OPEN", "CLAIM_PENDING", "ASSIGNED", "PUBLISHED", "IN_PROGRESS", "COMPLETED", "CANCELLED"])).optional()
+    }).strict(),
+    outputSchema: emptyOutput,
+    riskLevel: "READ_ONLY",
+    scopeRequirement: "UNIT",
+    roleAccess: roleAccessFor({
+      EMPLOYEE: "READ_ONLY",
+      EXTERNAL_AGENCY_ADMIN: "READ_ONLY",
+      CHARGE_NURSE: "READ_ONLY",
+      UNIT_MANAGER: "ALLOWED",
+      WORKFORCE_ADMIN: "ALLOWED",
+      FLOAT_POOL_COORDINATOR: "ALLOWED",
+      EXECUTIVE_VIEWER: "READ_ONLY",
+      SYSTEM_ADMIN: "READ_ONLY",
+      ORGANIZATION_OWNER: "READ_ONLY",
+      AI_AGENT_SERVICE: "READ_ONLY"
+    }),
+    auditEvent: "llm.workflow.list_shift_pipeline_slots"
+  },
+  {
+    name: "claim_shift_slot",
+    description: "Preview and claim a specific shift slot through the deterministic shift claim pipeline.",
+    routeAvailability: ["SELF_SERVICE_CHAT", "WORKFLOW_PREVIEW"],
+    pageContexts: ["*", "/app/open-shifts", "/app/copilot"],
+    inputSchema: z.object({ slotId: z.string().min(1) }).strict(),
+    outputSchema: emptyOutput,
+    riskLevel: "LOW_RISK_WRITE",
+    scopeRequirement: "SELF",
+    roleAccess: roleAccessFor({ EMPLOYEE: "APPROVAL_REQUIRED", EXTERNAL_AGENCY_ADMIN: "APPROVAL_REQUIRED" }),
+    auditEvent: "llm.workflow.claim_shift_slot",
+    allowsMutation: true,
+    requiresPolicyGate: true,
+    requiresPreview: true
+  },
+  {
+    name: "decide_shift_claim",
+    description: "Preview and approve or deny a manager-scoped shift claim request.",
+    routeAvailability: ["MANAGER_OPERATIONS", "WORKFLOW_PREVIEW"],
+    pageContexts: ["*", "/app/manager", "/app/copilot"],
+    inputSchema: z.object({
+      claimId: z.string().min(1),
+      decision: z.enum(["approve", "deny"]),
+      reason: z.string().min(1).optional()
+    }).strict(),
+    outputSchema: emptyOutput,
+    riskLevel: "APPROVAL_REQUIRED",
+    scopeRequirement: "UNIT",
+    roleAccess: roleAccessFor({ UNIT_MANAGER: "APPROVAL_REQUIRED", WORKFORCE_ADMIN: "APPROVAL_REQUIRED" }),
+    auditEvent: "llm.workflow.decide_shift_claim",
+    allowsMutation: true,
+    requiresPolicyGate: true,
+    requiresPreview: true
+  },
+  {
+    name: "direct_assign_shift_slot",
+    description: "Preview and directly assign an open shift slot to a named employee user.",
+    routeAvailability: ["MANAGER_OPERATIONS", "WORKFLOW_PREVIEW"],
+    pageContexts: ["*", "/app/manager", "/app/staffing-gaps", "/app/copilot"],
+    inputSchema: z.object({
+      slotId: z.string().min(1),
+      assigneeUserId: z.string().min(1),
+      overrideReason: z.string().min(1).optional()
+    }).strict(),
+    outputSchema: emptyOutput,
+    riskLevel: "APPROVAL_REQUIRED",
+    scopeRequirement: "UNIT",
+    roleAccess: roleAccessFor({ UNIT_MANAGER: "APPROVAL_REQUIRED", WORKFORCE_ADMIN: "APPROVAL_REQUIRED" }),
+    auditEvent: "llm.workflow.direct_assign_shift_slot",
+    allowsMutation: true,
+    requiresPolicyGate: true,
+    requiresPreview: true
+  },
+  {
     name: "approve_shift_swap",
     description: "Preview and decide a manager-scoped shift swap approval.",
     routeAvailability: ["MANAGER_OPERATIONS", "WORKFLOW_PREVIEW"],
