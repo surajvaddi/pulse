@@ -7,6 +7,7 @@ import type { DemoSession } from "../auth/demo-users";
 import { PermissionService } from "../auth/permission.service";
 import { ShiftEligibilityService } from "./shift-eligibility.service";
 import { ShiftPipelineRepositoryProvider } from "./shift-pipeline.repository";
+import { recordShiftPipelineEvent } from "./shift-pipeline-events";
 
 const ACTIVE_CLAIM_STATUSES: ShiftClaimRequestContract["status"][] = [
   "SUBMITTED",
@@ -72,6 +73,15 @@ export class ShiftClaimService {
         riskFlags: policyDecision.riskFlags
       });
       await this.assertSlotInvariant(session.organizationId, updatedSlot.id);
+      recordShiftPipelineEvent({
+        actorUserId: session.userId,
+        action: "shift_pipeline.claim.pending_approval",
+        objectType: "ShiftClaimRequest",
+        objectId: claim.id,
+        after: { slotId, approvalRequestId: approval.id, policyDecision },
+        notifyUserId: "user_jordan_manager",
+        notificationType: "SHIFT_CLAIM_APPROVAL_REQUIRED"
+      });
       return { status: "PENDING_APPROVAL" as const, slot: updatedSlot, claim, approval, policyDecision };
     }
 
@@ -99,6 +109,15 @@ export class ShiftClaimService {
       riskFlags: policyDecision.riskFlags
     });
     await this.assertSlotInvariant(session.organizationId, updatedSlot.id);
+    recordShiftPipelineEvent({
+      actorUserId: session.userId,
+      action: "shift_pipeline.claim.assigned",
+      objectType: "ShiftClaimRequest",
+      objectId: claim.id,
+      after: { slotId, assignmentId: assignment.id, policyDecision },
+      notifyUserId: session.userId,
+      notificationType: "SHIFT_CLAIM_ASSIGNED"
+    });
     return { status: "ASSIGNED" as const, slot: updatedSlot, claim, assignment, policyDecision };
   }
 
@@ -135,6 +154,15 @@ export class ShiftClaimService {
       });
     }
     await this.assertSlotInvariant(session.organizationId, claim.slotId);
+    recordShiftPipelineEvent({
+      actorUserId: session.userId,
+      action: "shift_pipeline.claim.cancelled",
+      objectType: "ShiftClaimRequest",
+      objectId: cancelledClaim.id,
+      after: { slotId: claim.slotId, status: cancelledClaim.status },
+      notifyUserId: session.userId,
+      notificationType: "SHIFT_CLAIM_CANCELLED"
+    });
     return cancelledClaim;
   }
 

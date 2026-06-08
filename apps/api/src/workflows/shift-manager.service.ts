@@ -5,6 +5,7 @@ import { demoApprovals, demoEmployeeByUserId } from "../demo/demo-data";
 import { demoSessions, type DemoSession } from "../auth/demo-users";
 import { PermissionService } from "../auth/permission.service";
 import { ShiftEligibilityService } from "./shift-eligibility.service";
+import { recordShiftPipelineEvent } from "./shift-pipeline-events";
 import { ShiftPipelineRepositoryProvider } from "./shift-pipeline.repository";
 
 @Injectable()
@@ -54,6 +55,16 @@ export class ShiftManagerService {
         riskFlags: slot.riskFlags
       });
       await this.assertSlotInvariant(session.organizationId, slot.id);
+      recordShiftPipelineEvent({
+        actorUserId: session.userId,
+        action: "shift_pipeline.claim.denied",
+        objectType: "ShiftClaimRequest",
+        objectId: deniedClaim.id,
+        ...(reason ? { reason } : {}),
+        after: { slotId: slot.id, approvalId: approval.id },
+        notifyUserId: claim.userId,
+        notificationType: "SHIFT_CLAIM_DENIED"
+      });
       return { status: "DENIED" as const, claim: deniedClaim, approval };
     }
 
@@ -92,6 +103,16 @@ export class ShiftManagerService {
       approval.decisionReason = reason;
     }
     await this.assertSlotInvariant(session.organizationId, slot.id);
+    recordShiftPipelineEvent({
+      actorUserId: session.userId,
+      action: "shift_pipeline.claim.approved",
+      objectType: "ShiftClaimRequest",
+      objectId: assignedClaim.id,
+      ...(reason ? { reason } : {}),
+      after: { slotId: slot.id, assignmentId: assignment.id, approvalId: approval.id },
+      notifyUserId: claim.userId,
+      notificationType: "SHIFT_CLAIM_APPROVED"
+    });
     return { status: "ASSIGNED" as const, slot: assignedSlot, claim: assignedClaim, assignment, approval };
   }
 
@@ -154,6 +175,16 @@ export class ShiftManagerService {
       riskFlags: policyDecision.riskFlags
     });
     await this.assertSlotInvariant(session.organizationId, slotId);
+    recordShiftPipelineEvent({
+      actorUserId: session.userId,
+      action: "shift_pipeline.slot.direct_assigned",
+      objectType: "ShiftAssignment",
+      objectId: assignment.id,
+      ...(options.overrideReason ? { reason: options.overrideReason } : {}),
+      after: { slotId, assigneeUserId, policyDecision },
+      notifyUserId: assigneeUserId,
+      notificationType: "SHIFT_DIRECT_ASSIGNED"
+    });
     return { status: "ASSIGNED" as const, slot: assignedSlot, assignment, policyDecision };
   }
 
