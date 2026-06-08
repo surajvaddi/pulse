@@ -6,7 +6,8 @@ import {
   ShiftPolicyDecisionSnapshotSchema,
   ShiftSlotContractSchema,
   StaffingRequirementContractSchema,
-  assertShiftCoverageInvariants
+  assertShiftCoverageInvariants,
+  operationalShiftFromSlot
 } from "./index.js";
 
 const evaluatedAt = "2026-06-07T10:00:00.000Z";
@@ -76,6 +77,11 @@ const claim = ShiftClaimRequestContractSchema.parse({
 });
 
 assert.equal(assertShiftCoverageInvariants({ slot, assignments: [assignment], claims: [claim] }), true);
+const operationalShift = operationalShiftFromSlot({ slot, assignment });
+assert.equal(operationalShift.slotId, slot.id);
+assert.equal(operationalShift.employeeId, assignment.employeeId);
+assert.equal(operationalShift.swappable, true);
+assert.equal(operationalShift.claimable, false);
 
 assert.throws(
   () =>

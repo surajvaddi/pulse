@@ -67,6 +67,7 @@ export const ShiftSlotStatusSchema = z.enum([
   "CLAIM_PENDING",
   "ASSIGNED",
   "PUBLISHED",
+  "LOCKED",
   "IN_PROGRESS",
   "COMPLETED",
   "CANCELLED"
@@ -329,6 +330,52 @@ export const ShiftClaimRequestContractSchema = z.object({
   expiresAt: IsoDateTimeStringSchema.optional()
 });
 export type ShiftClaimRequestContract = z.infer<typeof ShiftClaimRequestContractSchema>;
+
+export const OperationalShiftContractSchema = z.object({
+  id: z.string(),
+  organizationId: z.string(),
+  facilityId: z.string(),
+  unitId: z.string(),
+  slotId: z.string(),
+  assignmentId: z.string().optional(),
+  employeeId: z.string().optional(),
+  assignedByUserId: z.string().optional(),
+  roleRequiredId: z.string(),
+  certificationRequiredIds: z.array(z.string()),
+  startsAt: IsoDateTimeStringSchema,
+  endsAt: IsoDateTimeStringSchema,
+  status: ShiftSlotStatusSchema,
+  source: ShiftSourceSchema,
+  riskFlags: z.array(z.string()),
+  swappable: z.boolean(),
+  claimable: z.boolean()
+});
+export type OperationalShiftContract = z.infer<typeof OperationalShiftContractSchema>;
+
+export function operationalShiftFromSlot(input: {
+  slot: ShiftSlotContract;
+  assignment?: ShiftAssignmentContract | null;
+}): OperationalShiftContract {
+  return OperationalShiftContractSchema.parse({
+    id: input.slot.id,
+    organizationId: input.slot.organizationId,
+    facilityId: input.slot.facilityId,
+    unitId: input.slot.unitId,
+    slotId: input.slot.id,
+    ...(input.assignment?.id ? { assignmentId: input.assignment.id } : {}),
+    ...(input.assignment?.employeeId ? { employeeId: input.assignment.employeeId } : {}),
+    ...(input.assignment?.assignedByUserId ? { assignedByUserId: input.assignment.assignedByUserId } : {}),
+    roleRequiredId: input.slot.roleRequiredId,
+    certificationRequiredIds: input.slot.certificationRequiredIds,
+    startsAt: input.slot.startsAt,
+    endsAt: input.slot.endsAt,
+    status: input.slot.status,
+    source: input.slot.source,
+    riskFlags: input.slot.riskFlags,
+    swappable: Boolean(input.assignment?.employeeId) && ["ASSIGNED", "PUBLISHED"].includes(input.slot.status),
+    claimable: input.slot.status === "OPEN"
+  });
+}
 
 export function assertShiftCoverageInvariants(input: {
   slot: ShiftSlotContract;
