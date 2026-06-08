@@ -67,6 +67,8 @@ import { ShiftClaimService } from "../workflows/shift-claim.service";
 import { ShiftEligibilityService } from "../workflows/shift-eligibility.service";
 import { ShiftManagerService } from "../workflows/shift-manager.service";
 import { ShiftPipelineController } from "../workflows/shift-pipeline.controller";
+import { ShiftSwapEligibilityService } from "../workflows/shift-swap-eligibility.service";
+import { ShiftSwapPipelineController } from "../workflows/shift-swap-pipeline.controller";
 import {
   InMemoryShiftPipelineRepository,
   PrismaShiftPipelineRepository,
@@ -84,7 +86,8 @@ import {
     IntegrationController,
     EvalController,
     TimeclockController,
-    ShiftPipelineController
+    ShiftPipelineController,
+    ShiftSwapPipelineController
   ],
   providers: [
     SchedulingWorkflowService,
@@ -128,6 +131,7 @@ import {
     ShiftClaimService,
     ShiftEligibilityService,
     ShiftManagerService,
+    ShiftSwapEligibilityService,
     InMemoryShiftPipelineRepository,
     PrismaShiftPipelineRepository,
     ShiftPipelineRepositoryProvider
