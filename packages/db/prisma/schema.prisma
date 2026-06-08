@@ -108,6 +108,43 @@ enum ShiftSource {
   INTEGRATION
 }
 
+enum ShiftSlotStatus {
+  DRAFT
+  OPEN
+  CLAIM_PENDING
+  ASSIGNED
+  PUBLISHED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum ShiftAssignmentStatus {
+  ACTIVE
+  COMPLETED
+  CANCELLED
+  SUPERSEDED
+}
+
+enum ShiftAssignmentSource {
+  CLAIM
+  MANAGER_ASSIGNMENT
+  IMPORT
+  SWAP
+  SYSTEM
+}
+
+enum ShiftClaimStatus {
+  SUBMITTED
+  PENDING_POLICY_REVIEW
+  PENDING_APPROVAL
+  APPROVED
+  ASSIGNED
+  DENIED
+  CANCELLED
+  EXPIRED
+}
+
 enum AvailabilityType {
   AVAILABLE
   UNAVAILABLE
@@ -290,6 +327,9 @@ model Organization {
   workforceRoles     WorkforceRole[]
   certifications     Certification[]
   shifts             Shift[]
+  shiftSlots         ShiftSlot[]
+  shiftAssignments   ShiftAssignment[]
+  shiftClaims        ShiftClaimRequest[]
   approvalRequests   ApprovalRequest[]
   notifications      Notification[]
   aiConversations    AIConversation[]
@@ -310,6 +350,7 @@ model Facility {
   units          Unit[]
   employees      EmployeeProfile[] @relation("PrimaryFacility")
   shifts         Shift[]
+  shiftSlots     ShiftSlot[]
 
   @@map("facilities")
 }
@@ -326,6 +367,7 @@ model Unit {
   employees               EmployeeProfile[]     @relation("PrimaryUnit")
   shiftTemplates          ShiftTemplate[]
   shifts                  Shift[]
+  shiftSlots              ShiftSlot[]
   staffingRequirements    StaffingRequirement[]
   swapRequests            ShiftSwapRequest[]
 
@@ -351,6 +393,8 @@ model User {
   aiToolCalls          AIToolCall[]
   requestedApprovals   ApprovalRequest[]  @relation("RequestedApprovals")
   assignedApprovals    ApprovalRequest[]  @relation("AssignedApprovals")
+  shiftClaims          ShiftClaimRequest[] @relation("ShiftClaimsByUser")
+  assignedShiftSlots   ShiftAssignment[]   @relation("ShiftAssignmentsAssignedBy")
   auditLogs            AuditLog[]
   sentInvitations      Invitation[]       @relation("InvitedByUser")
   acceptedInvitations  Invitation[]       @relation("AcceptedByUser")
@@ -415,6 +459,8 @@ model EmployeeProfile {
   hireDate               DateTime?
   certifications         EmployeeCertification[]
   shifts                 Shift[]
+  shiftAssignments       ShiftAssignment[]
+  shiftClaims            ShiftClaimRequest[]
   availabilityWindows    AvailabilityWindow[]
   requestedSwaps         ShiftSwapRequest[]      @relation("RequesterSwaps")
   proposedSwaps          ShiftSwapRequest[]      @relation("ProposedSwaps")
@@ -434,6 +480,7 @@ model WorkforceRole {
   employees      EmployeeProfile[]
   shiftTemplates ShiftTemplate[]
   shifts         Shift[]
+  shiftSlots     ShiftSlot[]
   requirements   StaffingRequirement[]
 
   @@unique([organizationId, name])
@@ -514,6 +561,83 @@ model Shift {
   @@map("shifts")
 }
 
+model ShiftSlot {
+  id                       String               @id @default(cuid())
+  organizationId           String
+  organization             Organization         @relation(fields: [organizationId], references: [id])
+  facilityId               String
+  facility                 Facility             @relation(fields: [facilityId], references: [id])
+  unitId                   String
+  unit                     Unit                 @relation(fields: [unitId], references: [id])
+  requirementId            String?
+  requirement              StaffingRequirement? @relation(fields: [requirementId], references: [id])
+  roleRequiredId           String
+  roleRequired             WorkforceRole        @relation(fields: [roleRequiredId], references: [id])
+  certificationRequiredIds String[]
+  startAt                  DateTime
+  endAt                    DateTime
+  status                   ShiftSlotStatus      @default(OPEN)
+  source                   ShiftSource
+  riskFlags                String[]
+  assignments              ShiftAssignment[]
+  claims                   ShiftClaimRequest[]
+  createdAt                DateTime             @default(now())
+  updatedAt                DateTime             @updatedAt
+
+  @@index([unitId, startAt])
+  @@index([facilityId, startAt])
+  @@index([organizationId, status])
+  @@index([requirementId])
+  @@map("shift_slots")
+}
+
+model ShiftAssignment {
+  id               String                @id @default(cuid())
+  organizationId   String
+  organization     Organization          @relation(fields: [organizationId], references: [id])
+  slotId           String
+  slot             ShiftSlot             @relation(fields: [slotId], references: [id])
+  employeeId       String
+  employee         EmployeeProfile       @relation(fields: [employeeId], references: [id])
+  assignedByUserId String
+  assignedByUser   User                  @relation("ShiftAssignmentsAssignedBy", fields: [assignedByUserId], references: [id])
+  status           ShiftAssignmentStatus @default(ACTIVE)
+  source           ShiftAssignmentSource
+  createdAt        DateTime              @default(now())
+  endedAt          DateTime?
+
+  @@index([slotId, status])
+  @@index([employeeId, status])
+  @@index([organizationId, createdAt])
+  @@map("shift_assignments")
+}
+
+model ShiftClaimRequest {
+  id                String           @id @default(cuid())
+  organizationId    String
+  organization      Organization     @relation(fields: [organizationId], references: [id])
+  slotId            String
+  slot              ShiftSlot        @relation(fields: [slotId], references: [id])
+  employeeId        String
+  employee          EmployeeProfile  @relation(fields: [employeeId], references: [id])
+  userId            String
+  user              User             @relation("ShiftClaimsByUser", fields: [userId], references: [id])
+  status            ShiftClaimStatus
+  policyDecision    Json
+  approvalRequestId String?
+  assignmentId      String?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  decidedAt         DateTime?
+  expiresAt         DateTime?
+
+  @@index([slotId, status])
+  @@index([employeeId, status])
+  @@index([organizationId, status])
+  @@index([approvalRequestId])
+  @@map("shift_claim_requests")
+}
+
 model AvailabilityWindow {
   id             String             @id @default(cuid())
   employeeId     String
@@ -585,6 +709,7 @@ model StaffingRequirement {
   minRequired              Int
   idealRequired            Int?
   source                   String
+  shiftSlots               ShiftSlot[]
 
   @@index([unitId, startAt])
   @@map("staffing_requirements")
