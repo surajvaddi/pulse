@@ -3,6 +3,7 @@ import { prisma } from "@pulseshift/db";
 import { PermissionSchema, RolePermissionMap, type Scope } from "@pulseshift/domain";
 
 import type { SupabaseJwtClaims } from "./supabase-jwt.service";
+import type { DemoSession } from "./demo-users";
 
 function ownerPermissions() {
   return RolePermissionMap.ORGANIZATION_OWNER.map((permission) => PermissionSchema.parse(permission));
@@ -88,5 +89,88 @@ export class OnboardingService {
         nextStep: "/app/admin"
       };
     });
+  }
+
+  async upsertEmployeeProfile(
+    session: DemoSession,
+    input: {
+      legalName?: string;
+      preferredName?: string;
+      employeeNumber?: string;
+      facilityId?: string;
+      unitId?: string;
+      roleName?: string;
+      employmentType?: "FULL_TIME" | "PART_TIME" | "PER_DIEM" | "CONTRACT" | "AGENCY";
+    }
+  ) {
+    const legalName = input.legalName?.trim() || session.displayName || session.email;
+    const roleName = input.roleName?.trim() || "RN";
+    const facilityId = input.facilityId?.trim();
+    const unitId = input.unitId?.trim();
+    if (!facilityId || !unitId) {
+      throw new BadRequestException("Facility and unit are required to create a workforce profile.");
+    }
+
+    const [facility, unit] = await Promise.all([
+      prisma.facility.findFirst({ where: { id: facilityId, organizationId: session.organizationId } }),
+      prisma.unit.findFirst({ where: { id: unitId, facility: { organizationId: session.organizationId } } })
+    ]);
+    if (!facility || !unit || unit.facilityId !== facility.id) {
+      throw new BadRequestException("Profile facility and unit must belong to the current organization.");
+    }
+
+    const role = await prisma.workforceRole.upsert({
+      where: { organizationId_name: { organizationId: session.organizationId, name: roleName } },
+      update: {},
+      create: {
+        organizationId: session.organizationId,
+        name: roleName,
+        description: "Created during workforce profile onboarding"
+      }
+    });
+    const profile = await prisma.employeeProfile.upsert({
+      where: { userId: session.userId },
+      update: {
+        legalName,
+        preferredName: input.preferredName?.trim() || legalName,
+        primaryFacilityId: facility.id,
+        primaryUnitId: unit.id,
+        roleId: role.id,
+        employmentType: input.employmentType ?? "FULL_TIME",
+        status: "ACTIVE"
+      },
+      create: {
+        userId: session.userId,
+        organizationId: session.organizationId,
+        employeeNumber: input.employeeNumber?.trim() || `EMP-${session.userId.slice(0, 8)}`,
+        legalName,
+        preferredName: input.preferredName?.trim() || legalName,
+        primaryFacilityId: facility.id,
+        primaryUnitId: unit.id,
+        roleId: role.id,
+        employmentType: input.employmentType ?? "FULL_TIME",
+        status: "ACTIVE"
+      }
+    });
+    await prisma.auditLog.create({
+      data: {
+        organizationId: session.organizationId,
+        actorUserId: session.userId,
+        actorType: "USER",
+        action: "onboarding.profile.upserted",
+        objectType: "EmployeeProfile",
+        objectId: profile.id,
+        after: { facilityId: facility.id, unitId: unit.id, roleId: role.id }
+      }
+    });
+    return {
+      id: profile.id,
+      employeeNumber: profile.employeeNumber,
+      legalName: profile.legalName,
+      primaryFacilityId: profile.primaryFacilityId,
+      primaryUnitId: profile.primaryUnitId,
+      roleId: profile.roleId,
+      nextStep: "/app/home"
+    };
   }
 }

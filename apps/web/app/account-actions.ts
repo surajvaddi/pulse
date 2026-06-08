@@ -54,6 +54,19 @@ export async function createOrganizationAction(formData: FormData) {
   redirect("/app/admin");
 }
 
+export async function upsertProfileAction(formData: FormData) {
+  await apiPost("/onboarding/profile", {
+    legalName: String(formData.get("legalName") ?? ""),
+    preferredName: String(formData.get("preferredName") ?? ""),
+    employeeNumber: String(formData.get("employeeNumber") ?? ""),
+    facilityId: String(formData.get("facilityId") ?? ""),
+    unitId: String(formData.get("unitId") ?? ""),
+    roleName: String(formData.get("roleName") ?? "RN"),
+    employmentType: String(formData.get("employmentType") ?? "FULL_TIME")
+  });
+  redirect("/app/home");
+}
+
 export async function inviteWorkforceMemberAction(formData: FormData) {
   const email = String(formData.get("email") ?? "").trim();
   const role = String(formData.get("role") ?? "EMPLOYEE");
