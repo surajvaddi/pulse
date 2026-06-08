@@ -199,6 +199,8 @@ export async function createAdminFacilityAction(formData: FormData) {
     reason: String(formData.get("reason") ?? "Created from admin UI")
   }, "user_admin");
   revalidatePath("/app/admin/facilities");
+  revalidatePath("/app/admin/units");
+  revalidatePath("/onboarding/profile");
 }
 
 export async function createAdminUnitAction(formData: FormData) {
@@ -225,10 +227,12 @@ export async function suspendAdminUserAction(formData: FormData) {
 }
 
 export async function assignAdminRoleAction(formData: FormData) {
+  const role = String(formData.get("role") ?? "EMPLOYEE");
+  const unitId = String(formData.get("unitId") ?? "");
   await apiPost("/admin/roles", {
     userId: String(formData.get("userId") ?? ""),
-    role: String(formData.get("role") ?? "EMPLOYEE"),
-    scope: { type: "UNIT", unitIds: [String(formData.get("unitId") ?? "unit_icu")] },
+    role,
+    scope: unitId ? { type: "UNIT", unitIds: [unitId] } : { type: "SELF" },
     reason: String(formData.get("reason") ?? "Assigned from admin UI")
   }, "user_admin");
   revalidatePath("/app/admin/roles");

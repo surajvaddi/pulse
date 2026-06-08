@@ -22,6 +22,7 @@ export default async function AdminRolesPage() {
             <span>{users.length} accounts</span>
           </div>
           <div className="item-list">
+            {users.length === 0 ? <p className="empty-state">No users are in this workspace yet.</p> : null}
             {users.map((user) => (
               <article className="list-row" key={user.id}>
                 <div>
@@ -37,29 +38,34 @@ export default async function AdminRolesPage() {
           <div className="section-heading">
             <h2>Assign role</h2>
           </div>
-          <form action={assignAdminRoleAction} className="detail-stack">
-            <select name="userId">
-              {users.map((user) => (
-                <option key={user.id} value={user.id}>{user.displayName}</option>
-              ))}
-            </select>
-            <select name="role" defaultValue="UNIT_MANAGER">
-              <option value="EMPLOYEE">Employee</option>
-              <option value="UNIT_MANAGER">Unit Manager</option>
-              <option value="PAYROLL_ADMIN">Payroll Admin</option>
-              <option value="SYSTEM_ADMIN">System Admin</option>
-            </select>
-            <select name="unitId">
-              {units.map((unit) => (
-                <option key={unit.id} value={unit.id}>{unit.name}</option>
-              ))}
-            </select>
-            <input name="reason" placeholder="Audit reason" required />
-            <button className="command-button" type="submit">
-              <ShieldCheck size={16} aria-hidden="true" />
-              Assign role
-            </button>
-          </form>
+          {users.length === 0 ? (
+            <p className="empty-state">Invite or create users before assigning roles.</p>
+          ) : (
+            <form action={assignAdminRoleAction} className="detail-stack">
+              <select name="userId">
+                {users.map((user) => (
+                  <option key={user.id} value={user.id}>{user.displayName}</option>
+                ))}
+              </select>
+              <select name="role" defaultValue="EMPLOYEE">
+                <option value="EMPLOYEE">Employee</option>
+                <option value="UNIT_MANAGER">Unit Manager</option>
+                <option value="PAYROLL_ADMIN">Payroll Admin</option>
+                <option value="SYSTEM_ADMIN">System Admin</option>
+              </select>
+              <select name="unitId">
+                <option value="">Self scoped or org-scoped role</option>
+                {units.map((unit) => (
+                  <option key={unit.id} value={unit.id}>{unit.name}</option>
+                ))}
+              </select>
+              <input name="reason" placeholder="Audit reason" required />
+              <button className="command-button" type="submit">
+                <ShieldCheck size={16} aria-hidden="true" />
+                Assign role
+              </button>
+            </form>
+          )}
         </aside>
       </section>
     </section>

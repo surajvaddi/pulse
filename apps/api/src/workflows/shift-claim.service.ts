@@ -1,4 +1,5 @@
 import { BadRequestException, Inject, Injectable, NotFoundException } from "@nestjs/common";
+import { prisma } from "@pulseshift/db";
 import { assertShiftCoverageInvariants } from "@pulseshift/domain";
 import type { ShiftClaimRequestContract } from "@pulseshift/domain";
 
@@ -36,7 +37,7 @@ export class ShiftClaimService {
       throw new NotFoundException("Shift slot not found");
     }
 
-    const employeeId = this.employeeIdForSession(session);
+    const employeeId = await this.employeeIdForSession(session);
     const duplicateClaims = await repository.listClaims({
       organizationId: session.organizationId,
       slotId,
@@ -169,7 +170,17 @@ export class ShiftClaimService {
     return cancelledClaim;
   }
 
-  private employeeIdForSession(session: DemoSession) {
+  private async employeeIdForSession(session: DemoSession) {
+    if (process.env.WORKFLOW_PERSISTENCE === "prisma") {
+      const employee = await prisma.employeeProfile.findUnique({
+        where: { userId: session.userId },
+        select: { id: true }
+      });
+      if (!employee) {
+        throw new BadRequestException("User does not have a claimable employee profile.");
+      }
+      return employee.id;
+    }
     const employeeIdByUserId: Record<string, string> = {
       user_priya: "emp_priya",
       user_maya: "emp_maya",

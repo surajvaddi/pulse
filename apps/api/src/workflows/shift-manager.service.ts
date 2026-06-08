@@ -1,5 +1,6 @@
 import { BadRequestException, ForbiddenException, Inject, Injectable, NotFoundException } from "@nestjs/common";
 import { assertShiftCoverageInvariants } from "@pulseshift/domain";
+import { prisma } from "@pulseshift/db";
 
 import { demoApprovals, demoEmployeeByUserId } from "../demo/demo-data";
 import { demoSessions, type DemoSession } from "../auth/demo-users";
@@ -139,11 +140,9 @@ export class ShiftManagerService {
       throw new BadRequestException("Shift slot already has an active assignment.");
     }
 
-    const assigneeSession = demoSessions.find((candidate) => candidate.userId === assigneeUserId);
-    const employeeId = demoEmployeeByUserId.get(assigneeUserId);
-    if (!assigneeSession || !employeeId) {
-      throw new BadRequestException("Assignee does not have a claimable employee profile.");
-    }
+    const assignee = await this.assigneeForUser(session.organizationId, assigneeUserId);
+    const assigneeSession = assignee.session;
+    const employeeId = assignee.employeeId;
 
     const policyDecision = this.eligibility.evaluateClaim({
       session: assigneeSession,
@@ -195,6 +194,45 @@ export class ShiftManagerService {
     if (!this.permissions.hasPermission(session, "shift:assign", { type: "UNIT", unitId })) {
       throw new ForbiddenException("User is not allowed to assign shifts for this unit.");
     }
+  }
+
+  private async assigneeForUser(organizationId: string, assigneeUserId: string) {
+    if (process.env.WORKFLOW_PERSISTENCE === "prisma") {
+      const user = await prisma.user.findFirst({
+        where: { id: assigneeUserId, organizationId, status: "ACTIVE" },
+        include: { roles: true, employeeProfile: true }
+      });
+      if (!user?.employeeProfile) {
+        throw new BadRequestException("Assignee does not have a claimable employee profile.");
+      }
+      const primaryRole = user.roles.at(0);
+      if (!primaryRole) {
+        throw new BadRequestException("Assignee does not have an assigned role.");
+      }
+      return {
+        employeeId: user.employeeProfile.id,
+        session: {
+          userId: user.id,
+          ...(user.supabaseAuthId ? { supabaseAuthId: user.supabaseAuthId } : {}),
+          organizationId: user.organizationId,
+          displayName: user.displayName,
+          email: user.email,
+          role: primaryRole.role,
+          grants: user.roles.flatMap((role) =>
+            role.permissions.map((permission) => ({
+              permission: permission as DemoSession["grants"][number]["permission"],
+              scope: role.scope as DemoSession["grants"][number]["scope"]
+            }))
+          )
+        } satisfies DemoSession
+      };
+    }
+    const assigneeSession = demoSessions.find((candidate) => candidate.userId === assigneeUserId);
+    const employeeId = demoEmployeeByUserId.get(assigneeUserId);
+    if (!assigneeSession || !employeeId) {
+      throw new BadRequestException("Assignee does not have a claimable employee profile.");
+    }
+    return { session: assigneeSession, employeeId };
   }
 
   private async assertSlotInvariant(organizationId: string, slotId: string) {

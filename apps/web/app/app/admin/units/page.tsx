@@ -22,6 +22,7 @@ export default async function AdminUnitsPage() {
             <span>{units.length} units</span>
           </div>
           <div className="item-list">
+            {units.length === 0 ? <p className="empty-state">No units yet. Create a facility first, then add units.</p> : null}
             {units.map((unit) => (
               <article className="list-row" key={unit.id}>
                 <div>
@@ -37,26 +38,30 @@ export default async function AdminUnitsPage() {
           <div className="section-heading">
             <h2>Create unit</h2>
           </div>
-          <form action={createAdminUnitAction} className="detail-stack">
-            <select name="facilityId" required>
-              {facilities.map((facility) => (
-                <option key={facility.id} value={facility.id}>{facility.name}</option>
-              ))}
-            </select>
-            <input name="name" placeholder="Unit name" required />
-            <select name="type" defaultValue="OTHER">
-              <option value="ICU">ICU</option>
-              <option value="ED">ED</option>
-              <option value="MED_SURG">Med-Surg</option>
-              <option value="OTHER">Other</option>
-            </select>
-            <input name="managerUserIds" placeholder="Manager user ids, comma separated" />
-            <input name="reason" placeholder="Audit reason" required />
-            <button className="command-button" type="submit">
-              <PlusCircle size={16} aria-hidden="true" />
-              Create unit
-            </button>
-          </form>
+          {facilities.length === 0 ? (
+            <p className="empty-state">Create a facility before adding units.</p>
+          ) : (
+            <form action={createAdminUnitAction} className="detail-stack">
+              <select name="facilityId" required>
+                {facilities.map((facility) => (
+                  <option key={facility.id} value={facility.id}>{facility.name}</option>
+                ))}
+              </select>
+              <input name="name" placeholder="Unit name" required />
+              <select name="type" defaultValue="OTHER">
+                <option value="ICU">ICU</option>
+                <option value="ED">ED</option>
+                <option value="MED_SURG">Med-Surg</option>
+                <option value="OTHER">Other</option>
+              </select>
+              <input name="managerUserIds" placeholder="Manager user ids, comma separated" />
+              <input name="reason" placeholder="Audit reason" required />
+              <button className="command-button" type="submit">
+                <PlusCircle size={16} aria-hidden="true" />
+                Create unit
+              </button>
+            </form>
+          )}
         </aside>
       </section>
     </section>
