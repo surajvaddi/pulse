@@ -12,6 +12,7 @@ import {
   type Invitation,
   type SessionSummary
 } from "@/lib/api";
+import { requireSupabaseAccessToken } from "@/lib/onboarding-access";
 import { resolveSupabaseSessionDestination } from "@/lib/supabase-session";
 
 export async function startDemoSessionAction(formData: FormData) {
@@ -45,11 +46,7 @@ export async function establishSupabaseSessionAction(accessToken: string) {
 }
 
 export async function createOrganizationAction(formData: FormData) {
-  const cookieStore = await cookies();
-  const accessToken = cookieStore.get(sessionCookieNames.accessToken)?.value;
-  if (!accessToken) {
-    redirect("/login");
-  }
+  const accessToken = await requireSupabaseAccessToken();
   await apiPostWithAccessToken(
     "/onboarding/organizations",
     {
@@ -63,41 +60,43 @@ export async function createOrganizationAction(formData: FormData) {
 }
 
 export async function upsertProfileAction(formData: FormData) {
-  await apiPost("/onboarding/profile", {
-    legalName: String(formData.get("legalName") ?? ""),
-    preferredName: String(formData.get("preferredName") ?? ""),
-    employeeNumber: String(formData.get("employeeNumber") ?? ""),
-    facilityId: String(formData.get("facilityId") ?? ""),
-    unitId: String(formData.get("unitId") ?? ""),
-    roleName: String(formData.get("roleName") ?? "RN"),
-    employmentType: String(formData.get("employmentType") ?? "FULL_TIME")
-  });
+  const accessToken = await requireSupabaseAccessToken();
+  await apiPostWithAccessToken(
+    "/onboarding/profile",
+    {
+      legalName: String(formData.get("legalName") ?? ""),
+      preferredName: String(formData.get("preferredName") ?? ""),
+      employeeNumber: String(formData.get("employeeNumber") ?? ""),
+      facilityId: String(formData.get("facilityId") ?? ""),
+      unitId: String(formData.get("unitId") ?? ""),
+      roleName: String(formData.get("roleName") ?? "RN"),
+      employmentType: String(formData.get("employmentType") ?? "FULL_TIME")
+    },
+    accessToken
+  );
   redirect("/app/home");
 }
 
 export async function inviteWorkforceMemberAction(formData: FormData) {
+  const accessToken = await requireSupabaseAccessToken();
   const email = String(formData.get("email") ?? "").trim();
   const role = String(formData.get("role") ?? "EMPLOYEE");
-  await apiPost<Invitation>(
+  await apiPostWithAccessToken(
     "/users/invite",
     {
       email,
       role,
       scope: { type: "SELF" }
     },
-    "user_admin"
+    accessToken
   );
   redirect("/onboarding/organization?invited=1");
 }
 
 export async function acceptInvitationAction(formData: FormData) {
   const token = String(formData.get("token") ?? "");
-  const accessToken = String(formData.get("accessToken") ?? "");
-  const userId = String(formData.get("userId") ?? "user_priya") as DemoUserId;
-  if (accessToken) {
-    await apiPostWithAccessToken<Invitation>(`/invitations/${token}/accept`, {}, accessToken);
-  } else {
-    await apiPost<Invitation>(`/invitations/${token}/accept`, {}, userId);
-  }
+  const accessToken =
+    String(formData.get("accessToken") ?? "") || (await requireSupabaseAccessToken());
+  await apiPostWithAccessToken<Invitation>(`/invitations/${token}/accept`, {}, accessToken);
   redirect("/onboarding/profile");
 }

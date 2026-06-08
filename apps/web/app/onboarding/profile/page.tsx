@@ -2,13 +2,15 @@ import Link from "next/link";
 import { ArrowRight, BadgeCheck } from "lucide-react";
 
 import { upsertProfileAction } from "../../account-actions";
-import { apiGet, type AdminFacility, type AdminUnit, type SessionSummary } from "@/lib/api";
+import { apiGetWithAccessToken, type AdminFacility, type AdminUnit, type SessionSummary } from "@/lib/api";
+import { requireSupabaseAccessToken } from "@/lib/onboarding-access";
 
 export default async function ProfileOnboardingPage() {
+  const accessToken = await requireSupabaseAccessToken();
   const [session, facilities, units] = await Promise.all([
-    apiGet<SessionSummary>("/auth/me"),
-    apiGet<AdminFacility[]>("/admin/facilities"),
-    apiGet<AdminUnit[]>("/admin/units")
+    apiGetWithAccessToken<SessionSummary>("/auth/me", accessToken),
+    apiGetWithAccessToken<AdminFacility[]>("/admin/facilities", accessToken),
+    apiGetWithAccessToken<AdminUnit[]>("/admin/units", accessToken)
   ]);
   const firstFacility = facilities.at(0);
   const facilityUnits = firstFacility ? units.filter((unit) => unit.facilityId === firstFacility.id) : units;
