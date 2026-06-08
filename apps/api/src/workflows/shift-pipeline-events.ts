@@ -8,8 +8,13 @@ export type ShiftPipelineEventInput = {
     | "shift_pipeline.claim.cancelled"
     | "shift_pipeline.claim.approved"
     | "shift_pipeline.claim.denied"
-    | "shift_pipeline.slot.direct_assigned";
-  objectType: "ShiftClaimRequest" | "ShiftSlot" | "ShiftAssignment";
+    | "shift_pipeline.slot.direct_assigned"
+    | "shift_pipeline.swap.requested"
+    | "shift_pipeline.swap.accepted"
+    | "shift_pipeline.swap.declined"
+    | "shift_pipeline.swap.approved"
+    | "shift_pipeline.swap.denied";
+  objectType: "ShiftClaimRequest" | "ShiftSlot" | "ShiftAssignment" | "ShiftSwapRequest";
   objectId: string;
   reason?: string;
   after?: Record<string, unknown>;

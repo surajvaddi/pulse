@@ -58,6 +58,12 @@ export interface ShiftPipelineRepository {
   listAssignments(query: ShiftAssignmentQuery): Promise<ShiftAssignmentContract[]>;
   findActiveAssignmentForSlot(query: { organizationId: string; slotId: string }): Promise<ShiftAssignmentContract | null>;
   createAssignment(input: Omit<ShiftAssignmentContract, "id" | "createdAt"> & { id?: string; createdAt?: string }): Promise<ShiftAssignmentContract>;
+  updateAssignment(input: {
+    organizationId: string;
+    assignmentId: string;
+    status: ShiftAssignmentStatus;
+    endedAt?: string;
+  }): Promise<ShiftAssignmentContract>;
 }
 
 type PrismaModelFacade = {
@@ -202,6 +208,25 @@ export class InMemoryShiftPipelineRepository implements ShiftPipelineRepository 
       createdAt: input.createdAt ?? nowIso()
     };
     demoShiftAssignments.push(assignment);
+    return assignment;
+  }
+
+  async updateAssignment(input: {
+    organizationId: string;
+    assignmentId: string;
+    status: ShiftAssignmentStatus;
+    endedAt?: string;
+  }) {
+    const assignment = demoShiftAssignments.find(
+      (candidate) => candidate.organizationId === input.organizationId && candidate.id === input.assignmentId
+    );
+    if (!assignment) {
+      throw new Error(`Shift assignment not found: ${input.assignmentId}`);
+    }
+    assignment.status = input.status;
+    if (input.endedAt) {
+      assignment.endedAt = input.endedAt;
+    }
     return assignment;
   }
 }
@@ -375,6 +400,22 @@ export class PrismaShiftPipelineRepository implements ShiftPipelineRepository {
         ...input,
         ...(input.id ? { id: input.id } : {}),
         ...(input.createdAt ? { createdAt: new Date(input.createdAt) } : {}),
+        ...(input.endedAt ? { endedAt: new Date(input.endedAt) } : {})
+      }
+    });
+    return mapPrismaAssignment(assignment as Record<string, unknown>);
+  }
+
+  async updateAssignment(input: {
+    organizationId: string;
+    assignmentId: string;
+    status: ShiftAssignmentStatus;
+    endedAt?: string;
+  }) {
+    const assignment = await this.client.shiftAssignment.update({
+      where: { id: input.assignmentId },
+      data: {
+        status: input.status,
         ...(input.endedAt ? { endedAt: new Date(input.endedAt) } : {})
       }
     });
