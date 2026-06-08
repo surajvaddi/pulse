@@ -573,3 +573,18 @@ export async function apiPostWithAccessToken<T>(
 
   return (await response.json()) as T;
 }
+
+export async function apiGetWithAccessToken<T>(path: string, accessToken: string): Promise<T> {
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    headers: {
+      authorization: `Bearer ${accessToken}`
+    },
+    cache: "no-store"
+  });
+
+  if (!response.ok) {
+    throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+  }
+
+  return (await response.json()) as T;
+}

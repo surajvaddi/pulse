@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { Send, Settings2 } from "lucide-react";
+import { Building2, Send, Settings2 } from "lucide-react";
 
-import { inviteWorkforceMemberAction } from "../../account-actions";
+import { createOrganizationAction, inviteWorkforceMemberAction } from "../../account-actions";
 
 type OrganizationOnboardingPageProps = {
   searchParams: Promise<{
@@ -19,23 +19,35 @@ export default async function OrganizationOnboardingPage({
       <section className="auth-panel">
         <div className="auth-copy">
           <p className="eyebrow">Organization Setup</p>
-          <h1>Prepare the first production workspace.</h1>
+          <h1>Create or join a workspace.</h1>
           <p>
-            Admin onboarding starts with account ownership, facility structure, unit scopes, and
-            workforce invitations.
+            New Supabase accounts can create the first workspace here. Existing organizations should invite members by email.
           </p>
-          {invited ? <div className="risk-strip">Invite created for the demo organization.</div> : null}
+          {invited ? <div className="risk-strip">Invite created for the current organization.</div> : null}
         </div>
+
+        <form action={createOrganizationAction} className="auth-form">
+          <label htmlFor="name">Organization name</label>
+          <input id="name" name="name" type="text" placeholder="Mercy Workforce Group" />
+          <label htmlFor="displayName">Your display name</label>
+          <input id="displayName" name="displayName" type="text" placeholder="Alex Morgan" />
+          <label htmlFor="timezone">Timezone</label>
+          <input id="timezone" name="timezone" type="text" defaultValue="America/New_York" />
+          <button className="command-button" type="submit">
+            <Building2 size={18} aria-hidden="true" />
+            Create workspace
+          </button>
+        </form>
 
         <form action={inviteWorkforceMemberAction} className="auth-form">
           <label htmlFor="email">Invite email</label>
-          <input id="email" name="email" type="email" defaultValue="new.rn@example.com" />
+          <input id="email" name="email" type="email" placeholder="new.rn@example.com" />
           <label htmlFor="role">Role</label>
           <select id="role" name="role" defaultValue="EMPLOYEE">
             <option value="EMPLOYEE">Employee</option>
-            <option value="MANAGER">Manager</option>
-            <option value="PAYROLL">Payroll</option>
-            <option value="ORG_ADMIN">Organization admin</option>
+            <option value="UNIT_MANAGER">Unit manager</option>
+            <option value="PAYROLL_ADMIN">Payroll</option>
+            <option value="WORKFORCE_ADMIN">Workforce admin</option>
           </select>
           <button className="command-button" type="submit">
             <Send size={18} aria-hidden="true" />

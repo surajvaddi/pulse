@@ -4,7 +4,13 @@ import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { accessTokenCookieOptions, demoUserCookieOptions, sessionCookieNames } from "@pulseshift/tools";
 
-import { apiPost, apiPostWithAccessToken, type DemoUserId, type Invitation } from "@/lib/api";
+import {
+  apiGetWithAccessToken,
+  apiPost,
+  apiPostWithAccessToken,
+  type DemoUserId,
+  type Invitation
+} from "@/lib/api";
 
 export async function startDemoSessionAction(formData: FormData) {
   const userId = String(formData.get("userId") ?? "user_priya");
@@ -22,7 +28,30 @@ export async function logoutAction() {
 
 export async function establishSupabaseSessionAction(accessToken: string) {
   (await cookies()).set(sessionCookieNames.accessToken, accessToken, accessTokenCookieOptions(process.env));
+  try {
+    await apiGetWithAccessToken("/auth/me", accessToken);
+  } catch {
+    redirect("/onboarding/organization");
+  }
   redirect("/app");
+}
+
+export async function createOrganizationAction(formData: FormData) {
+  const cookieStore = await cookies();
+  const accessToken = cookieStore.get(sessionCookieNames.accessToken)?.value;
+  if (!accessToken) {
+    redirect("/login");
+  }
+  await apiPostWithAccessToken(
+    "/onboarding/organizations",
+    {
+      name: String(formData.get("name") ?? ""),
+      timezone: String(formData.get("timezone") ?? "America/New_York"),
+      displayName: String(formData.get("displayName") ?? "")
+    },
+    accessToken
+  );
+  redirect("/app/admin");
 }
 
 export async function inviteWorkforceMemberAction(formData: FormData) {

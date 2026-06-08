@@ -56,7 +56,10 @@ export class DemoAuthMiddleware implements NestMiddleware {
       try {
         request.session = await this.sessions.loadSupabaseSession(claims);
       } catch (error) {
-        if (request.method === "POST" && request.path.startsWith("/invitations/")) {
+        if (
+          (request.method === "POST" && request.path.startsWith("/invitations/")) ||
+          (request.method === "POST" && request.path === "/onboarding/organizations")
+        ) {
           next();
           return;
         }
