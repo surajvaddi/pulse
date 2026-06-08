@@ -1974,3 +1974,89 @@ Phase 20 completion gate recorded on 2026-06-05:
   - `npm audit --audit-level=high` reports no high or critical vulnerabilities. npm still reports two moderate PostCSS advisories through Next; the suggested forced fix would install a breaking old Next version and was not applied.
   - The Next.js build still warns that the Next ESLint plugin is not detected in the current ESLint configuration, but the production build completed successfully.
   - Live LLM validation remains opt-in with `LLM_LIVE_SMOKE=true npm run test:llm:live` once staging provider credentials are intentionally loaded.
+
+## Phase 21 Goal Mode Steps: Production Shift Pipeline And Coverage Model
+
+Phase 21 upgrades open-shift claiming from a simple demo workflow into a typed production pipeline. Each step must have a clear purpose, focused tests, and a commit after completion.
+
+1. `Model: Define shift pipeline contracts`
+   - Purpose: Add shared domain contracts for shift slots, claim requests, assignments, policy snapshots, and coverage invariants.
+   - Tests:
+     - `npm run test --workspace @pulseshift/domain`
+     - `npm run typecheck --workspace @pulseshift/domain`
+
+2. `Database: Add shift pipeline schema`
+   - Purpose: Add Prisma enums/models for `ShiftSlot`, `ShiftAssignment`, and `ShiftClaimRequest`.
+   - Tests:
+     - `npm run db:validate`
+     - `npm run typecheck --workspace @pulseshift/db`
+
+3. `Persistence: Add shift pipeline repositories`
+   - Purpose: Add in-memory and Prisma repository adapters for slots, claims, and assignments.
+   - Tests:
+     - `npm run typecheck --workspace @pulseshift/api`
+     - `npm run lint --workspace @pulseshift/api`
+     - `npm run test --workspace @pulseshift/api`
+
+4. `Seed: Add shift pipeline sandbox coverage`
+   - Purpose: Seed multi-week slot, assignment, and claim scenarios for demos and tests.
+   - Tests:
+     - API typecheck, lint, and test suite.
+
+5. `Policy: Add shift eligibility engine`
+   - Purpose: Centralize deterministic claim eligibility for slot status, employee profile, role, unit, credentials, rest, and overtime.
+   - Tests:
+     - API typecheck, lint, and test suite.
+
+6. `Claims: Implement shift claim lifecycle`
+   - Purpose: Implement submit, pending approval, auto-assignment, duplicate prevention, cancellation, and invariant validation.
+   - Tests:
+     - API typecheck, lint, and test suite.
+
+7. `Management: Add shift assignment decisions`
+   - Purpose: Implement manager claim approval/denial and direct assignment.
+   - Tests:
+     - API typecheck, lint, and test suite.
+
+8. `Api: Expose shift pipeline endpoints`
+   - Purpose: Expose typed `/shift-pipeline` endpoints for slots, claims, assignments, approvals, claims, cancellations, approvals, denials, and direct assignment.
+   - Tests:
+     - API typecheck, lint, and test suite including route e2e.
+
+9. `Interface: Connect open shifts to pipeline`
+   - Purpose: Connect the employee open-shifts page and claim action to the new pipeline API.
+   - Tests:
+     - `npm run typecheck --workspace @pulseshift/web`
+     - `npm run lint --workspace @pulseshift/web`
+     - `npm run test --workspace @pulseshift/web`
+
+10. `Management: Surface shift coverage actions`
+    - Purpose: Show managers pending shift claims, open pipeline slots, approve/deny actions, and direct assignment actions.
+    - Tests:
+      - Web typecheck, lint, and test suite.
+
+11. `Tools: Add shift pipeline LLM actions`
+    - Purpose: Add predefined LLM tools for listing slots, claiming slots, deciding claims, and direct assignment.
+    - Tests:
+      - API typecheck, lint, and test suite.
+
+12. `Audit: Record shift pipeline events`
+    - Purpose: Record audit and notification events for claim, approval, denial, cancellation, assignment, and direct assignment transitions.
+    - Tests:
+      - API typecheck, lint, and test suite.
+
+13. `Docs: Document shift pipeline operations`
+    - Purpose: Add operational docs, endpoint catalog, lifecycle notes, LLM tool rules, and verification commands.
+    - Tests:
+      - `npm run typecheck --workspace @pulseshift/api`
+      - `npm run typecheck --workspace @pulseshift/web`
+
+14. `Quality: Run shift pipeline integration gate`
+    - Purpose: Validate the full Phase 21 integration before future phases.
+    - Tests:
+      - `npm run db:validate`
+      - `npm run typecheck`
+      - `npm run lint`
+      - `npm run test`
+
+Phase 21 operational runbook: `docs/shift-pipeline-runbook.md`.

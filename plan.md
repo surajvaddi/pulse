@@ -147,6 +147,8 @@ Phase 19: Add production security and HIPAA-ready controls while continuing to e
 
 Phase 20: Prepare production deployment and launch readiness with staging/production environment docs, migration runbooks, full-role smoke tests, release checklists, rollback plans, monitoring, and removal or strict gating of demo-only affordances.
 
+Phase 21: Upgrade the shift pipeline into a production-ready coverage system with typed shift slots, assignments, claim requests, deterministic eligibility, manager approval/direct assignment flows, API endpoints, employee and manager UI integration, predefined LLM shift tools, audit/notification events, and a verification runbook.
+
 ## Phase 16B Role Coverage Gate
 
 Phase 16B is now a standing acceptance gate for every later phase. Future work must not treat role coverage as optional UI polish. Every new feature, page, API, notification, LLM tool, security rule, integration, and smoke test must explicitly declare:
@@ -194,6 +196,7 @@ The production phases should add these durable interfaces and contracts:
 - Organization admin APIs should cover users, roles, facilities, units, invites, suspension/reactivation, and role assignment.
 - LLM metadata should be persisted for conversations and tool calls: provider, model, latency, tokens, estimated cost, safety status, and blocked-action reason.
 - SQL reporting tools should be implemented as concrete, named backend functions with fixed SQL text, typed parameters, mandatory tenant/org scope injection, result limits, query timeouts, and audit metadata. The LLM must never generate, edit, concatenate, or execute arbitrary SQL.
+- Shift pipeline tools should be implemented as concrete, named backend services and LLM tools. Claims, approvals, direct assignments, cancellations, and slot reads must use typed APIs, deterministic policy snapshots, role/scope checks, audit events, and notification events. Multi-person requirements should be represented by multiple one-person `ShiftSlot` records tied to a staffing requirement.
 
 ## Production Role And Page Interaction Matrix
 
