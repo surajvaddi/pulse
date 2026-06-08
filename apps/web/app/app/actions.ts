@@ -8,8 +8,9 @@ import { demoResetEnabledForEnv } from "@/lib/demo-controls";
 export async function claimOpenShiftAction(formData: FormData) {
   const shiftId = String(formData.get("shiftId"));
   const userId = String(formData.get("userId") ?? "user_priya") as DemoUserId;
-  await apiPost(`/workflows/open-shifts/${shiftId}/claim`, {}, userId);
+  await apiPost(`/shift-pipeline/slots/${shiftId}/claim`, {}, userId);
   revalidatePath("/app/open-shifts");
+  revalidatePath("/app/schedule");
   revalidatePath("/app/manager");
 }
 

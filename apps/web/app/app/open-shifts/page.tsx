@@ -1,10 +1,15 @@
-import { ShieldCheck } from "lucide-react";
+import { AlertTriangle, Clock3, ShieldCheck } from "lucide-react";
 
-import { apiGet, type DemoShift } from "@/lib/api";
+import { apiGet, type ShiftPipelineClaim, type ShiftPipelineSlot } from "@/lib/api";
+import { buildOpenShiftCards } from "@/lib/shift-pipeline-view";
 import { claimOpenShiftAction } from "../actions";
 
 export default async function OpenShiftsPage() {
-  const openShifts = await apiGet<DemoShift[]>("/workflows/open-shifts");
+  const [slots, claims] = await Promise.all([
+    apiGet<ShiftPipelineSlot[]>("/shift-pipeline/slots?statuses=OPEN,CLAIM_PENDING"),
+    apiGet<ShiftPipelineClaim[]>("/shift-pipeline/claims")
+  ]);
+  const openShifts = buildOpenShiftCards(slots, claims);
 
   return (
     <section className="page-stack">
@@ -29,15 +34,20 @@ export default async function OpenShiftsPage() {
       <div className="dashboard-grid">
         {openShifts.map((shift) => (
           <article className="metric-card" key={shift.id}>
-            <ShieldCheck size={20} />
-            <p>ICU</p>
-            <strong>{shift.title}</strong>
-            <span>Requires ACLS and ICU Qualified</span>
+            {shift.statusTone === "pending" ? <Clock3 size={20} /> : <ShieldCheck size={20} />}
+            <p>{shift.unitLabel}</p>
+            <strong>{shift.roleLabel} · {shift.dateLabel}</strong>
+            <span>{shift.timeLabel}</span>
+            <span>{shift.certificationLabel}</span>
+            <span className={`status-pill status-pill-${shift.statusTone}`}>{shift.statusLabel}</span>
+            <span className="risk-line">
+              <AlertTriangle size={14} /> {shift.riskLabel}
+            </span>
             <form action={claimOpenShiftAction}>
               <input type="hidden" name="shiftId" value={shift.id} />
               <input type="hidden" name="userId" value="user_priya" />
-              <button className="command-button" type="submit">
-                Claim shift
+              <button className="command-button" type="submit" disabled={!shift.canClaim}>
+                {shift.claimButtonLabel}
               </button>
             </form>
           </article>

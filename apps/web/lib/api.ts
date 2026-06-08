@@ -57,6 +57,57 @@ export type DemoShift = {
   status: string;
 };
 
+export type ShiftPolicyDecisionSnapshot = {
+  allowed: boolean;
+  requiresApproval: boolean;
+  riskFlags: string[];
+  blockingReasons: string[];
+  warnings: string[];
+  evaluatedAt: string;
+};
+
+export type ShiftPipelineSlot = {
+  id: string;
+  organizationId: string;
+  facilityId: string;
+  unitId: string;
+  requirementId?: string;
+  roleRequiredId: string;
+  certificationRequiredIds: string[];
+  startsAt: string;
+  endsAt: string;
+  status: string;
+  source: string;
+  riskFlags: string[];
+};
+
+export type ShiftPipelineClaim = {
+  id: string;
+  organizationId: string;
+  slotId: string;
+  employeeId: string;
+  userId: string;
+  status: string;
+  policyDecision: ShiftPolicyDecisionSnapshot;
+  approvalRequestId?: string;
+  assignmentId?: string;
+  createdAt: string;
+  decidedAt?: string;
+  expiresAt?: string;
+};
+
+export type ShiftPipelineAssignment = {
+  id: string;
+  organizationId: string;
+  slotId: string;
+  employeeId: string;
+  assignedByUserId: string;
+  status: string;
+  source: string;
+  createdAt: string;
+  endedAt?: string;
+};
+
 export type TimecardException = {
   id: string;
   employeeId: string;

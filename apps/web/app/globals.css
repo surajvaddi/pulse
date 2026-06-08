@@ -592,6 +592,48 @@ h1 {
   font-weight: 800;
 }
 
+.status-pill-open,
+.status-pill-assigned,
+.status-pill-pending,
+.status-pill-neutral {
+  justify-self: start;
+  border-radius: 999px;
+  padding: 4px 8px;
+}
+
+.status-pill-open {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.status-pill-assigned {
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.status-pill-pending {
+  background: #fff7ed;
+  color: #9a3412;
+}
+
+.status-pill-neutral {
+  background: #f8fafc;
+  color: #475569;
+}
+
+.risk-line {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+}
+
+.command-button:disabled {
+  cursor: not-allowed;
+  color: var(--muted);
+  background: #f8fafc;
+}
+
 .muted-pill {
   color: var(--muted);
   font-size: 12px;
