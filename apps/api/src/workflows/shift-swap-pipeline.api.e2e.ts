@@ -5,10 +5,34 @@ import { Test } from "@nestjs/testing";
 import request from "supertest";
 
 import { AppModule } from "../app.module";
+import { demoShiftAssignments, demoShiftSlots } from "./shift-pipeline.repository";
 import { seedDemoShiftPipelineState } from "./shift-pipeline.seed";
 
 async function main() {
   seedDemoShiftPipelineState();
+  demoShiftSlots.push({
+    id: "slot_shift_priya_future_swap_api",
+    organizationId: "org_pulseshift_demo",
+    facilityId: "fac_mercy_main",
+    unitId: "unit_icu",
+    roleRequiredId: "role_rn",
+    certificationRequiredIds: ["cert_bls", "cert_acls", "cert_icu_qualified"],
+    startsAt: "2026-06-20T11:00:00.000Z",
+    endsAt: "2026-06-20T23:00:00.000Z",
+    status: "ASSIGNED",
+    source: "MANUAL",
+    riskFlags: []
+  });
+  demoShiftAssignments.push({
+    id: "assignment_priya_future_swap_api",
+    organizationId: "org_pulseshift_demo",
+    slotId: "slot_shift_priya_future_swap_api",
+    employeeId: "emp_priya",
+    assignedByUserId: "user_jordan_manager",
+    status: "ACTIVE",
+    source: "MANAGER_ASSIGNMENT",
+    createdAt: "2026-06-07T12:00:00.000Z"
+  });
 
   const moduleRef = await Test.createTestingModule({
     imports: [AppModule]
@@ -23,17 +47,17 @@ async function main() {
       .get("/swap-pipeline/eligible-original-shifts")
       .set("x-demo-user-id", "user_priya")
       .expect(200);
-    assert.ok(eligible.body.some((shift: { slotId: string }) => shift.slotId === "slot_shift_priya_week2_icu_day"));
+    assert.ok(eligible.body.some((shift: { slotId: string }) => shift.slotId === "slot_shift_priya_future_swap_api"));
 
     const detail = await request(server)
-      .get("/swap-pipeline/shifts/slot_shift_priya_week2_icu_day/eligibility")
+      .get("/swap-pipeline/shifts/slot_shift_priya_future_swap_api/eligibility")
       .set("x-demo-user-id", "user_priya")
       .expect(200);
     assert.equal(detail.body.decision.allowed, true);
     assert.equal(detail.body.originalShift.employeeId, "emp_priya");
 
     const candidates = await request(server)
-      .get("/swap-pipeline/shifts/slot_shift_priya_week2_icu_day/candidates")
+      .get("/swap-pipeline/shifts/slot_shift_priya_future_swap_api/candidates")
       .set("x-demo-user-id", "user_priya")
       .expect(200);
     const maya = candidates.body.find((candidate: { userId: string }) => candidate.userId === "user_maya");
@@ -48,7 +72,7 @@ async function main() {
     const swap = await request(server)
       .post("/swap-pipeline/swaps")
       .set("x-demo-user-id", "user_priya")
-      .send({ originalSlotId: "slot_shift_priya_week2_icu_day", proposedUserId: "user_maya" })
+      .send({ originalSlotId: "slot_shift_priya_future_swap_api", proposedUserId: "user_maya" })
       .expect(201);
     assert.equal(swap.body.status, "PENDING_COUNTERPARTY");
     assert.equal(swap.body.requesterEmployeeId, "emp_priya");

@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { PermissionService } from "../auth/permission.service";
 import { demoSessions } from "../auth/demo-users";
 import { demoApprovals } from "../demo/demo-data";
-import { ShiftPipelineRepositoryProvider, demoShiftAssignments } from "./shift-pipeline.repository";
+import { ShiftPipelineRepositoryProvider, demoShiftAssignments, demoShiftSlots } from "./shift-pipeline.repository";
 import { seedDemoShiftPipelineState } from "./shift-pipeline.seed";
 import { ShiftSwapEligibilityService } from "./shift-swap-eligibility.service";
 import { ShiftSwapService, demoShiftSwapRequests } from "./shift-swap.service";
@@ -26,6 +26,29 @@ async function rejectsWithMessage(action: () => Promise<unknown>, message: strin
 
 async function main() {
   seedDemoShiftPipelineState();
+  demoShiftSlots.push({
+    id: "slot_shift_priya_future_swap_service",
+    organizationId: "org_pulseshift_demo",
+    facilityId: "fac_mercy_main",
+    unitId: "unit_icu",
+    roleRequiredId: "role_rn",
+    certificationRequiredIds: ["cert_bls", "cert_acls", "cert_icu_qualified"],
+    startsAt: "2026-06-20T11:00:00.000Z",
+    endsAt: "2026-06-20T23:00:00.000Z",
+    status: "ASSIGNED",
+    source: "MANUAL",
+    riskFlags: []
+  });
+  demoShiftAssignments.push({
+    id: "assignment_priya_future_swap_service",
+    organizationId: "org_pulseshift_demo",
+    slotId: "slot_shift_priya_future_swap_service",
+    employeeId: "emp_priya",
+    assignedByUserId: "user_jordan_manager",
+    status: "ACTIVE",
+    source: "MANAGER_ASSIGNMENT",
+    createdAt: "2026-06-07T12:00:00.000Z"
+  });
   demoShiftSwapRequests.splice(0, demoShiftSwapRequests.length);
 
   const repositoryProvider = new ShiftPipelineRepositoryProvider();
@@ -34,14 +57,14 @@ async function main() {
   await rejectsWithMessage(
     () =>
       service.createSwapRequest(session("user_priya"), {
-        originalSlotId: "slot_shift_priya_week2_icu_day",
+        originalSlotId: "slot_shift_priya_future_swap_service",
         proposedUserId: "user_priya"
       }),
     "Proposed swap candidate is not eligible."
   );
 
   const swap = await service.createSwapRequest(session("user_priya"), {
-    originalSlotId: "slot_shift_priya_week2_icu_day",
+    originalSlotId: "slot_shift_priya_future_swap_service",
     proposedUserId: "user_maya"
   });
   assert.equal(swap.status, "PENDING_COUNTERPARTY");
@@ -72,7 +95,7 @@ async function main() {
   assert.equal(approved.assignment.source, "SWAP");
   assert.equal(approved.swap.assignmentId, approved.assignment.id);
 
-  const slotAssignments = demoShiftAssignments.filter((assignment) => assignment.slotId === "slot_shift_priya_week2_icu_day");
+  const slotAssignments = demoShiftAssignments.filter((assignment) => assignment.slotId === "slot_shift_priya_future_swap_service");
   assert.equal(slotAssignments.filter((assignment) => assignment.status === "ACTIVE").length, 1);
   assert.equal(slotAssignments.find((assignment) => assignment.status === "ACTIVE")?.employeeId, "emp_maya");
   assert.equal(slotAssignments.find((assignment) => assignment.employeeId === "emp_priya")?.status, "SUPERSEDED");

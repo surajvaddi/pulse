@@ -2170,3 +2170,56 @@ Phase 22 completion gate recorded on 2026-06-08:
   - Employee swap center integrated with candidate selection and request status.
   - Manager dashboard and swap center integrated with canonical approval decisions.
   - LLM workflow tools remain strictly predefined and schema-gated; no model-authored SQL or arbitrary mutation is introduced.
+
+## Phase 23 Goal Mode Steps: No-Seed Supabase Production Mode
+
+Phase 23 removes the blocking assumptions that required seeded demo identities before a Supabase-backed workspace could be used.
+
+Completed implementation slices:
+
+1. `Bootstrap: Create Supabase workspaces`
+   - Added `POST /onboarding/organizations` for Supabase-authenticated users without an existing PulseShift workspace.
+   - Creates the first organization, active owner user, `ORGANIZATION_OWNER` role grant, and audit event.
+   - Web login now probes `/auth/me`; unknown Supabase users are redirected to `/onboarding/organization`.
+
+2. `Persistence: Back admin workspaces with Prisma`
+   - Production-mode admin organization, facility, unit, user, role, and invitation services now read/write Prisma instead of static `admin-state.ts`.
+   - Demo mode keeps existing in-memory behavior for tests and demos.
+
+3. `Tenancy: Remove seeded workflow leaks`
+   - Timecard exceptions route now uses repository-backed operations data.
+   - Production AI tool-call review reads Prisma-scoped calls through user organization.
+   - Shift pipeline notifications now carry the workflow organization instead of `org_pulseshift_demo`.
+
+4. `Onboarding: Create workforce profiles`
+   - Added `POST /onboarding/profile`.
+   - Profile onboarding creates or updates `EmployeeProfile`, creates/reuses a workforce role, validates facility/unit ownership, and audits the change.
+
+5. `Production: Resolve real employee workflows`
+   - Shift claim and manager direct assignment resolve real Prisma `EmployeeProfile` records in production mode.
+   - Admin role/unit setup pages now support fresh org empty states and avoid seeded fallback scopes.
+
+6. `Production: Disable implicit demo seeds`
+   - Shift pipeline routes no longer auto-seed demo slots in Prisma mode.
+   - Direct assignment no longer defaults to `user_maya`.
+
+7. `Quality: Add no-seed guardrails`
+   - Added `src/auth/no-seed-production.assert.ts` to prevent regressions in workspace bootstrap, profile onboarding, implicit demo seeding, and seeded role-scope fallbacks.
+
+Verification commands:
+
+```text
+npm run typecheck --workspace @pulseshift/api
+npm run lint --workspace @pulseshift/api
+npm run typecheck --workspace @pulseshift/web
+npm run test --workspace @pulseshift/api
+```
+
+Remaining production hardening after Phase 23:
+
+- Build a full database integration smoke test against a disposable Supabase/Postgres database instead of source-level guardrails only.
+- Persist shift swap request records themselves in Prisma; current canonical swap lifecycle still stores swap request state in memory while assignment/slot repositories can use Prisma.
+- Persist shift claim approval records in Prisma instead of the current demo approval array.
+- Replace legacy `/demo/...` route names with production route aliases, even where they already use Prisma repositories.
+- Add UI to create/publish shift slots from the admin/workforce workspace instead of relying on API/tool calls.
+- Add a first-class organization join page that discovers pending invites by signed-in Supabase email.
