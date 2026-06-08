@@ -63,6 +63,15 @@ import {
   TimeclockRepositoryProvider
 } from "./timeclock.repository";
 import { TimeclockService } from "./timeclock.service";
+import { ShiftClaimService } from "../workflows/shift-claim.service";
+import { ShiftEligibilityService } from "../workflows/shift-eligibility.service";
+import { ShiftManagerService } from "../workflows/shift-manager.service";
+import { ShiftPipelineController } from "../workflows/shift-pipeline.controller";
+import {
+  InMemoryShiftPipelineRepository,
+  PrismaShiftPipelineRepository,
+  ShiftPipelineRepositoryProvider
+} from "../workflows/shift-pipeline.repository";
 
 @Module({
   imports: [AuthModule],
@@ -74,7 +83,8 @@ import { TimeclockService } from "./timeclock.service";
     OperationsController,
     IntegrationController,
     EvalController,
-    TimeclockController
+    TimeclockController,
+    ShiftPipelineController
   ],
   providers: [
     SchedulingWorkflowService,
@@ -114,7 +124,13 @@ import { TimeclockService } from "./timeclock.service";
     TimeclockService,
     InMemoryTimeclockRepository,
     PrismaTimeclockRepository,
-    TimeclockRepositoryProvider
+    TimeclockRepositoryProvider,
+    ShiftClaimService,
+    ShiftEligibilityService,
+    ShiftManagerService,
+    InMemoryShiftPipelineRepository,
+    PrismaShiftPipelineRepository,
+    ShiftPipelineRepositoryProvider
   ]
 })
 export class DemoModule {}
