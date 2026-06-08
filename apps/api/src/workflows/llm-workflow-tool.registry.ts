@@ -69,12 +69,69 @@ export const llmWorkflowTools: LlmToolDefinition[] = [
     description: "Preview and create a shift swap request that still requires counterpart/manager approval.",
     routeAvailability: ["SELF_SERVICE_CHAT", "WORKFLOW_PREVIEW"],
     pageContexts: ["*", "/app/swaps", "/app/copilot"],
-    inputSchema: z.object({ originalShiftId: z.string().min(1), proposedUserId: z.string().min(1) }).strict(),
+    inputSchema: z.object({ originalSlotId: z.string().min(1), proposedUserId: z.string().min(1) }).strict(),
     outputSchema: emptyOutput,
     riskLevel: "LOW_RISK_WRITE",
     scopeRequirement: "SELF",
     roleAccess: roleAccessFor({ EMPLOYEE: "APPROVAL_REQUIRED" }),
     auditEvent: "llm.workflow.create_shift_swap_request",
+    allowsMutation: true,
+    requiresPolicyGate: true,
+    requiresPreview: true
+  },
+  {
+    name: "list_swappable_shifts",
+    description: "Read the current user's future assigned shifts that are eligible to start a swap.",
+    routeAvailability: ["SELF_SERVICE_CHAT", "WORKFLOW_PREVIEW"],
+    pageContexts: ["*", "/app/swaps", "/app/schedule", "/app/copilot"],
+    inputSchema: z.object({ userId: z.string().min(1).optional() }).strict(),
+    outputSchema: emptyOutput,
+    riskLevel: "READ_ONLY",
+    scopeRequirement: "SELF",
+    roleAccess: roleAccessFor({
+      EMPLOYEE: "ALLOWED",
+      EXTERNAL_AGENCY_ADMIN: "READ_ONLY",
+      UNIT_MANAGER: "READ_ONLY",
+      SYSTEM_ADMIN: "READ_ONLY",
+      ORGANIZATION_OWNER: "READ_ONLY",
+      AI_AGENT_SERVICE: "READ_ONLY"
+    }),
+    auditEvent: "llm.workflow.list_swappable_shifts"
+  },
+  {
+    name: "list_shift_swap_candidates",
+    description: "Read eligible, warning, and blocked counterpart candidates for a specific swappable shift slot.",
+    routeAvailability: ["SELF_SERVICE_CHAT", "WORKFLOW_PREVIEW"],
+    pageContexts: ["*", "/app/swaps", "/app/schedule", "/app/copilot"],
+    inputSchema: z.object({ originalSlotId: z.string().min(1) }).strict(),
+    outputSchema: emptyOutput,
+    riskLevel: "READ_ONLY",
+    scopeRequirement: "SELF",
+    roleAccess: roleAccessFor({
+      EMPLOYEE: "ALLOWED",
+      EXTERNAL_AGENCY_ADMIN: "READ_ONLY",
+      UNIT_MANAGER: "READ_ONLY",
+      SYSTEM_ADMIN: "READ_ONLY",
+      ORGANIZATION_OWNER: "READ_ONLY",
+      AI_AGENT_SERVICE: "READ_ONLY"
+    }),
+    auditEvent: "llm.workflow.list_shift_swap_candidates"
+  },
+  {
+    name: "respond_shift_swap",
+    description: "Preview and accept or decline a swap request where the current user is the proposed counterpart.",
+    routeAvailability: ["SELF_SERVICE_CHAT", "WORKFLOW_PREVIEW"],
+    pageContexts: ["*", "/app/swaps", "/app/copilot"],
+    inputSchema: z.object({
+      swapId: z.string().min(1),
+      decision: z.enum(["accept", "decline"]),
+      reason: z.string().min(1).optional()
+    }).strict(),
+    outputSchema: emptyOutput,
+    riskLevel: "LOW_RISK_WRITE",
+    scopeRequirement: "SELF",
+    roleAccess: roleAccessFor({ EMPLOYEE: "APPROVAL_REQUIRED" }),
+    auditEvent: "llm.workflow.respond_shift_swap",
     allowsMutation: true,
     requiresPolicyGate: true,
     requiresPreview: true
@@ -102,7 +159,7 @@ export const llmWorkflowTools: LlmToolDefinition[] = [
     inputSchema: z.object({
       unitId: z.string().min(1).optional(),
       facilityId: z.string().min(1).optional(),
-      statuses: z.array(z.enum(["OPEN", "CLAIM_PENDING", "ASSIGNED", "PUBLISHED", "IN_PROGRESS", "COMPLETED", "CANCELLED"])).optional()
+      statuses: z.array(z.enum(["OPEN", "CLAIM_PENDING", "ASSIGNED", "PUBLISHED", "LOCKED", "IN_PROGRESS", "COMPLETED", "CANCELLED"])).optional()
     }).strict(),
     outputSchema: emptyOutput,
     riskLevel: "READ_ONLY",
@@ -175,16 +232,63 @@ export const llmWorkflowTools: LlmToolDefinition[] = [
     requiresPreview: true
   },
   {
-    name: "approve_shift_swap",
+    name: "decide_shift_swap",
     description: "Preview and decide a manager-scoped shift swap approval.",
     routeAvailability: ["MANAGER_OPERATIONS", "WORKFLOW_PREVIEW"],
     pageContexts: ["*", "/app/manager", "/app/swaps", "/app/copilot"],
-    inputSchema: z.object({ swapId: z.string().min(1), decision: z.enum(["approve", "deny"]) }).strict(),
+    inputSchema: z.object({
+      swapId: z.string().min(1),
+      decision: z.enum(["approve", "deny"]),
+      reason: z.string().min(1).optional()
+    }).strict(),
     outputSchema: emptyOutput,
     riskLevel: "APPROVAL_REQUIRED",
     scopeRequirement: "UNIT",
-    roleAccess: roleAccessFor({ UNIT_MANAGER: "APPROVAL_REQUIRED" }),
-    auditEvent: "llm.workflow.approve_shift_swap",
+    roleAccess: roleAccessFor({ UNIT_MANAGER: "APPROVAL_REQUIRED", WORKFORCE_ADMIN: "APPROVAL_REQUIRED" }),
+    auditEvent: "llm.workflow.decide_shift_swap",
+    allowsMutation: true,
+    requiresPolicyGate: true,
+    requiresPreview: true
+  },
+  {
+    name: "create_shift_slots_from_requirement",
+    description: "Preview and create draft shift slots from a predefined staffing requirement.",
+    routeAvailability: ["MANAGER_OPERATIONS", "WORKFLOW_PREVIEW"],
+    pageContexts: ["*", "/app/manager", "/app/staffing-gaps", "/app/copilot"],
+    inputSchema: z.object({
+      requirementId: z.string().min(1),
+      facilityId: z.string().min(1),
+      unitId: z.string().min(1),
+      roleRequiredId: z.string().min(1),
+      certificationRequiredIds: z.array(z.string().min(1)),
+      startsAt: z.string().datetime(),
+      endsAt: z.string().datetime(),
+      minRequired: z.number().int().min(1),
+      idealRequired: z.number().int().min(1).optional()
+    }).strict(),
+    outputSchema: emptyOutput,
+    riskLevel: "APPROVAL_REQUIRED",
+    scopeRequirement: "FACILITY",
+    roleAccess: roleAccessFor({ WORKFORCE_ADMIN: "APPROVAL_REQUIRED", SYSTEM_ADMIN: "APPROVAL_REQUIRED" }),
+    auditEvent: "llm.workflow.create_shift_slots_from_requirement",
+    allowsMutation: true,
+    requiresPolicyGate: true,
+    requiresPreview: true
+  },
+  {
+    name: "publish_shift_slots",
+    description: "Preview and publish a concrete batch of draft shift slots.",
+    routeAvailability: ["MANAGER_OPERATIONS", "WORKFLOW_PREVIEW"],
+    pageContexts: ["*", "/app/manager", "/app/staffing-gaps", "/app/copilot"],
+    inputSchema: z.object({
+      facilityId: z.string().min(1),
+      slotIds: z.array(z.string().min(1)).min(1)
+    }).strict(),
+    outputSchema: emptyOutput,
+    riskLevel: "APPROVAL_REQUIRED",
+    scopeRequirement: "FACILITY",
+    roleAccess: roleAccessFor({ WORKFORCE_ADMIN: "APPROVAL_REQUIRED", SYSTEM_ADMIN: "APPROVAL_REQUIRED" }),
+    auditEvent: "llm.workflow.publish_shift_slots",
     allowsMutation: true,
     requiresPolicyGate: true,
     requiresPreview: true
