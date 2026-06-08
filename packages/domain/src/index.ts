@@ -61,6 +61,33 @@ export type ShiftStatus = z.infer<typeof ShiftStatusSchema>;
 export const ShiftSourceSchema = z.enum(["MANUAL", "TEMPLATE", "IMPORT", "AI_DRAFT", "INTEGRATION"]);
 export type ShiftSource = z.infer<typeof ShiftSourceSchema>;
 
+export const ShiftSlotStatusSchema = z.enum([
+  "DRAFT",
+  "OPEN",
+  "CLAIM_PENDING",
+  "ASSIGNED",
+  "PUBLISHED",
+  "IN_PROGRESS",
+  "COMPLETED",
+  "CANCELLED"
+]);
+export type ShiftSlotStatus = z.infer<typeof ShiftSlotStatusSchema>;
+
+export const ShiftAssignmentStatusSchema = z.enum(["ACTIVE", "COMPLETED", "CANCELLED", "SUPERSEDED"]);
+export type ShiftAssignmentStatus = z.infer<typeof ShiftAssignmentStatusSchema>;
+
+export const ShiftClaimStatusSchema = z.enum([
+  "SUBMITTED",
+  "PENDING_POLICY_REVIEW",
+  "PENDING_APPROVAL",
+  "APPROVED",
+  "ASSIGNED",
+  "DENIED",
+  "CANCELLED",
+  "EXPIRED"
+]);
+export type ShiftClaimStatus = z.infer<typeof ShiftClaimStatusSchema>;
+
 export const AvailabilityTypeSchema = z.enum(["AVAILABLE", "UNAVAILABLE", "PREFERRED", "AVOID"]);
 export type AvailabilityType = z.infer<typeof AvailabilityTypeSchema>;
 
@@ -230,6 +257,101 @@ export const PermissionGrantSchema = z.object({
   scope: ScopeSchema
 });
 export type PermissionGrant = z.infer<typeof PermissionGrantSchema>;
+
+const IsoDateTimeStringSchema = z.string().datetime();
+
+export const ShiftPolicyDecisionSnapshotSchema = z.object({
+  allowed: z.boolean(),
+  requiresApproval: z.boolean(),
+  riskFlags: z.array(z.string()),
+  blockingReasons: z.array(z.string()),
+  warnings: z.array(z.string()),
+  evaluatedAt: IsoDateTimeStringSchema
+});
+export type ShiftPolicyDecisionSnapshot = z.infer<typeof ShiftPolicyDecisionSnapshotSchema>;
+
+export const StaffingRequirementContractSchema = z.object({
+  id: z.string(),
+  organizationId: z.string(),
+  facilityId: z.string(),
+  unitId: z.string(),
+  roleId: z.string(),
+  certificationRequiredIds: z.array(z.string()),
+  startAt: IsoDateTimeStringSchema,
+  endAt: IsoDateTimeStringSchema,
+  minRequired: z.number().int().nonnegative(),
+  idealRequired: z.number().int().nonnegative().optional(),
+  source: z.string()
+});
+export type StaffingRequirementContract = z.infer<typeof StaffingRequirementContractSchema>;
+
+export const ShiftSlotContractSchema = z.object({
+  id: z.string(),
+  organizationId: z.string(),
+  facilityId: z.string(),
+  unitId: z.string(),
+  requirementId: z.string().optional(),
+  roleRequiredId: z.string(),
+  certificationRequiredIds: z.array(z.string()),
+  startsAt: IsoDateTimeStringSchema,
+  endsAt: IsoDateTimeStringSchema,
+  status: ShiftSlotStatusSchema,
+  source: ShiftSourceSchema,
+  riskFlags: z.array(z.string())
+});
+export type ShiftSlotContract = z.infer<typeof ShiftSlotContractSchema>;
+
+export const ShiftAssignmentContractSchema = z.object({
+  id: z.string(),
+  organizationId: z.string(),
+  slotId: z.string(),
+  employeeId: z.string(),
+  assignedByUserId: z.string(),
+  status: ShiftAssignmentStatusSchema,
+  source: z.enum(["CLAIM", "MANAGER_ASSIGNMENT", "IMPORT", "SWAP", "SYSTEM"]),
+  createdAt: IsoDateTimeStringSchema,
+  endedAt: IsoDateTimeStringSchema.optional()
+});
+export type ShiftAssignmentContract = z.infer<typeof ShiftAssignmentContractSchema>;
+
+export const ShiftClaimRequestContractSchema = z.object({
+  id: z.string(),
+  organizationId: z.string(),
+  slotId: z.string(),
+  employeeId: z.string(),
+  userId: z.string(),
+  status: ShiftClaimStatusSchema,
+  policyDecision: ShiftPolicyDecisionSnapshotSchema,
+  approvalRequestId: z.string().optional(),
+  assignmentId: z.string().optional(),
+  createdAt: IsoDateTimeStringSchema,
+  decidedAt: IsoDateTimeStringSchema.optional(),
+  expiresAt: IsoDateTimeStringSchema.optional()
+});
+export type ShiftClaimRequestContract = z.infer<typeof ShiftClaimRequestContractSchema>;
+
+export function assertShiftCoverageInvariants(input: {
+  slot: ShiftSlotContract;
+  assignments: ShiftAssignmentContract[];
+  claims: ShiftClaimRequestContract[];
+}) {
+  const activeAssignments = input.assignments.filter((assignment) => assignment.status === "ACTIVE");
+  if (activeAssignments.length > 1) {
+    throw new Error(`Shift slot ${input.slot.id} has more than one active assignment`);
+  }
+  if (input.slot.status === "ASSIGNED" && activeAssignments.length !== 1) {
+    throw new Error(`Assigned shift slot ${input.slot.id} must have exactly one active assignment`);
+  }
+  for (const claim of input.claims) {
+    if (claim.status === "PENDING_APPROVAL" && !claim.approvalRequestId) {
+      throw new Error(`Pending approval claim ${claim.id} must reference an approval request`);
+    }
+    if (claim.status === "ASSIGNED" && !claim.assignmentId) {
+      throw new Error(`Assigned claim ${claim.id} must reference a shift assignment`);
+    }
+  }
+  return true;
+}
 
 export const RolePermissionMap = {
   ORGANIZATION_OWNER: [
