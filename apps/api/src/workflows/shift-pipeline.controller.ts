@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Inject, Param, Post, Query } from "@nestjs/common";
+import { BadRequestException, Body, Controller, Get, Inject, Param, Post, Query } from "@nestjs/common";
 import type { ShiftAssignmentStatus, ShiftClaimStatus, ShiftSlotStatus } from "@pulseshift/domain";
 
 import type { DemoSession } from "../auth/demo-users";
@@ -11,6 +11,10 @@ import { seedDemoShiftPipelineState } from "./shift-pipeline.seed";
 
 function splitStatuses<TStatus extends string>(value?: string) {
   return value ? (value.split(",").filter(Boolean) as TStatus[]) : [];
+}
+
+function usePrismaWorkflow() {
+  return process.env.WORKFLOW_PERSISTENCE === "prisma";
 }
 
 @Controller("shift-pipeline")
@@ -75,6 +79,9 @@ export class ShiftPipelineController {
   @Get("approvals")
   listApprovals(@CurrentSession() session: DemoSession, @Query("status") status?: "PENDING" | "APPROVED" | "DENIED") {
     this.ensureSeeded();
+    if (usePrismaWorkflow()) {
+      return [];
+    }
     return demoApprovals.filter(
       (approval) =>
         approval.targetObjectType === "ShiftSlot" &&
@@ -122,13 +129,16 @@ export class ShiftPipelineController {
     @Body() body: { userId?: string; overrideReason?: string }
   ) {
     this.ensureSeeded();
-    return this.managers.directAssignSlot(session, slotId, body.userId ?? "user_maya", {
+    if (!body.userId) {
+      throw new BadRequestException("Direct assignment requires an assignee user id.");
+    }
+    return this.managers.directAssignSlot(session, slotId, body.userId, {
       ...(body.overrideReason ? { overrideReason: body.overrideReason } : {})
     });
   }
 
   private ensureSeeded() {
-    if (demoShiftSlots.length === 0) {
+    if (!usePrismaWorkflow() && demoShiftSlots.length === 0) {
       seedDemoShiftPipelineState();
     }
   }
