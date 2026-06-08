@@ -2096,3 +2096,77 @@ Phase 21 completion gate recorded on 2026-06-07:
   - Multi-person requirements are modeled as multiple one-person `ShiftSlot` records tied to a staffing requirement.
   - The LLM tool layer remains predefined only; it does not generate SQL or arbitrary workflow names.
   - Prisma validation still emits the existing Prisma 7 deprecation warning for `package.json#prisma`; schema validation passes.
+
+## Phase 22 Goal Mode Steps: Canonical Shift Creation And Swap Pipeline
+
+Phase 22 upgrades shift swapping and schedule creation so employee, manager, API, and LLM workflows all operate on the same canonical shift-slot and assignment model.
+
+Completed commits:
+
+1. `Model: Unify operational shift contract`
+   - Purpose: Derive a canonical operational shift view from shift slots plus active assignments.
+   - Checks: domain tests and typecheck.
+
+2. `Scheduling: Add shift creation pipeline`
+   - Purpose: Create draft slots directly and expand staffing requirements into one-person draft slots.
+   - Checks: API typecheck, lint, and tests.
+
+3. `Scheduling: Add publish and lock semantics`
+   - Purpose: Publish draft slots to open slots and lock published/assigned slots with risk flags.
+   - Checks: Prisma validate plus API typecheck, lint, and tests.
+
+4. `Model: Define shift swap contracts`
+   - Purpose: Add canonical swap request, candidate, status, and invariant contracts.
+   - Checks: domain tests and typecheck.
+
+5. `Policy: Add shift swap eligibility`
+   - Purpose: Evaluate swappable original shifts and eligible/blocked counterpart candidates.
+   - Checks: API typecheck, lint, and tests.
+
+6. `Api: Expose swappable shifts`
+   - Purpose: Add read endpoints for employee swappable shifts and original-shift eligibility.
+   - Checks: API typecheck, lint, and route e2e tests.
+
+7. `Api: Expose swap candidates`
+   - Purpose: Add candidate discovery endpoint with eligible, warning, and blocked outcomes.
+   - Checks: API typecheck, lint, and route e2e tests.
+
+8. `Swaps: Implement canonical lifecycle`
+   - Purpose: Implement create, counterpart response, manager decision, approval records, audit/notification events, and assignment transfer through `SUPERSEDED` plus new `SWAP` assignment.
+   - Checks: API typecheck, lint, service assertions, and route e2e tests.
+
+9. `Interface: Show swappable candidates`
+   - Purpose: Replace the employee swap center's hardcoded demo action with canonical swappable shifts, candidate choices, blocked explanations, counterpart response, approval queue, and history.
+   - Checks: web typecheck, lint, and tests.
+
+10. `Management: Surface swap approvals`
+    - Purpose: Show canonical pending swap approvals on the manager dashboard and swap center with approve/deny actions.
+    - Checks: web typecheck, lint, and tests.
+
+11. `Tools: Add swap schedule actions`
+    - Purpose: Register predefined LLM tools for listing swappable shifts, listing candidates, creating/responding/deciding swaps, creating slots from requirements, and publishing slot batches.
+    - Checks: API typecheck, lint, and LLM tool safety assertions.
+
+12. `Quality: Record swap pipeline gate`
+    - Purpose: Record the full Phase 22 integration gate and verification results.
+    - Checks:
+      - `npm run db:validate`
+      - `npm run typecheck`
+      - `npm run lint`
+      - `npm run test`
+
+Phase 22 completion gate recorded on 2026-06-08:
+
+- Final verification:
+  - `npm run db:validate` passed.
+  - `npm run typecheck` passed.
+  - `npm run lint` passed.
+  - `npm run test` passed.
+- Outputs:
+  - Canonical operational shift view for schedule, claim, and swap workflows.
+  - Draft creation, requirement expansion, publish, and lock schedule semantics.
+  - Canonical swap contracts and deterministic eligibility engine.
+  - `/swap-pipeline` APIs for swappable shifts, candidates, swap creation, counterpart response, manager decision, and request listing.
+  - Employee swap center integrated with candidate selection and request status.
+  - Manager dashboard and swap center integrated with canonical approval decisions.
+  - LLM workflow tools remain strictly predefined and schema-gated; no model-authored SQL or arbitrary mutation is introduced.
