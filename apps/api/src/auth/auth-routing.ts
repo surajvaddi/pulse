@@ -1,6 +1,6 @@
 export type AuthRoutingInput = {
   demoAuthEnabled: boolean;
-  authorizationHeader?: string;
+  authorizationHeader?: string | undefined;
 };
 
 export function requestHasBearerToken(authorizationHeader: string | undefined): boolean {
