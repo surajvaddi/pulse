@@ -48,6 +48,38 @@ export async function approveSwapAction(formData: FormData) {
   revalidatePath("/app/manager");
 }
 
+export async function createCanonicalSwapAction(formData: FormData) {
+  const originalSlotId = String(formData.get("originalSlotId"));
+  const proposedUserId = String(formData.get("proposedUserId"));
+  const requesterUserId = String(formData.get("requesterUserId") ?? "user_priya") as DemoUserId;
+  await apiPost("/swap-pipeline/swaps", { originalSlotId, proposedUserId }, requesterUserId);
+  revalidatePath("/app/swaps");
+  revalidatePath("/app/schedule");
+  revalidatePath("/app/manager");
+}
+
+export async function respondCanonicalSwapAction(formData: FormData) {
+  const swapId = String(formData.get("swapId"));
+  const decision = String(formData.get("decision") ?? "decline");
+  const userId = String(formData.get("userId") ?? "user_maya") as DemoUserId;
+  await apiPost(`/swap-pipeline/swaps/${swapId}/respond`, { decision }, userId);
+  revalidatePath("/app/swaps");
+  revalidatePath("/app/manager");
+}
+
+export async function decideCanonicalSwapAction(formData: FormData) {
+  const swapId = String(formData.get("swapId"));
+  const decision = String(formData.get("decision") ?? "deny");
+  await apiPost(
+    `/swap-pipeline/swaps/${swapId}/decide`,
+    { decision, reason: "Reviewed from canonical swap center" },
+    "user_jordan_manager"
+  );
+  revalidatePath("/app/swaps");
+  revalidatePath("/app/schedule");
+  revalidatePath("/app/manager");
+}
+
 export async function approveShiftClaimAction(formData: FormData) {
   const claimId = String(formData.get("claimId"));
   await apiPost(

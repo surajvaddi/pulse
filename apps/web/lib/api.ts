@@ -108,6 +108,57 @@ export type ShiftPipelineAssignment = {
   endedAt?: string;
 };
 
+export type OperationalShift = {
+  id: string;
+  organizationId: string;
+  facilityId: string;
+  unitId: string;
+  slotId: string;
+  assignmentId?: string;
+  employeeId?: string;
+  assignedByUserId?: string;
+  roleRequiredId: string;
+  certificationRequiredIds: string[];
+  startsAt: string;
+  endsAt: string;
+  status: string;
+  source: string;
+  riskFlags: string[];
+  swappable: boolean;
+  claimable: boolean;
+};
+
+export type ShiftSwapCandidate = {
+  userId: string;
+  employeeId: string;
+  displayName: string;
+  eligible: boolean;
+  requiresApproval: boolean;
+  riskFlags: string[];
+  blockingReasons: string[];
+  warnings: string[];
+  evaluatedAt: string;
+};
+
+export type ShiftSwapRequest = {
+  id: string;
+  organizationId: string;
+  originalSlotId: string;
+  requesterEmployeeId: string;
+  requesterUserId: string;
+  proposedEmployeeId: string;
+  proposedUserId: string;
+  unitId: string;
+  status: string;
+  policyDecision: ShiftPolicyDecisionSnapshot;
+  managerApprovalRequired: boolean;
+  approvalRequestId?: string;
+  assignmentId?: string;
+  createdAt: string;
+  decidedAt?: string;
+  expiresAt?: string;
+};
+
 export type ShiftPipelineApproval = {
   id: string;
   approvalType: string;
