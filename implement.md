@@ -2060,3 +2060,39 @@ Phase 21 upgrades open-shift claiming from a simple demo workflow into a typed p
       - `npm run test`
 
 Phase 21 operational runbook: `docs/shift-pipeline-runbook.md`.
+
+Phase 21 completion gate recorded on 2026-06-07:
+
+- Completed commits:
+  - `Model: Define shift pipeline contracts`
+  - `Database: Add shift pipeline schema`
+  - `Persistence: Add shift pipeline repositories`
+  - `Seed: Add shift pipeline sandbox coverage`
+  - `Policy: Add shift eligibility engine`
+  - `Claims: Implement shift claim lifecycle`
+  - `Management: Add shift assignment decisions`
+  - `Api: Expose shift pipeline endpoints`
+  - `Interface: Connect open shifts to pipeline`
+  - `Management: Surface shift coverage actions`
+  - `Tools: Add shift pipeline LLM actions`
+  - `Audit: Record shift pipeline events`
+  - `Docs: Document shift pipeline operations`
+- Final verification:
+  - `npm run db:validate` passed.
+  - `npm run typecheck` passed.
+  - `npm run lint` passed.
+  - `npm run test` passed.
+- Outputs:
+  - Domain contracts and invariant checks for shift slots, assignments, claims, and policy snapshots.
+  - Prisma schema models for shift slots, assignments, and claim requests.
+  - In-memory and Prisma repository adapters.
+  - Multi-week sandbox seed with open, assigned, submitted, denied, pending approval, and assigned claim scenarios.
+  - Deterministic eligibility service for role, unit, credential, rest-period, assignment, and overtime checks.
+  - Claim lifecycle, manager decision, direct assignment, audit, notification, and API endpoint layers.
+  - Employee open-shifts UI and manager coverage dashboard integration.
+  - Predefined LLM shift tools with strict schemas, role access, preview gates, and policy gates.
+  - Operational runbook: `docs/shift-pipeline-runbook.md`.
+- Notes:
+  - Multi-person requirements are modeled as multiple one-person `ShiftSlot` records tied to a staffing requirement.
+  - The LLM tool layer remains predefined only; it does not generate SQL or arbitrary workflow names.
+  - Prisma validation still emits the existing Prisma 7 deprecation warning for `package.json#prisma`; schema validation passes.
