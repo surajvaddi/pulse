@@ -1,10 +1,10 @@
 import type {
   AuditLog,
   DemoShift,
-  DemoSwap,
   ShiftPipelineApproval,
   ShiftPipelineClaim,
   ShiftPipelineSlot,
+  ShiftSwapRequest,
   StaffingGap
 } from "@/lib/api";
 
@@ -18,7 +18,7 @@ export type ManagerDashboardCard = {
 export type ManagerDashboardModel = {
   cards: ManagerDashboardCard[];
   priorityGap: StaffingGap | null;
-  pendingSwaps: DemoSwap[];
+  pendingSwaps: ShiftSwapRequest[];
   pendingClaims: ShiftPipelineClaim[];
   openSlots: ShiftPipelineSlot[];
   approvals: ShiftPipelineApproval[];
@@ -36,7 +36,7 @@ function openShiftDetail(openSlots: ShiftPipelineSlot[], legacyOpenShifts: DemoS
 export function buildManagerDashboard(input: {
   shifts: DemoShift[];
   gaps: StaffingGap[];
-  swaps: DemoSwap[];
+  swaps: ShiftSwapRequest[];
   auditLogs: AuditLog[];
   slots?: ShiftPipelineSlot[];
   claims?: ShiftPipelineClaim[];
@@ -53,7 +53,7 @@ export function buildManagerDashboard(input: {
   const priorityGap =
     [...input.gaps].sort((left, right) => right.gapCount - left.gapCount).at(0) ?? null;
   const riskFlags = [
-    ...input.swaps.flatMap((swap) => swap.riskFlags),
+    ...input.swaps.flatMap((swap) => swap.policyDecision.riskFlags),
     ...pipelineSlots.flatMap((slot) => slot.riskFlags),
     ...pipelineClaims.flatMap((claim) => claim.policyDecision.riskFlags)
   ];

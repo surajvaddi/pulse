@@ -1,5 +1,5 @@
 import { apiGet, type OperationalShift, type ShiftSwapCandidate, type ShiftSwapRequest } from "@/lib/api";
-import { createCanonicalSwapAction, respondCanonicalSwapAction } from "../actions";
+import { createCanonicalSwapAction, decideCanonicalSwapAction, respondCanonicalSwapAction } from "../actions";
 
 const tabs = ["Start Swap", "Requests For Me", "Waiting On Manager", "History"];
 
@@ -174,6 +174,22 @@ export default async function SwapsPage() {
                 <span className="risk-strip">
                   {swap.policyDecision.riskFlags.map((flag) => flag.replaceAll("_", " ")).join(", ")}
                 </span>
+                <div className="action-row">
+                  <form action={decideCanonicalSwapAction}>
+                    <input type="hidden" name="swapId" value={swap.id} />
+                    <input type="hidden" name="decision" value="approve" />
+                    <button className="command-button" type="submit">
+                      Approve
+                    </button>
+                  </form>
+                  <form action={decideCanonicalSwapAction}>
+                    <input type="hidden" name="swapId" value={swap.id} />
+                    <input type="hidden" name="decision" value="deny" />
+                    <button className="secondary-button" type="submit">
+                      Deny
+                    </button>
+                  </form>
+                </div>
               </article>
             ))}
           </div>

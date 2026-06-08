@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 
 import { buildManagerDashboard } from "@/lib/manager-dashboard";
-import type { AuditLog, DemoShift, DemoSwap, StaffingGap } from "@/lib/api";
+import type { AuditLog, DemoShift, ShiftSwapRequest, StaffingGap } from "@/lib/api";
 
 const shifts: DemoShift[] = [
   {
@@ -28,16 +28,28 @@ const gaps: StaffingGap[] = [
   }
 ];
 
-const swaps: DemoSwap[] = [
+const swaps: ShiftSwapRequest[] = [
   {
     id: "swap_1",
+    organizationId: "org_pulseshift_demo",
+    originalSlotId: "slot_1",
+    requesterEmployeeId: "emp_priya",
     requesterUserId: "user_priya",
+    proposedEmployeeId: "emp_maya",
     proposedUserId: "user_maya",
-    originalShiftId: "shift_1",
     unitId: "unit_icu",
     status: "PENDING_MANAGER",
-    riskFlags: ["OVERTIME_RISK"],
-    timeline: ["Created", "Accepted"]
+    policyDecision: {
+      allowed: true,
+      requiresApproval: true,
+      riskFlags: ["OVERTIME_RISK"],
+      blockingReasons: [],
+      warnings: [],
+      evaluatedAt: "2026-06-07T12:00:00.000Z"
+    },
+    managerApprovalRequired: true,
+    approvalRequestId: "approval_swap_1",
+    createdAt: "2026-06-07T12:01:00.000Z"
   }
 ];
 

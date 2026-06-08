@@ -5,14 +5,14 @@ import {
   apiGet,
   type AuditLog,
   type DemoShift,
-  type DemoSwap,
   type ShiftPipelineApproval,
   type ShiftPipelineClaim,
   type ShiftPipelineSlot,
+  type ShiftSwapRequest,
   type StaffingGap
 } from "@/lib/api";
 import { buildManagerDashboard } from "@/lib/manager-dashboard";
-import { approveShiftClaimAction, denyShiftClaimAction, directAssignShiftAction } from "../actions";
+import { approveShiftClaimAction, decideCanonicalSwapAction, denyShiftClaimAction, directAssignShiftAction } from "../actions";
 import { WorkflowNote } from "../workflow-note";
 
 export default async function ManagerPage() {
@@ -20,7 +20,7 @@ export default async function ManagerPage() {
     apiGet<DemoShift[]>("/demo/schedule/unit/unit_icu", "user_jordan_manager"),
     apiGet<AuditLog[]>("/demo/audit", "user_admin"),
     apiGet<StaffingGap[]>("/operations/staffing/gaps", "user_jordan_manager"),
-    apiGet<DemoSwap[]>("/workflows/swaps", "user_jordan_manager"),
+    apiGet<ShiftSwapRequest[]>("/swap-pipeline/swaps?status=PENDING_MANAGER", "user_jordan_manager"),
     apiGet<ShiftPipelineSlot[]>("/shift-pipeline/slots?unitId=unit_icu&statuses=OPEN,CLAIM_PENDING", "user_jordan_manager"),
     apiGet<ShiftPipelineClaim[]>("/shift-pipeline/claims?statuses=PENDING_APPROVAL", "user_jordan_manager"),
     apiGet<ShiftPipelineApproval[]>("/shift-pipeline/approvals?status=PENDING", "user_jordan_manager")
@@ -80,12 +80,25 @@ export default async function ManagerPage() {
           {dashboard.pendingSwaps.map((swap) => (
             <article className="list-row" key={swap.id}>
               <div>
-                <strong>{swap.status.replaceAll("_", " ")}</strong>
-                <span>{swap.riskFlags.length} policy flags</span>
+                <strong>Swap approval pending</strong>
+                <span>
+                  {swap.requesterEmployeeId} to {swap.proposedEmployeeId} · {swap.policyDecision.riskFlags.length} policy flags
+                </span>
               </div>
-              <Link className="command-button" href="/app/swaps">
-                Review swap
-              </Link>
+              <form className="action-row" action={decideCanonicalSwapAction}>
+                <input type="hidden" name="swapId" value={swap.id} />
+                <input type="hidden" name="decision" value="approve" />
+                <button className="command-button" type="submit">
+                  Approve
+                </button>
+              </form>
+              <form className="action-row" action={decideCanonicalSwapAction}>
+                <input type="hidden" name="swapId" value={swap.id} />
+                <input type="hidden" name="decision" value="deny" />
+                <button className="secondary-button" type="submit">
+                  Deny
+                </button>
+              </form>
             </article>
           ))}
           {dashboard.pendingClaims.map((claim) => (
