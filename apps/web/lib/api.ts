@@ -108,6 +108,18 @@ export type ShiftPipelineAssignment = {
   endedAt?: string;
 };
 
+export type ShiftPipelineApproval = {
+  id: string;
+  approvalType: string;
+  requestedByUserId: string;
+  approverUserId?: string;
+  targetObjectType: string;
+  targetObjectId: string;
+  status: string;
+  riskFlags: string[];
+  decisionReason?: string;
+};
+
 export type TimecardException = {
   id: string;
   employeeId: string;

@@ -48,6 +48,38 @@ export async function approveSwapAction(formData: FormData) {
   revalidatePath("/app/manager");
 }
 
+export async function approveShiftClaimAction(formData: FormData) {
+  const claimId = String(formData.get("claimId"));
+  await apiPost(
+    `/shift-pipeline/claims/${claimId}/approve`,
+    { reason: "Manager approved from coverage dashboard" },
+    "user_jordan_manager"
+  );
+  revalidatePath("/app/manager");
+  revalidatePath("/app/open-shifts");
+  revalidatePath("/app/schedule");
+}
+
+export async function denyShiftClaimAction(formData: FormData) {
+  const claimId = String(formData.get("claimId"));
+  await apiPost(
+    `/shift-pipeline/claims/${claimId}/deny`,
+    { reason: "Manager denied from coverage dashboard" },
+    "user_jordan_manager"
+  );
+  revalidatePath("/app/manager");
+  revalidatePath("/app/open-shifts");
+}
+
+export async function directAssignShiftAction(formData: FormData) {
+  const slotId = String(formData.get("slotId"));
+  const userId = String(formData.get("userId") ?? "user_maya");
+  await apiPost(`/shift-pipeline/slots/${slotId}/assign`, { userId }, "user_jordan_manager");
+  revalidatePath("/app/manager");
+  revalidatePath("/app/open-shifts");
+  revalidatePath("/app/schedule");
+}
+
 export async function markNotificationReadAction(formData: FormData) {
   const notificationId = String(formData.get("notificationId"));
   const userId = String(formData.get("userId") ?? "user_priya") as DemoUserId;
