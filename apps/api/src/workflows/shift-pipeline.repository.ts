@@ -38,6 +38,7 @@ export type ShiftAssignmentQuery = {
 export interface ShiftPipelineRepository {
   listSlots(query: ShiftSlotQuery): Promise<ShiftSlotContract[]>;
   findSlot(query: { organizationId: string; slotId: string }): Promise<ShiftSlotContract | null>;
+  createSlot(input: Omit<ShiftSlotContract, "id"> & { id?: string }): Promise<ShiftSlotContract>;
   updateSlotStatus(input: {
     organizationId: string;
     slotId: string;
@@ -110,6 +111,15 @@ export class InMemoryShiftPipelineRepository implements ShiftPipelineRepository 
 
   async findSlot(query: { organizationId: string; slotId: string }) {
     return demoShiftSlots.find((slot) => slot.organizationId === query.organizationId && slot.id === query.slotId) ?? null;
+  }
+
+  async createSlot(input: Omit<ShiftSlotContract, "id"> & { id?: string }) {
+    const slot: ShiftSlotContract = {
+      ...input,
+      id: input.id ?? `slot_${demoShiftSlots.length + 1}`
+    };
+    demoShiftSlots.push(slot);
+    return slot;
   }
 
   async updateSlotStatus(input: {
@@ -271,6 +281,18 @@ export class PrismaShiftPipelineRepository implements ShiftPipelineRepository {
       where: { organizationId: query.organizationId, id: query.slotId }
     });
     return slot ? mapPrismaSlot(slot as Record<string, unknown>) : null;
+  }
+
+  async createSlot(input: Omit<ShiftSlotContract, "id"> & { id?: string }) {
+    const slot = await this.client.shiftSlot.create({
+      data: {
+        ...input,
+        ...(input.id ? { id: input.id } : {}),
+        startAt: new Date(input.startsAt),
+        endAt: new Date(input.endsAt)
+      }
+    });
+    return mapPrismaSlot(slot as Record<string, unknown>);
   }
 
   async updateSlotStatus(input: { organizationId: string; slotId: string; status: ShiftSlotStatus; riskFlags?: string[] }) {
