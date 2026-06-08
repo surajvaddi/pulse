@@ -9,8 +9,10 @@ import {
   apiPost,
   apiPostWithAccessToken,
   type DemoUserId,
-  type Invitation
+  type Invitation,
+  type SessionSummary
 } from "@/lib/api";
+import { resolveSupabaseSessionDestination } from "@/lib/supabase-session";
 
 export async function startDemoSessionAction(formData: FormData) {
   const userId = String(formData.get("userId") ?? "user_priya");
@@ -27,13 +29,19 @@ export async function logoutAction() {
 }
 
 export async function establishSupabaseSessionAction(accessToken: string) {
-  (await cookies()).set(sessionCookieNames.accessToken, accessToken, accessTokenCookieOptions(process.env));
+  const cookieStore = await cookies();
+  cookieStore.delete(sessionCookieNames.demoUserId);
+  cookieStore.set(sessionCookieNames.accessToken, accessToken, accessTokenCookieOptions(process.env));
+
+  let session: SessionSummary | null = null;
   try {
-    await apiGetWithAccessToken("/auth/me", accessToken);
+    session = await apiGetWithAccessToken<SessionSummary>("/auth/me", accessToken);
   } catch {
-    redirect("/onboarding/organization");
+    session = null;
   }
-  redirect("/app");
+
+  const destination = resolveSupabaseSessionDestination({ accessToken, session });
+  redirect(destination);
 }
 
 export async function createOrganizationAction(formData: FormData) {

@@ -20,12 +20,13 @@ export type DemoUserId =
   | "user_ai_service";
 
 export type SessionSummary = {
-  userId: DemoUserId;
+  userId: string;
   organizationId: string;
   displayName: string;
   email: string;
   role: string;
   permissions: string[];
+  supabaseAuthId?: string;
 };
 
 export type Invitation = {
