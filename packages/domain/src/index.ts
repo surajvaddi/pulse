@@ -89,6 +89,17 @@ export const ShiftClaimStatusSchema = z.enum([
 ]);
 export type ShiftClaimStatus = z.infer<typeof ShiftClaimStatusSchema>;
 
+export const ShiftSwapStatusSchema = z.enum([
+  "PREVIEW",
+  "PENDING_COUNTERPARTY",
+  "PENDING_MANAGER",
+  "APPROVED",
+  "DENIED",
+  "CANCELLED",
+  "EXPIRED"
+]);
+export type ShiftSwapStatus = z.infer<typeof ShiftSwapStatusSchema>;
+
 export const AvailabilityTypeSchema = z.enum(["AVAILABLE", "UNAVAILABLE", "PREFERRED", "AVOID"]);
 export type AvailabilityType = z.infer<typeof AvailabilityTypeSchema>;
 
@@ -375,6 +386,61 @@ export function operationalShiftFromSlot(input: {
     swappable: Boolean(input.assignment?.employeeId) && ["ASSIGNED", "PUBLISHED"].includes(input.slot.status),
     claimable: input.slot.status === "OPEN"
   });
+}
+
+export const ShiftSwapCandidateContractSchema = z.object({
+  userId: z.string(),
+  employeeId: z.string(),
+  displayName: z.string(),
+  eligible: z.boolean(),
+  requiresApproval: z.boolean(),
+  riskFlags: z.array(z.string()),
+  blockingReasons: z.array(z.string()),
+  warnings: z.array(z.string()),
+  evaluatedAt: IsoDateTimeStringSchema
+});
+export type ShiftSwapCandidateContract = z.infer<typeof ShiftSwapCandidateContractSchema>;
+
+export const ShiftSwapRequestContractSchema = z.object({
+  id: z.string(),
+  organizationId: z.string(),
+  originalSlotId: z.string(),
+  requesterEmployeeId: z.string(),
+  requesterUserId: z.string(),
+  proposedEmployeeId: z.string(),
+  proposedUserId: z.string(),
+  unitId: z.string(),
+  status: ShiftSwapStatusSchema,
+  policyDecision: ShiftPolicyDecisionSnapshotSchema,
+  managerApprovalRequired: z.boolean(),
+  approvalRequestId: z.string().optional(),
+  assignmentId: z.string().optional(),
+  createdAt: IsoDateTimeStringSchema,
+  decidedAt: IsoDateTimeStringSchema.optional(),
+  expiresAt: IsoDateTimeStringSchema.optional()
+});
+export type ShiftSwapRequestContract = z.infer<typeof ShiftSwapRequestContractSchema>;
+
+export function assertShiftSwapInvariants(input: {
+  swap: ShiftSwapRequestContract;
+  originalShift: OperationalShiftContract;
+}) {
+  if (input.swap.originalSlotId !== input.originalShift.slotId) {
+    throw new Error(`Swap ${input.swap.id} must reference the selected operational shift`);
+  }
+  if (input.swap.requesterUserId === input.swap.proposedUserId) {
+    throw new Error(`Swap ${input.swap.id} cannot target the requesting user`);
+  }
+  if (!input.originalShift.swappable) {
+    throw new Error(`Swap ${input.swap.id} original shift is not swappable`);
+  }
+  if (input.swap.status === "PENDING_MANAGER" && !input.swap.approvalRequestId) {
+    throw new Error(`Swap ${input.swap.id} requires an approval request before manager review`);
+  }
+  if (input.swap.status === "APPROVED" && !input.swap.assignmentId) {
+    throw new Error(`Approved swap ${input.swap.id} must reference the resulting assignment`);
+  }
+  return true;
 }
 
 export function assertShiftCoverageInvariants(input: {

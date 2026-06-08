@@ -2,11 +2,14 @@ import assert from "node:assert/strict";
 
 import {
   ShiftAssignmentContractSchema,
+  ShiftSwapCandidateContractSchema,
+  ShiftSwapRequestContractSchema,
   ShiftClaimRequestContractSchema,
   ShiftPolicyDecisionSnapshotSchema,
   ShiftSlotContractSchema,
   StaffingRequirementContractSchema,
   assertShiftCoverageInvariants,
+  assertShiftSwapInvariants,
   operationalShiftFromSlot
 } from "./index.js";
 
@@ -82,6 +85,44 @@ assert.equal(operationalShift.slotId, slot.id);
 assert.equal(operationalShift.employeeId, assignment.employeeId);
 assert.equal(operationalShift.swappable, true);
 assert.equal(operationalShift.claimable, false);
+
+const candidate = ShiftSwapCandidateContractSchema.parse({
+  userId: "user_maya",
+  employeeId: "emp_maya",
+  displayName: "Maya Shah",
+  eligible: true,
+  requiresApproval: true,
+  riskFlags: ["MANAGER_APPROVAL_REQUIRED"],
+  blockingReasons: [],
+  warnings: ["Manager approval required before the reassignment is final."],
+  evaluatedAt
+});
+assert.equal(candidate.eligible, true);
+
+const swap = ShiftSwapRequestContractSchema.parse({
+  id: "swap_1",
+  organizationId: slot.organizationId,
+  originalSlotId: slot.id,
+  requesterEmployeeId: assignment.employeeId,
+  requesterUserId: "user_priya",
+  proposedEmployeeId: candidate.employeeId,
+  proposedUserId: candidate.userId,
+  unitId: slot.unitId,
+  status: "PENDING_MANAGER",
+  policyDecision,
+  managerApprovalRequired: true,
+  approvalRequestId: "approval_swap_1",
+  createdAt: "2026-06-07T10:10:00.000Z"
+});
+assert.equal(assertShiftSwapInvariants({ swap, originalShift: operationalShift }), true);
+assert.throws(
+  () =>
+    assertShiftSwapInvariants({
+      swap: { ...swap, id: "swap_self", proposedUserId: swap.requesterUserId },
+      originalShift: operationalShift
+    }),
+  /cannot target/
+);
 
 assert.throws(
   () =>
