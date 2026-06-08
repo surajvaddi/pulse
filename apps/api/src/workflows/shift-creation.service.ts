@@ -74,9 +74,80 @@ export class ShiftCreationService {
     return slots;
   }
 
+  async publishDraftSlots(session: DemoSession, input: { facilityId: string; slotIds: string[] }) {
+    this.assertCanPublish(session, input.facilityId);
+    if (input.slotIds.length === 0) {
+      throw new BadRequestException("At least one draft slot is required to publish.");
+    }
+
+    const repository = this.repositories.repository();
+    const published = [];
+    for (const slotId of input.slotIds) {
+      const slot = await repository.findSlot({ organizationId: session.organizationId, slotId });
+      if (!slot) {
+        throw new BadRequestException(`Cannot publish missing slot: ${slotId}`);
+      }
+      if (slot.facilityId !== input.facilityId) {
+        throw new ForbiddenException("Cannot publish a shift outside the requested facility.");
+      }
+      if (slot.status !== "DRAFT") {
+        throw new BadRequestException(`Only draft slots can be published: ${slotId}`);
+      }
+      published.push(
+        await repository.updateSlotStatus({
+          organizationId: session.organizationId,
+          slotId,
+          status: "OPEN",
+          riskFlags: slot.riskFlags
+        })
+      );
+    }
+    return published;
+  }
+
+  async lockPublishedSlots(session: DemoSession, input: { facilityId: string; slotIds: string[]; reason: string }) {
+    this.assertCanPublish(session, input.facilityId);
+    if (input.slotIds.length === 0) {
+      throw new BadRequestException("At least one slot is required to lock.");
+    }
+    if (!input.reason.trim()) {
+      throw new BadRequestException("A lock reason is required.");
+    }
+
+    const repository = this.repositories.repository();
+    const locked = [];
+    for (const slotId of input.slotIds) {
+      const slot = await repository.findSlot({ organizationId: session.organizationId, slotId });
+      if (!slot) {
+        throw new BadRequestException(`Cannot lock missing slot: ${slotId}`);
+      }
+      if (slot.facilityId !== input.facilityId) {
+        throw new ForbiddenException("Cannot lock a shift outside the requested facility.");
+      }
+      if (!["OPEN", "ASSIGNED", "PUBLISHED"].includes(slot.status)) {
+        throw new BadRequestException(`Only open, assigned, or published slots can be locked: ${slotId}`);
+      }
+      locked.push(
+        await repository.updateSlotStatus({
+          organizationId: session.organizationId,
+          slotId,
+          status: "LOCKED",
+          riskFlags: [...new Set([...slot.riskFlags, "SCHEDULE_LOCKED"])]
+        })
+      );
+    }
+    return locked;
+  }
+
   private assertCanCreateDraft(session: DemoSession, facilityId: string) {
     if (!this.permissions.hasPermission(session, "schedule:write:draft", { type: "FACILITY", facilityId })) {
       throw new ForbiddenException("User cannot create draft shifts for this facility.");
+    }
+  }
+
+  private assertCanPublish(session: DemoSession, facilityId: string) {
+    if (!this.permissions.hasPermission(session, "schedule:publish", { type: "FACILITY", facilityId })) {
+      throw new ForbiddenException("User cannot publish or lock shifts for this facility.");
     }
   }
 

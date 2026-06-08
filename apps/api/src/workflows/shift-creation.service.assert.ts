@@ -45,6 +45,21 @@ async function run() {
   assert.equal(requirementSlots.length, 3);
   assert.ok(requirementSlots.every((slot) => slot.status === "DRAFT"));
 
+  const published = await service.publishDraftSlots(session("user_wendy_workforce"), {
+    facilityId: "fac_mercy_main",
+    slotIds: [draft.id, requirementSlots[0]?.id ?? ""]
+  });
+  assert.equal(published.length, 2);
+  assert.ok(published.every((slot) => slot.status === "OPEN"));
+
+  const locked = await service.lockPublishedSlots(session("user_wendy_workforce"), {
+    facilityId: "fac_mercy_main",
+    slotIds: [draft.id],
+    reason: "Finalized schedule for assertion"
+  });
+  assert.equal(locked[0]?.status, "LOCKED");
+  assert.ok(locked[0]?.riskFlags.includes("SCHEDULE_LOCKED"));
+
   await assert.rejects(
     () =>
       service.createDraftSlot(session("user_priya"), {
