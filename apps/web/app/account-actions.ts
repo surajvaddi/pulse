@@ -8,7 +8,6 @@ import {
   apiGetWithAccessToken,
   apiPost,
   apiPostWithAccessToken,
-  type DemoUserId,
   type Invitation,
   type SessionSummary
 } from "@/lib/api";
