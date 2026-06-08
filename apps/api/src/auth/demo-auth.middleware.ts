@@ -1,6 +1,7 @@
 import { Inject, Injectable, type NestMiddleware } from "@nestjs/common";
 import type { NextFunction, Request, Response } from "express";
 
+import { allowsUnlinkedSupabaseSession, demoAuthEnabledForEnvironment, shouldUseDemoAuth } from "./auth-routing";
 import { AuthSessionService } from "./auth-session.service";
 import { findDemoSession } from "./demo-users";
 import { SupabaseJwtService } from "./supabase-jwt.service";
@@ -25,7 +26,12 @@ export class DemoAuthMiddleware implements NestMiddleware {
     response: Response,
     next: NextFunction
   ) {
-    if (process.env.ENABLE_DEMO_AUTH !== "false") {
+    if (
+      shouldUseDemoAuth({
+        demoAuthEnabled: demoAuthEnabledForEnvironment(),
+        authorizationHeader: request.header("authorization")
+      })
+    ) {
       const requestedUser = request.header("x-demo-user-id");
       const session = findDemoSession(requestedUser);
       if (!activeAdminUser(session.userId)) {
@@ -56,10 +62,7 @@ export class DemoAuthMiddleware implements NestMiddleware {
       try {
         request.session = await this.sessions.loadSupabaseSession(claims);
       } catch (error) {
-        if (
-          (request.method === "POST" && request.path.startsWith("/invitations/")) ||
-          (request.method === "POST" && request.path === "/onboarding/organizations")
-        ) {
+        if (allowsUnlinkedSupabaseSession({ method: request.method, path: request.path })) {
           next();
           return;
         }

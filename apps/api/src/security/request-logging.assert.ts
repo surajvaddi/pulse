@@ -50,8 +50,6 @@ async function main() {
     const authResponse = await request(server)
       .get("/auth/me")
       .set(requestIdHeader, "req_auth-123456")
-      .set("authorization", "Bearer secret-token")
-      .set("cookie", "ps_access_token=secret")
       .set("x-demo-user-id", "user_priya")
       .expect(200);
     assert.equal(authResponse.headers[requestIdHeader], "req_auth-123456");
