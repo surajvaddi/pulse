@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
+import { prisma } from "@pulseshift/db";
 
 import {
   UnitMutationSchema,
@@ -9,9 +10,32 @@ import {
 } from "./admin-contracts";
 import { adminFacilities, adminUnits, appendAdminAuditEvent } from "./admin-state";
 
+function usePrismaAdmin() {
+  return process.env.AUTH_PERSISTENCE === "prisma" || process.env.WORKFLOW_PERSISTENCE === "prisma";
+}
+
 @Injectable()
 export class UnitAdminService implements UnitAdminServiceContract {
   async list(organizationId: string, facilityId?: string) {
+    if (usePrismaAdmin()) {
+      const units = await prisma.unit.findMany({
+        where: {
+          facility: { organizationId },
+          ...(facilityId ? { facilityId } : {})
+        },
+        orderBy: { name: "asc" }
+      });
+      return units.map((unit) =>
+        UnitRecordSchema.parse({
+          id: unit.id,
+          facilityId: unit.facilityId,
+          name: unit.name,
+          type: unit.unitType,
+          managerUserIds: unit.managerUserIds,
+          active: unit.status === "ACTIVE"
+        })
+      );
+    }
     return adminUnits
       .filter((unit) => this.facilityBelongsToOrg(organizationId, unit.facilityId))
       .filter((unit) => !facilityId || unit.facilityId === facilityId)
@@ -20,6 +44,37 @@ export class UnitAdminService implements UnitAdminServiceContract {
 
   async create(organizationId: string, input: UnitMutation) {
     const parsed = UnitMutationSchema.parse(input);
+    if (usePrismaAdmin()) {
+      await this.assertPrismaFacility(organizationId, parsed.facilityId);
+      const unit = await prisma.unit.create({
+        data: {
+          facilityId: parsed.facilityId,
+          name: parsed.name,
+          unitType: parsed.type,
+          managerUserIds: parsed.managerUserIds,
+          status: "ACTIVE"
+        }
+      });
+      await prisma.auditLog.create({
+        data: {
+          organizationId,
+          actorType: "SYSTEM",
+          action: "admin.unit.created",
+          objectType: "Unit",
+          objectId: unit.id,
+          reason: parsed.reason,
+          after: { id: unit.id, name: unit.name, type: unit.unitType }
+        }
+      });
+      return UnitRecordSchema.parse({
+        id: unit.id,
+        facilityId: unit.facilityId,
+        name: unit.name,
+        type: unit.unitType,
+        managerUserIds: unit.managerUserIds,
+        active: unit.status === "ACTIVE"
+      });
+    }
     this.assertFacility(organizationId, parsed.facilityId);
     const unit: UnitRecord = {
       id: `unit_${adminUnits.length + 1}`,
@@ -43,6 +98,38 @@ export class UnitAdminService implements UnitAdminServiceContract {
 
   async update(organizationId: string, unitId: string, input: UnitMutation) {
     const parsed = UnitMutationSchema.parse(input);
+    if (usePrismaAdmin()) {
+      await this.assertPrismaFacility(organizationId, parsed.facilityId);
+      await this.assertPrismaUnit(organizationId, unitId);
+      const unit = await prisma.unit.update({
+        where: { id: unitId },
+        data: {
+          facilityId: parsed.facilityId,
+          name: parsed.name,
+          unitType: parsed.type,
+          managerUserIds: parsed.managerUserIds
+        }
+      });
+      await prisma.auditLog.create({
+        data: {
+          organizationId,
+          actorType: "SYSTEM",
+          action: "admin.unit.updated",
+          objectType: "Unit",
+          objectId: unitId,
+          reason: parsed.reason,
+          after: { id: unit.id, name: unit.name, type: unit.unitType }
+        }
+      });
+      return UnitRecordSchema.parse({
+        id: unit.id,
+        facilityId: unit.facilityId,
+        name: unit.name,
+        type: unit.unitType,
+        managerUserIds: unit.managerUserIds,
+        active: unit.status === "ACTIVE"
+      });
+    }
     this.assertFacility(organizationId, parsed.facilityId);
     const unit = this.unitFor(organizationId, unitId);
     unit.facilityId = parsed.facilityId;
@@ -61,6 +148,32 @@ export class UnitAdminService implements UnitAdminServiceContract {
   }
 
   async assignManagers(organizationId: string, unitId: string, managerUserIds: string[], reason: string) {
+    if (usePrismaAdmin()) {
+      await this.assertPrismaUnit(organizationId, unitId);
+      const unit = await prisma.unit.update({
+        where: { id: unitId },
+        data: { managerUserIds }
+      });
+      await prisma.auditLog.create({
+        data: {
+          organizationId,
+          actorType: "SYSTEM",
+          action: "admin.unit.managers_assigned",
+          objectType: "Unit",
+          objectId: unitId,
+          reason,
+          after: { managerUserIds }
+        }
+      });
+      return UnitRecordSchema.parse({
+        id: unit.id,
+        facilityId: unit.facilityId,
+        name: unit.name,
+        type: unit.unitType,
+        managerUserIds: unit.managerUserIds,
+        active: unit.status === "ACTIVE"
+      });
+    }
     const unit = this.unitFor(organizationId, unitId);
     unit.managerUserIds = managerUserIds;
     appendAdminAuditEvent({
@@ -75,6 +188,32 @@ export class UnitAdminService implements UnitAdminServiceContract {
   }
 
   async deactivate(organizationId: string, unitId: string, reason: string) {
+    if (usePrismaAdmin()) {
+      await this.assertPrismaUnit(organizationId, unitId);
+      const unit = await prisma.unit.update({
+        where: { id: unitId },
+        data: { status: "INACTIVE" }
+      });
+      await prisma.auditLog.create({
+        data: {
+          organizationId,
+          actorType: "SYSTEM",
+          action: "admin.unit.deactivated",
+          objectType: "Unit",
+          objectId: unitId,
+          reason,
+          after: { id: unit.id, status: unit.status }
+        }
+      });
+      return UnitRecordSchema.parse({
+        id: unit.id,
+        facilityId: unit.facilityId,
+        name: unit.name,
+        type: unit.unitType,
+        managerUserIds: unit.managerUserIds,
+        active: unit.status === "ACTIVE"
+      });
+    }
     const unit = this.unitFor(organizationId, unitId);
     unit.active = false;
     appendAdminAuditEvent({
@@ -108,5 +247,21 @@ export class UnitAdminService implements UnitAdminServiceContract {
     return adminFacilities.some(
       (facility) => facility.id === facilityId && facility.organizationId === organizationId
     );
+  }
+
+  private async assertPrismaFacility(organizationId: string, facilityId: string) {
+    const facility = await prisma.facility.findFirst({ where: { id: facilityId, organizationId } });
+    if (!facility) {
+      throw new NotFoundException("Facility not found");
+    }
+    return facility;
+  }
+
+  private async assertPrismaUnit(organizationId: string, unitId: string) {
+    const unit = await prisma.unit.findFirst({ where: { id: unitId, facility: { organizationId } } });
+    if (!unit) {
+      throw new NotFoundException("Unit not found");
+    }
+    return unit;
   }
 }
