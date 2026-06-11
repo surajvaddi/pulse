@@ -1,9 +1,15 @@
-import { BadRequestException, Injectable } from "@nestjs/common";
+import { BadRequestException, ForbiddenException, Injectable } from "@nestjs/common";
 import { prisma } from "@pulseshift/db";
 import { PermissionSchema, RolePermissionMap, type Scope } from "@pulseshift/domain";
 
+import { FacilityRecordSchema, UnitRecordSchema } from "../admin/admin-contracts";
 import type { SupabaseJwtClaims } from "./supabase-jwt.service";
 import type { DemoSession } from "./demo-users";
+import {
+  OrganizationStructureBootstrapInputSchema,
+  OrganizationStructureBootstrapResultSchema,
+  type OrganizationStructureBootstrapInput
+} from "./onboarding-contracts";
 
 function ownerPermissions() {
   return RolePermissionMap.ORGANIZATION_OWNER.map((permission) => PermissionSchema.parse(permission));
@@ -86,9 +92,74 @@ export class OnboardingService {
           displayName: user.displayName,
           role: "ORGANIZATION_OWNER"
         },
-        nextStep: "/app/admin"
+        nextStep: "/onboarding/structure"
       };
     });
+  }
+
+  async bootstrapOrganizationStructure(session: DemoSession, input: OrganizationStructureBootstrapInput) {
+    if (session.role !== "ORGANIZATION_OWNER" && session.role !== "WORKFORCE_ADMIN" && session.role !== "SYSTEM_ADMIN") {
+      throw new ForbiddenException("Only organization administrators can bootstrap facility structure.");
+    }
+
+    const parsed = OrganizationStructureBootstrapInputSchema.parse(input);
+    const existingFacilityCount = await prisma.facility.count({
+      where: { organizationId: session.organizationId }
+    });
+    if (existingFacilityCount > 0) {
+      throw new BadRequestException("This organization already has facility structure configured.");
+    }
+
+    const result = await prisma.$transaction(async (tx) => {
+      const facility = await tx.facility.create({
+        data: {
+          organizationId: session.organizationId,
+          name: parsed.facilityName,
+          timezone: parsed.facilityTimezone,
+          status: "ACTIVE"
+        }
+      });
+      const unit = await tx.unit.create({
+        data: {
+          facilityId: facility.id,
+          name: parsed.unitName,
+          unitType: parsed.unitType,
+          managerUserIds: [session.userId],
+          status: "ACTIVE"
+        }
+      });
+      await tx.auditLog.create({
+        data: {
+          organizationId: session.organizationId,
+          actorUserId: session.userId,
+          actorType: "USER",
+          action: "onboarding.structure.created",
+          objectType: "Organization",
+          objectId: session.organizationId,
+          after: { facilityId: facility.id, unitId: unit.id }
+        }
+      });
+      return {
+        facility: FacilityRecordSchema.parse({
+          id: facility.id,
+          organizationId: facility.organizationId,
+          name: facility.name,
+          timezone: facility.timezone,
+          status: facility.status
+        }),
+        unit: UnitRecordSchema.parse({
+          id: unit.id,
+          facilityId: unit.facilityId,
+          name: unit.name,
+          type: unit.unitType,
+          managerUserIds: unit.managerUserIds,
+          active: unit.status === "ACTIVE"
+        }),
+        nextStep: "/onboarding/profile" as const
+      };
+    });
+
+    return OrganizationStructureBootstrapResultSchema.parse(result);
   }
 
   async upsertEmployeeProfile(
