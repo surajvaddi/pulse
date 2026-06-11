@@ -70,6 +70,7 @@ async function main() {
 
     assert.equal(created.body.user.email, uniqueEmail);
     assert.equal(created.body.user.role, "ORGANIZATION_OWNER");
+    assert.equal(created.body.nextStep, "/onboarding/structure");
 
     const session = await request(server)
       .get("/auth/me")
@@ -78,6 +79,31 @@ async function main() {
       .expect(200);
     assert.equal(session.body.email, uniqueEmail);
     assert.notEqual(session.body.userId, "user_priya");
+
+    const structure = await request(server)
+      .post("/onboarding/structure")
+      .set("authorization", `Bearer ${token}`)
+      .send({
+        facilityName: "Onboarding Main Campus",
+        facilityTimezone: "America/Chicago",
+        unitName: "Emergency Department",
+        unitType: "ED"
+      })
+      .expect(201);
+    assert.equal(structure.body.facility.name, "Onboarding Main Campus");
+    assert.equal(structure.body.unit.type, "ED");
+    assert.equal(structure.body.nextStep, "/onboarding/profile");
+
+    await request(server)
+      .post("/onboarding/structure")
+      .set("authorization", `Bearer ${token}`)
+      .send({
+        facilityName: "Duplicate Campus",
+        facilityTimezone: "America/Chicago",
+        unitName: "ICU",
+        unitType: "ICU"
+      })
+      .expect(400);
   } finally {
     await app.close();
     if (originalDemoAuth === undefined) {

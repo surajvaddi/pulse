@@ -14,6 +14,7 @@ const profilePage = readFileSync("../../apps/web/app/onboarding/profile/page.tsx
 assert.ok(authModule.includes("OnboardingController"));
 assert.ok(authModule.includes("OnboardingService"));
 assert.ok(onboardingController.includes('@Post("organizations")'));
+assert.ok(onboardingController.includes('@Post("structure")'));
 assert.ok(onboardingController.includes('@Post("profile")'));
 assert.ok(onboardingService.includes("createOrganizationForSupabaseUser"));
 assert.ok(onboardingService.includes("upsertEmployeeProfile"));
