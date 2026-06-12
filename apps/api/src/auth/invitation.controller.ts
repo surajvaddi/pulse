@@ -1,4 +1,14 @@
-import { Body, Controller, ForbiddenException, Get, Inject, Param, Post, Req } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  ForbiddenException,
+  Get,
+  Inject,
+  Param,
+  Post,
+  Req,
+  UnauthorizedException
+} from "@nestjs/common";
 import type { Request } from "express";
 import type { AccountRole, Scope } from "@pulseshift/domain";
 
@@ -37,6 +47,20 @@ export class InvitationController {
     return this.invitations.createInvitation(
       body.expiresAt ? { ...invitation, expiresAt: body.expiresAt } : invitation
     );
+  }
+
+  @Get("invitations/pending")
+  listPendingInvitations(
+    @Req()
+    request: Request & {
+      supabaseClaims?: SupabaseJwtClaims;
+    }
+  ) {
+    const email = request.supabaseClaims?.email?.toLowerCase();
+    if (!email) {
+      throw new UnauthorizedException("Sign in with Supabase before checking pending invitations.");
+    }
+    return this.invitations.listPendingForEmail(email);
   }
 
   @Get("invitations/:token")

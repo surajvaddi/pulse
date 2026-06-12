@@ -123,5 +123,13 @@ export async function acceptInvitationAction(formData: FormData) {
   const accessToken =
     String(formData.get("accessToken") ?? "") || (await requireSupabaseAccessToken());
   await apiPostWithAccessToken<Invitation>(`/invitations/${token}/accept`, {}, accessToken);
-  redirect("/onboarding/profile");
+  const claims = decodeSupabaseAccessTokenClaims(accessToken);
+  const session = await apiGetWithAccessToken<SessionSummary>("/auth/me", accessToken);
+  const destination = resolveOnboardingRoute({
+    claims,
+    session,
+    facilityCount: session.facilityCount ?? 0,
+    employeeProfile: session.employeeProfile ?? null
+  });
+  redirect(destination === "/app" ? "/app/home" : destination);
 }

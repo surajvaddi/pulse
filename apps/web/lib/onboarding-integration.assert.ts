@@ -16,3 +16,5 @@ assert.ok(organizationPage.includes("loadOnboardingContext"));
 assert.ok(profilePage.includes("requireOnboardingStep"));
 assert.ok(accountActions.includes('"/onboarding/structure"'));
 assert.ok(accountActions.includes("bootstrapStructureAction"));
+assert.ok(organizationPage.includes("/invitations/pending"));
+assert.ok(accountActions.includes("resolveOnboardingRoute"));

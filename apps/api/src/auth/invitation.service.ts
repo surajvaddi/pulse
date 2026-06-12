@@ -168,6 +168,30 @@ export class InvitationService {
     };
   }
 
+  async listPendingForEmail(email: string) {
+    const normalized = email.toLowerCase();
+    if (authPersistenceEnabled()) {
+      const invitations = await prisma.invitation.findMany({
+        where: {
+          email: normalized,
+          status: "PENDING",
+          expiresAt: { gt: new Date() }
+        },
+        orderBy: { createdAt: "desc" }
+      });
+      return invitations.map((invitation) => this.publicPrismaInvitation(invitation));
+    }
+
+    return demoInvitations
+      .filter(
+        (invitation) =>
+          invitation.email === normalized &&
+          invitation.status === "PENDING" &&
+          new Date(invitation.expiresAt) > new Date()
+      )
+      .map((invitation) => publicInvitation(invitation));
+  }
+
   private async findPendingInvitation(token: string) {
     const tokenHash = hashToken(token);
     if (authPersistenceEnabled()) {

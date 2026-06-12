@@ -37,6 +37,7 @@ export type UnlinkedSupabaseRouteInput = {
 export function allowsUnlinkedSupabaseSession(input: UnlinkedSupabaseRouteInput): boolean {
   const normalizedPath = input.path.split("?")[0] ?? input.path;
   return (
+    (input.method === "GET" && normalizedPath === "/invitations/pending") ||
     (input.method === "POST" && normalizedPath.startsWith("/invitations/")) ||
     (input.method === "POST" && normalizedPath === "/onboarding/organizations")
   );

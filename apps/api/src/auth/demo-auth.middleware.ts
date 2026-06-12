@@ -51,7 +51,15 @@ export class DemoAuthMiddleware implements NestMiddleware {
       return;
     }
 
-    if (request.method === "GET" && (request.path === "/health" || request.path.startsWith("/invitations/"))) {
+    if (request.method === "GET" && request.path === "/health") {
+      next();
+      return;
+    }
+    if (
+      request.method === "GET" &&
+      request.path.startsWith("/invitations/") &&
+      request.path !== "/invitations/pending"
+    ) {
       next();
       return;
     }

@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { Building2, Send, Settings2 } from "lucide-react";
 
 import { createOrganizationAction, inviteWorkforceMemberAction } from "../../account-actions";
+import { apiGetWithAccessToken, type Invitation } from "@/lib/api";
 import { loadOnboardingContext } from "@/lib/onboarding-guards";
 
 type OrganizationOnboardingPageProps = {
@@ -15,7 +16,10 @@ export default async function OrganizationOnboardingPage({
   searchParams
 }: OrganizationOnboardingPageProps) {
   const { invited } = await searchParams;
-  const { claims, session, route } = await loadOnboardingContext();
+  const { claims, session, route, accessToken } = await loadOnboardingContext();
+  const pendingInvites = !session
+    ? await apiGetWithAccessToken<Invitation[]>("/invitations/pending", accessToken).catch(() => [])
+    : [];
 
   if (!session) {
     if (route !== "/onboarding/organization") {
@@ -44,7 +48,26 @@ export default async function OrganizationOnboardingPage({
           {invited ? <div className="risk-strip">Invite created for the current organization.</div> : null}
         </div>
 
-        {!session ? (
+        {!session && pendingInvites.length > 0 ? (
+          <div className="detail-stack">
+            {pendingInvites.map((invitation) => (
+              <article className="list-row" key={invitation.id}>
+                <div>
+                  <strong>Pending invite found</strong>
+                  <span>
+                    You were invited as {invitation.role.replaceAll("_", " ").toLowerCase()}. Open the invite
+                    link from your email to join this workspace.
+                  </span>
+                </div>
+              </article>
+            ))}
+            <Link className="command-button" href="/login">
+              Back to sign in
+            </Link>
+          </div>
+        ) : null}
+
+        {!session && pendingInvites.length === 0 ? (
           <form action={createOrganizationAction} className="auth-form">
             <label htmlFor="name">Organization name</label>
             <input id="name" name="name" type="text" placeholder="Mercy Workforce Group" required />

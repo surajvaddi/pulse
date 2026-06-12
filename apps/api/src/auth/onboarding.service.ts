@@ -241,7 +241,10 @@ export class OnboardingService {
       primaryFacilityId: profile.primaryFacilityId,
       primaryUnitId: profile.primaryUnitId,
       roleId: profile.roleId,
-      nextStep: "/app/home"
+      nextStep:
+        session.role === "ORGANIZATION_OWNER" || session.role === "SYSTEM_ADMIN"
+          ? "/onboarding/organization"
+          : "/app/home"
     };
   }
 }

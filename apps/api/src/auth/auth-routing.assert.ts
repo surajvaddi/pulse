@@ -57,3 +57,7 @@ assert.equal(
   allowsUnlinkedSupabaseSession({ method: "POST", path: "/invitations/abc/accept" }),
   true
 );
+assert.equal(
+  allowsUnlinkedSupabaseSession({ method: "GET", path: "/invitations/pending" }),
+  true
+);
