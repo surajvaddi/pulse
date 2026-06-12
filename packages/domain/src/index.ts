@@ -555,6 +555,32 @@ export const UnitSchema = z.object({
 });
 export type Unit = z.infer<typeof UnitSchema>;
 
+export const OrganizationStructureBootstrapInputSchema = z
+  .object({
+    facilityName: z.string().trim().min(1),
+    facilityTimezone: z.string().trim().min(1),
+    unitName: z.string().trim().min(1),
+    unitType: UnitTypeSchema
+  })
+  .strict();
+export type OrganizationStructureBootstrapInput = z.infer<
+  typeof OrganizationStructureBootstrapInputSchema
+>;
+
+export const OrganizationStructureBootstrapResultSchema = z
+  .object({
+    facilityId: z.string().min(1),
+    unitId: z.string().min(1),
+    facilityName: z.string().min(1),
+    unitName: z.string().min(1),
+    unitType: UnitTypeSchema,
+    nextStep: z.literal("/onboarding/profile")
+  })
+  .strict();
+export type OrganizationStructureBootstrapResult = z.infer<
+  typeof OrganizationStructureBootstrapResultSchema
+>;
+
 export const UserSchema = z.object({
   id: z.string(),
   organizationId: z.string(),
