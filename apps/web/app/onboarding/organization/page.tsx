@@ -3,8 +3,7 @@ import { redirect } from "next/navigation";
 import { Building2, Send, Settings2 } from "lucide-react";
 
 import { createOrganizationAction, inviteWorkforceMemberAction } from "../../account-actions";
-import { readSupabaseAccessToken } from "@/lib/onboarding-access";
-import { decodeSupabaseAccessTokenClaims } from "@/lib/supabase-session";
+import { loadOnboardingContext } from "@/lib/onboarding-guards";
 
 type OrganizationOnboardingPageProps = {
   searchParams: Promise<{
@@ -16,60 +15,71 @@ export default async function OrganizationOnboardingPage({
   searchParams
 }: OrganizationOnboardingPageProps) {
   const { invited } = await searchParams;
-  const accessToken = await readSupabaseAccessToken();
-  if (!accessToken) {
-    redirect("/login");
+  const { claims, session, route } = await loadOnboardingContext();
+
+  if (!session) {
+    if (route !== "/onboarding/organization") {
+      redirect(route);
+    }
+  } else if ((session.facilityCount ?? 0) === 0) {
+    redirect("/onboarding/structure");
+  } else if (session.needsProfileOnboarding) {
+    redirect("/onboarding/profile");
   }
-  const claims = decodeSupabaseAccessTokenClaims(accessToken);
-  if (!claims) {
-    redirect("/login");
-  }
+
+  const canInvite = Boolean(session && (session.facilityCount ?? 0) > 0);
 
   return (
     <main className="auth-shell">
       <section className="auth-panel">
         <div className="auth-copy">
           <p className="eyebrow">Organization Setup</p>
-          <h1>Create or join a workspace.</h1>
+          <h1>{canInvite ? "Invite your team." : "Create or join a workspace."}</h1>
           <p>
-            New Supabase accounts can create the first workspace here. Existing organizations should invite members by email.
+            {canInvite
+              ? "Your workspace is ready. Invite workforce members by email to complete onboarding."
+              : "New Supabase accounts can create the first workspace here. Existing organizations should invite members by email."}
           </p>
           <p className="form-note">Signed in as {claims.email ?? claims.sub}</p>
           {invited ? <div className="risk-strip">Invite created for the current organization.</div> : null}
         </div>
 
-        <form action={createOrganizationAction} className="auth-form">
-          <label htmlFor="name">Organization name</label>
-          <input id="name" name="name" type="text" placeholder="Mercy Workforce Group" />
-          <label htmlFor="displayName">Your display name</label>
-          <input id="displayName" name="displayName" type="text" placeholder="Alex Morgan" />
-          <label htmlFor="timezone">Timezone</label>
-          <input id="timezone" name="timezone" type="text" defaultValue="America/New_York" />
-          <button className="command-button" type="submit">
-            <Building2 size={18} aria-hidden="true" />
-            Create workspace
-          </button>
-        </form>
+        {!session ? (
+          <form action={createOrganizationAction} className="auth-form">
+            <label htmlFor="name">Organization name</label>
+            <input id="name" name="name" type="text" placeholder="Mercy Workforce Group" required />
+            <label htmlFor="displayName">Your display name</label>
+            <input id="displayName" name="displayName" type="text" placeholder="Alex Morgan" required />
+            <label htmlFor="timezone">Timezone</label>
+            <input id="timezone" name="timezone" type="text" placeholder="America/New_York" required />
+            <button className="command-button" type="submit">
+              <Building2 size={18} aria-hidden="true" />
+              Create workspace
+            </button>
+          </form>
+        ) : null}
 
-        <form action={inviteWorkforceMemberAction} className="auth-form">
-          <label htmlFor="email">Invite email</label>
-          <input id="email" name="email" type="email" placeholder="new.rn@example.com" />
-          <label htmlFor="role">Role</label>
-          <select id="role" name="role" defaultValue="EMPLOYEE">
-            <option value="EMPLOYEE">Employee</option>
-            <option value="UNIT_MANAGER">Unit manager</option>
-            <option value="PAYROLL_ADMIN">Payroll</option>
-            <option value="WORKFORCE_ADMIN">Workforce admin</option>
-          </select>
-          <button className="command-button" type="submit">
-            <Send size={18} aria-hidden="true" />
-            Send invite
-          </button>
-          <Link className="command-button" href="/app/admin/audit">
-            <Settings2 size={18} aria-hidden="true" />
-            Review audit trail
-          </Link>
-        </form>
+        {canInvite ? (
+          <form action={inviteWorkforceMemberAction} className="auth-form">
+            <label htmlFor="email">Invite email</label>
+            <input id="email" name="email" type="email" placeholder="new.rn@example.com" required />
+            <label htmlFor="role">Role</label>
+            <select id="role" name="role" defaultValue="EMPLOYEE">
+              <option value="EMPLOYEE">Employee</option>
+              <option value="UNIT_MANAGER">Unit manager</option>
+              <option value="PAYROLL_ADMIN">Payroll</option>
+              <option value="WORKFORCE_ADMIN">Workforce admin</option>
+            </select>
+            <button className="command-button" type="submit">
+              <Send size={18} aria-hidden="true" />
+              Send invite
+            </button>
+            <Link className="command-button" href="/app/admin">
+              <Settings2 size={18} aria-hidden="true" />
+              Open admin workspace
+            </Link>
+          </form>
+        ) : null}
       </section>
     </main>
   );

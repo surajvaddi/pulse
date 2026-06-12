@@ -2,13 +2,12 @@ import Link from "next/link";
 import { ArrowRight, BadgeCheck } from "lucide-react";
 
 import { upsertProfileAction } from "../../account-actions";
-import { apiGetWithAccessToken, type AdminFacility, type AdminUnit, type SessionSummary } from "@/lib/api";
-import { requireSupabaseAccessToken } from "@/lib/onboarding-access";
+import { apiGetWithAccessToken, type AdminFacility, type AdminUnit } from "@/lib/api";
+import { requireOnboardingStep } from "@/lib/onboarding-guards";
 
 export default async function ProfileOnboardingPage() {
-  const accessToken = await requireSupabaseAccessToken();
-  const [session, facilities, units] = await Promise.all([
-    apiGetWithAccessToken<SessionSummary>("/auth/me", accessToken),
+  const { accessToken, session } = await requireOnboardingStep("/onboarding/profile");
+  const [facilities, units] = await Promise.all([
     apiGetWithAccessToken<AdminFacility[]>("/admin/facilities", accessToken),
     apiGetWithAccessToken<AdminUnit[]>("/admin/units", accessToken)
   ]);
@@ -36,7 +35,7 @@ export default async function ProfileOnboardingPage() {
               </div>
               <BadgeCheck size={18} aria-hidden="true" />
             </article>
-            <Link className="command-button" href="/app/admin/facilities">
+            <Link className="command-button" href="/onboarding/structure">
               <ArrowRight size={18} aria-hidden="true" />
               Set up facilities
             </Link>
@@ -44,9 +43,9 @@ export default async function ProfileOnboardingPage() {
         ) : (
           <form action={upsertProfileAction} className="auth-form">
             <label htmlFor="legalName">Legal name</label>
-            <input id="legalName" name="legalName" type="text" defaultValue={session.displayName} />
+            <input id="legalName" name="legalName" type="text" defaultValue={session?.displayName ?? ""} required />
             <label htmlFor="preferredName">Preferred name</label>
-            <input id="preferredName" name="preferredName" type="text" defaultValue={session.displayName} />
+            <input id="preferredName" name="preferredName" type="text" defaultValue={session?.displayName ?? ""} />
             <label htmlFor="employeeNumber">Employee number</label>
             <input id="employeeNumber" name="employeeNumber" type="text" placeholder="EMP-1001" />
             <label htmlFor="facilityId">Home facility</label>

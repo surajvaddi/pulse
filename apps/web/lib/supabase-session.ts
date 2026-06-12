@@ -6,7 +6,7 @@ export type SupabaseAccessTokenClaims = {
 export type PulseShiftSessionIdentity = {
   userId: string;
   email: string;
-  supabaseAuthId?: string;
+  supabaseAuthId?: string | undefined;
 };
 
 function decodeBase64UrlJson<T>(segment: string): T | null {

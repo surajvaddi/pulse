@@ -12,7 +12,8 @@ import {
   type SessionSummary
 } from "@/lib/api";
 import { requireSupabaseAccessToken } from "@/lib/onboarding-access";
-import { resolveSupabaseSessionDestination } from "@/lib/supabase-session";
+import { resolveOnboardingRoute } from "@/lib/onboarding-progress";
+import { decodeSupabaseAccessTokenClaims } from "@/lib/supabase-session";
 
 export async function startDemoSessionAction(formData: FormData) {
   const userId = String(formData.get("userId") ?? "user_priya");
@@ -33,6 +34,7 @@ export async function establishSupabaseSessionAction(accessToken: string) {
   cookieStore.delete(sessionCookieNames.demoUserId);
   cookieStore.set(sessionCookieNames.accessToken, accessToken, accessTokenCookieOptions(process.env));
 
+  const claims = decodeSupabaseAccessTokenClaims(accessToken);
   let session: SessionSummary | null = null;
   try {
     session = await apiGetWithAccessToken<SessionSummary>("/auth/me", accessToken);
@@ -40,7 +42,12 @@ export async function establishSupabaseSessionAction(accessToken: string) {
     session = null;
   }
 
-  const destination = resolveSupabaseSessionDestination({ accessToken, session });
+  const destination = resolveOnboardingRoute({
+    claims,
+    session,
+    facilityCount: session?.facilityCount ?? 0,
+    employeeProfile: session?.employeeProfile ?? null
+  });
   redirect(destination);
 }
 
@@ -55,7 +62,22 @@ export async function createOrganizationAction(formData: FormData) {
     },
     accessToken
   );
-  redirect("/app/admin");
+  redirect("/onboarding/structure");
+}
+
+export async function bootstrapStructureAction(formData: FormData) {
+  const accessToken = await requireSupabaseAccessToken();
+  await apiPostWithAccessToken(
+    "/onboarding/structure",
+    {
+      facilityName: String(formData.get("facilityName") ?? ""),
+      facilityTimezone: String(formData.get("facilityTimezone") ?? ""),
+      unitName: String(formData.get("unitName") ?? ""),
+      unitType: String(formData.get("unitType") ?? "")
+    },
+    accessToken
+  );
+  redirect("/onboarding/profile");
 }
 
 export async function upsertProfileAction(formData: FormData) {
@@ -73,6 +95,10 @@ export async function upsertProfileAction(formData: FormData) {
     },
     accessToken
   );
+  const session = await apiGetWithAccessToken<SessionSummary>("/auth/me", accessToken);
+  if (session.role === "ORGANIZATION_OWNER" || session.role === "SYSTEM_ADMIN") {
+    redirect("/onboarding/organization");
+  }
   redirect("/app/home");
 }
 

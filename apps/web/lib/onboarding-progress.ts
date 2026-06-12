@@ -32,9 +32,10 @@ export function buildOnboardingProgress(input: {
   return {
     hasLinkedSession: linked,
     hasFacilities: input.facilityCount > 0,
-    needsProfileOnboarding: linked
-      ? sessionNeedsProfileOnboarding(input.session, input.employeeProfile)
-      : false
+    needsProfileOnboarding:
+      linked && input.session
+        ? sessionNeedsProfileOnboarding(input.session, input.employeeProfile)
+        : false
   };
 }
 
@@ -62,7 +63,7 @@ export function resolveOnboardingRoute(input: {
   const identity: PulseShiftSessionIdentity = {
     userId: input.session.userId,
     email: input.session.email,
-    supabaseAuthId: input.session.supabaseAuthId
+    ...(input.session.supabaseAuthId ? { supabaseAuthId: input.session.supabaseAuthId } : {})
   };
 
   if (requiresOrganizationOnboarding(identity, input.claims)) {
