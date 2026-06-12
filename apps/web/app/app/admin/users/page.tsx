@@ -1,10 +1,10 @@
 import { UserX } from "lucide-react";
 
 import { suspendAdminUserAction } from "@/app/app/actions";
-import { apiGet, type AdminUser } from "@/lib/api";
+import { apiGetSession, type AdminUser } from "@/lib/api";
 
 export default async function AdminUsersPage() {
-  const users = await apiGet<AdminUser[]>("/admin/users", "user_admin");
+  const users = await apiGetSession<AdminUser[]>("/admin/users", "user_admin");
 
   return (
     <section className="page-stack">

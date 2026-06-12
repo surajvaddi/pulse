@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
-import { apiPatch, apiPost, type DemoUserId } from "@/lib/api";
+import { apiPatch, apiPost, apiPatchSession, apiPostSession, type DemoUserId } from "@/lib/api";
 import { demoResetEnabledForEnv } from "@/lib/demo-controls";
 
 export async function claimOpenShiftAction(formData: FormData) {
@@ -168,12 +168,12 @@ export async function clockOutAction(_formData: FormData) {
 export async function runIntegrationSyncAction(formData: FormData) {
   const integrationId = String(formData.get("integrationId"));
   const direction = String(formData.get("direction") ?? "BIDIRECTIONAL");
-  await apiPost(`/integrations/${integrationId}/sync`, { direction }, "user_admin");
+  await apiPostSession(`/integrations/${integrationId}/sync`, { direction }, "user_admin");
   revalidatePath("/app/admin/integrations");
 }
 
 export async function runCopilotEvalAction() {
-  await apiPost("/evals/copilot/run", {}, "user_admin");
+  await apiPostSession("/evals/copilot/run", {}, "user_admin");
   revalidatePath("/app/admin/evals");
 }
 
@@ -181,7 +181,7 @@ export async function resetDemoAction() {
   if (!demoResetEnabledForEnv()) {
     return;
   }
-  await apiPost("/demo/reset", {}, "user_admin");
+  await apiPostSession("/demo/reset", {}, "user_admin");
   revalidatePath("/app/admin/audit");
   revalidatePath("/app/home");
   revalidatePath("/app/schedule");
@@ -193,7 +193,7 @@ export async function resetDemoAction() {
 }
 
 export async function createAdminFacilityAction(formData: FormData) {
-  await apiPost("/admin/facilities", {
+  await apiPostSession("/admin/facilities", {
     name: String(formData.get("name") ?? ""),
     timezone: String(formData.get("timezone") ?? "America/New_York"),
     reason: String(formData.get("reason") ?? "Created from admin UI")
@@ -204,7 +204,7 @@ export async function createAdminFacilityAction(formData: FormData) {
 }
 
 export async function createAdminUnitAction(formData: FormData) {
-  await apiPost("/admin/units", {
+  await apiPostSession("/admin/units", {
     facilityId: String(formData.get("facilityId") ?? ""),
     name: String(formData.get("name") ?? ""),
     type: String(formData.get("type") ?? "OTHER"),
@@ -219,7 +219,7 @@ export async function createAdminUnitAction(formData: FormData) {
 
 export async function suspendAdminUserAction(formData: FormData) {
   const userId = String(formData.get("userId") ?? "");
-  await apiPatch(`/admin/users/${userId}/status`, {
+  await apiPatchSession(`/admin/users/${userId}/status`, {
     status: "SUSPENDED",
     reason: String(formData.get("reason") ?? "Suspended from admin UI")
   }, "user_admin");
@@ -229,7 +229,7 @@ export async function suspendAdminUserAction(formData: FormData) {
 export async function assignAdminRoleAction(formData: FormData) {
   const role = String(formData.get("role") ?? "EMPLOYEE");
   const unitId = String(formData.get("unitId") ?? "");
-  await apiPost("/admin/roles", {
+  await apiPostSession("/admin/roles", {
     userId: String(formData.get("userId") ?? ""),
     role,
     scope: unitId ? { type: "UNIT", unitIds: [unitId] } : { type: "SELF" },
@@ -240,7 +240,7 @@ export async function assignAdminRoleAction(formData: FormData) {
 }
 
 export async function createAdminInvitationAction(formData: FormData) {
-  await apiPost("/admin/invitations", {
+  await apiPostSession("/admin/invitations", {
     email: String(formData.get("email") ?? ""),
     role: String(formData.get("role") ?? "EMPLOYEE"),
     scope: { type: "SELF" },

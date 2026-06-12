@@ -2,7 +2,7 @@ import { RefreshCw, UploadCloud } from "lucide-react";
 
 import { runIntegrationSyncAction } from "@/app/app/actions";
 import {
-  apiGet,
+  apiGetSession,
   type IntegrationConnection,
   type IntegrationImportPreview,
   type IntegrationSyncRun
@@ -21,14 +21,14 @@ function formatDate(value: string | null) {
 }
 
 export default async function IntegrationsPage() {
-  const connections = await apiGet<IntegrationConnection[]>("/integrations", "user_admin");
+  const connections = await apiGetSession<IntegrationConnection[]>("/integrations", "user_admin");
   const primaryConnection = connections[0];
   const [syncRuns, importPreview] = await Promise.all([
     primaryConnection
-      ? apiGet<IntegrationSyncRun[]>(`/integrations/${primaryConnection.id}/sync-runs`, "user_admin")
+      ? apiGetSession<IntegrationSyncRun[]>(`/integrations/${primaryConnection.id}/sync-runs`, "user_admin")
       : Promise.resolve([]),
     primaryConnection
-      ? apiGet<IntegrationImportPreview>(
+      ? apiGetSession<IntegrationImportPreview>(
           `/integrations/${primaryConnection.id}/import-preview`,
           "user_admin"
         )

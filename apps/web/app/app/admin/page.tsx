@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Bell, Cable, ListChecks, Users } from "lucide-react";
 
 import {
-  apiGet,
+  apiGetSession,
   type AdminFacility,
   type AdminInvitation,
   type AdminUnit,
@@ -15,12 +15,12 @@ import { WorkflowNote } from "../workflow-note";
 
 export default async function AdminDashboardPage() {
   const [users, facilities, units, invitations, integrations, auditLogs] = await Promise.all([
-    apiGet<AdminUser[]>("/admin/users", "user_admin"),
-    apiGet<AdminFacility[]>("/admin/facilities", "user_admin"),
-    apiGet<AdminUnit[]>("/admin/units", "user_admin"),
-    apiGet<AdminInvitation[]>("/admin/invitations", "user_admin"),
-    apiGet<IntegrationConnection[]>("/integrations", "user_admin"),
-    apiGet<AuditLog[]>("/demo/audit", "user_admin")
+    apiGetSession<AdminUser[]>("/admin/users", "user_admin"),
+    apiGetSession<AdminFacility[]>("/admin/facilities", "user_admin"),
+    apiGetSession<AdminUnit[]>("/admin/units", "user_admin"),
+    apiGetSession<AdminInvitation[]>("/admin/invitations", "user_admin"),
+    apiGetSession<IntegrationConnection[]>("/integrations", "user_admin"),
+    apiGetSession<AuditLog[]>("/demo/audit", "user_admin")
   ]);
   const dashboard = buildAdminDashboard({
     users,

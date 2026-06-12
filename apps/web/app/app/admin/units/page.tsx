@@ -1,12 +1,12 @@
 import { PlusCircle } from "lucide-react";
 
 import { createAdminUnitAction } from "@/app/app/actions";
-import { apiGet, type AdminFacility, type AdminUnit } from "@/lib/api";
+import { apiGetSession, type AdminFacility, type AdminUnit } from "@/lib/api";
 
 export default async function AdminUnitsPage() {
   const [units, facilities] = await Promise.all([
-    apiGet<AdminUnit[]>("/admin/units", "user_admin"),
-    apiGet<AdminFacility[]>("/admin/facilities", "user_admin")
+    apiGetSession<AdminUnit[]>("/admin/units", "user_admin"),
+    apiGetSession<AdminFacility[]>("/admin/facilities", "user_admin")
   ]);
 
   return (

@@ -1,10 +1,10 @@
 import { Send } from "lucide-react";
 
 import { createAdminInvitationAction } from "@/app/app/actions";
-import { apiGet, type AdminInvitation } from "@/lib/api";
+import { apiGetSession, type AdminInvitation } from "@/lib/api";
 
 export default async function AdminInvitationsPage() {
-  const invitations = await apiGet<AdminInvitation[]>("/admin/invitations", "user_admin");
+  const invitations = await apiGetSession<AdminInvitation[]>("/admin/invitations", "user_admin");
 
   return (
     <section className="page-stack">

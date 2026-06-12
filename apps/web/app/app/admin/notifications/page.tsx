@@ -1,4 +1,4 @@
-import { apiGet, type Notification } from "@/lib/api";
+import { apiGetSession, type Notification } from "@/lib/api";
 import {
   notificationMetadata,
   notificationSummary,
@@ -7,7 +7,7 @@ import {
 import { WorkflowNote } from "../../workflow-note";
 
 export default async function AdminNotificationDeliveryPage() {
-  const failures = await apiGet<Notification[]>("/notifications/delivery-failures", "user_admin");
+  const failures = await apiGetSession<Notification[]>("/notifications/delivery-failures", "user_admin");
 
   return (
     <section className="page-stack">

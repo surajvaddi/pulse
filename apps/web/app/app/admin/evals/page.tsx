@@ -1,7 +1,7 @@
 import { PlayCircle } from "lucide-react";
 
 import { runCopilotEvalAction } from "@/app/app/actions";
-import { apiGet, type CopilotEvalRun, type CopilotEvalTask } from "@/lib/api";
+import { apiGetSession, type CopilotEvalRun, type CopilotEvalTask } from "@/lib/api";
 
 function percent(value: number) {
   return `${Math.round(value * 100)}%`;
@@ -9,8 +9,8 @@ function percent(value: number) {
 
 export default async function CopilotEvalsPage() {
   const [tasks, runs] = await Promise.all([
-    apiGet<CopilotEvalTask[]>("/evals/copilot/tasks", "user_admin"),
-    apiGet<CopilotEvalRun[]>("/evals/copilot/runs", "user_admin")
+    apiGetSession<CopilotEvalTask[]>("/evals/copilot/tasks", "user_admin"),
+    apiGetSession<CopilotEvalRun[]>("/evals/copilot/runs", "user_admin")
   ]);
   const latestRun = runs[0];
   const taskById = new Map(tasks.map((task) => [task.id, task]));

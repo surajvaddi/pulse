@@ -1,12 +1,12 @@
 import { ShieldCheck } from "lucide-react";
 
 import { assignAdminRoleAction } from "@/app/app/actions";
-import { apiGet, type AdminUnit, type AdminUser } from "@/lib/api";
+import { apiGetSession, type AdminUnit, type AdminUser } from "@/lib/api";
 
 export default async function AdminRolesPage() {
   const [users, units] = await Promise.all([
-    apiGet<AdminUser[]>("/admin/users", "user_admin"),
-    apiGet<AdminUnit[]>("/admin/units", "user_admin")
+    apiGetSession<AdminUser[]>("/admin/users", "user_admin"),
+    apiGetSession<AdminUnit[]>("/admin/units", "user_admin")
   ]);
 
   return (

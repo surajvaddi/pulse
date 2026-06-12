@@ -1,10 +1,10 @@
 import { PlusCircle } from "lucide-react";
 
 import { createAdminFacilityAction } from "@/app/app/actions";
-import { apiGet, type AdminFacility } from "@/lib/api";
+import { apiGetSession, type AdminFacility } from "@/lib/api";
 
 export default async function AdminFacilitiesPage() {
-  const facilities = await apiGet<AdminFacility[]>("/admin/facilities", "user_admin");
+  const facilities = await apiGetSession<AdminFacility[]>("/admin/facilities", "user_admin");
 
   return (
     <section className="page-stack">

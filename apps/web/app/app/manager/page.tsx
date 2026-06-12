@@ -2,7 +2,7 @@ import Link from "next/link";
 import { AlertTriangle, CheckCircle2, Clock3, Users } from "lucide-react";
 
 import {
-  apiGet,
+  apiGetSession,
   type AuditLog,
   type DemoShift,
   type ShiftPipelineApproval,
@@ -17,13 +17,13 @@ import { WorkflowNote } from "../workflow-note";
 
 export default async function ManagerPage() {
   const [shifts, auditLogs, gaps, swaps, slots, claims, approvals] = await Promise.all([
-    apiGet<DemoShift[]>("/demo/schedule/unit/unit_icu", "user_jordan_manager"),
-    apiGet<AuditLog[]>("/demo/audit", "user_admin"),
-    apiGet<StaffingGap[]>("/operations/staffing/gaps", "user_jordan_manager"),
-    apiGet<ShiftSwapRequest[]>("/swap-pipeline/swaps?status=PENDING_MANAGER", "user_jordan_manager"),
-    apiGet<ShiftPipelineSlot[]>("/shift-pipeline/slots?unitId=unit_icu&statuses=OPEN,CLAIM_PENDING", "user_jordan_manager"),
-    apiGet<ShiftPipelineClaim[]>("/shift-pipeline/claims?statuses=PENDING_APPROVAL", "user_jordan_manager"),
-    apiGet<ShiftPipelineApproval[]>("/shift-pipeline/approvals?status=PENDING", "user_jordan_manager")
+    apiGetSession<DemoShift[]>("/demo/schedule/unit/unit_icu", "user_jordan_manager"),
+    apiGetSession<AuditLog[]>("/demo/audit", "user_admin"),
+    apiGetSession<StaffingGap[]>("/operations/staffing/gaps", "user_jordan_manager"),
+    apiGetSession<ShiftSwapRequest[]>("/swap-pipeline/swaps?status=PENDING_MANAGER", "user_jordan_manager"),
+    apiGetSession<ShiftPipelineSlot[]>("/shift-pipeline/slots?unitId=unit_icu&statuses=OPEN,CLAIM_PENDING", "user_jordan_manager"),
+    apiGetSession<ShiftPipelineClaim[]>("/shift-pipeline/claims?statuses=PENDING_APPROVAL", "user_jordan_manager"),
+    apiGetSession<ShiftPipelineApproval[]>("/shift-pipeline/approvals?status=PENDING", "user_jordan_manager")
   ]);
   const dashboard = buildManagerDashboard({ shifts, auditLogs, gaps, swaps, slots, claims, approvals });
   const icons = [Users, CheckCircle2, Clock3, AlertTriangle];
