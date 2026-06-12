@@ -79,8 +79,9 @@ Hosted setup:
 4. Configure allowed redirect URLs for the web app:
    - `/login`
    - `/invite/accept`
-   - `/onboarding/profile`
    - `/onboarding/organization`
+   - `/onboarding/structure`
+   - `/onboarding/profile`
 5. Store Supabase anon/service-role/JWT settings in the deployment secret store.
 6. Set `ENABLE_DEMO_AUTH=false` outside local demos so requests require Supabase bearer tokens.
 7. Set `ENABLE_DEMO_RESET=false` outside local demos so destructive reset is not exposed.
@@ -96,6 +97,22 @@ For local Supabase testing against seeded users:
 3. Run `npm run db:push` and `npm run db:seed` against the Supabase database.
 4. Sign in at `/login` with one of the Supabase users. On first successful request, PulseShift links the real Supabase `sub` to the matching seeded app user by email.
 5. Invite a workforce member from `/onboarding/organization`, create or sign in as that invited Supabase user, then open the invite URL and accept it.
+
+## Supabase Onboarding Flow
+
+New workspace owners should complete these steps in order:
+
+1. Sign up or sign in at `/login`.
+2. Create a workspace at `/onboarding/organization` when no PulseShift user is linked yet.
+3. Add the first facility and unit at `/onboarding/structure` with blank required fields.
+4. Complete the owner workforce profile at `/onboarding/profile`.
+5. Invite team members from `/onboarding/organization` once structure exists.
+
+Invited users should sign in, open the emailed invite link at `/invite/accept`, accept the invitation, then finish `/onboarding/profile`.
+
+`GET /auth/me` returns `facilityCount`, `employeeProfile`, and `needsProfileOnboarding` so the web router can send each account to the next incomplete step.
+
+`GET /invitations/pending` lets a signed-in Supabase user discover pending invites by email before creating a duplicate workspace.
 
 ## Prisma Commands
 
