@@ -13,6 +13,7 @@ import {
   findDemoSessionBySupabaseAuthId,
   type DemoSession
 } from "./demo-users";
+import type { PermissionService } from "./permission.service";
 import type { SupabaseJwtClaims } from "./supabase-jwt.service";
 
 function scopeFromJson(value: unknown): Scope {
@@ -82,6 +83,44 @@ export class AuthSessionService {
       email: user.email,
       role: primaryRole.role,
       grants
+    };
+  }
+
+  async buildMeResponse(session: DemoSession, permissions: PermissionService) {
+    const base = {
+      ...session,
+      permissions: permissions.effectivePermissions(session),
+      scopes: permissions.effectiveScopes(session)
+    };
+
+    if (session.userId.startsWith("user_")) {
+      return {
+        ...base,
+        employeeProfile: null,
+        needsProfileOnboarding: false,
+        facilityCount: 1
+      };
+    }
+
+    const [employeeProfile, facilityCount] = await Promise.all([
+      prisma.employeeProfile.findUnique({
+        where: { userId: session.userId },
+        select: {
+          id: true,
+          employeeNumber: true,
+          legalName: true,
+          primaryFacilityId: true,
+          primaryUnitId: true
+        }
+      }),
+      prisma.facility.count({ where: { organizationId: session.organizationId } })
+    ]);
+
+    return {
+      ...base,
+      employeeProfile,
+      needsProfileOnboarding: !employeeProfile,
+      facilityCount
     };
   }
 

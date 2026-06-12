@@ -20,8 +20,10 @@ assert.ok(onboardingService.includes("createOrganizationForSupabaseUser"));
 assert.ok(onboardingService.includes("upsertEmployeeProfile"));
 assert.ok(middleware.includes("shouldUseDemoAuth"));
 assert.ok(middleware.includes("allowsUnlinkedSupabaseSession"));
-assert.ok(accountActions.includes("resolveSupabaseSessionDestination"));
+assert.ok(accountActions.includes("resolveOnboardingRoute"));
 assert.ok(accountActions.includes("delete(sessionCookieNames.demoUserId)"));
+assert.ok(accountActions.includes("bootstrapStructureAction"));
+assert.ok(organizationPage.includes("canInvite"));
 assert.ok(organizationPage.includes("Create workspace"));
 assert.ok(profilePage.includes("Save profile"));
 

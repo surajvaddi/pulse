@@ -5,18 +5,18 @@ import type { Response } from "express";
 import { CurrentSession } from "./session.decorator";
 import type { DemoSession } from "./demo-users";
 import { PermissionService } from "./permission.service";
+import { AuthSessionService } from "./auth-session.service";
 
 @Controller("auth")
 export class AuthController {
-  constructor(@Inject(PermissionService) private readonly permissions: PermissionService) {}
+  constructor(
+    @Inject(PermissionService) private readonly permissions: PermissionService,
+    @Inject(AuthSessionService) private readonly sessions: AuthSessionService
+  ) {}
 
   @Get("me")
-  me(@CurrentSession() session: DemoSession) {
-    return {
-      ...session,
-      permissions: this.permissions.effectivePermissions(session),
-      scopes: this.permissions.effectiveScopes(session)
-    };
+  async me(@CurrentSession() session: DemoSession) {
+    return this.sessions.buildMeResponse(session, this.permissions);
   }
 
   @Post("logout")
