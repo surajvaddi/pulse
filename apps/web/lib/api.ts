@@ -27,6 +27,15 @@ export type SessionSummary = {
   role: string;
   permissions: string[];
   supabaseAuthId?: string;
+  employeeProfile?: {
+    id: string;
+    employeeNumber: string;
+    legalName: string;
+    primaryFacilityId: string;
+    primaryUnitId: string;
+  } | null;
+  needsProfileOnboarding?: boolean;
+  facilityCount?: number;
 };
 
 export type Invitation = {
@@ -588,4 +597,51 @@ export async function apiGetWithAccessToken<T>(path: string, accessToken: string
   }
 
   return (await response.json()) as T;
+}
+
+export async function apiGetSession<T>(path: string, fallbackUserId: DemoUserId = "user_priya"): Promise<T> {
+  const { readSupabaseAccessToken } = await import("@/lib/onboarding-access");
+  const accessToken = await readSupabaseAccessToken();
+  if (accessToken) {
+    return apiGetWithAccessToken<T>(path, accessToken);
+  }
+  return apiGet<T>(path, fallbackUserId);
+}
+
+export async function apiPostSession<T>(
+  path: string,
+  body: Record<string, unknown> = {},
+  fallbackUserId: DemoUserId = "user_priya"
+): Promise<T> {
+  const { readSupabaseAccessToken } = await import("@/lib/onboarding-access");
+  const accessToken = await readSupabaseAccessToken();
+  if (accessToken) {
+    return apiPostWithAccessToken<T>(path, body, accessToken);
+  }
+  return apiPost<T>(path, body, fallbackUserId);
+}
+
+export async function apiPatchSession<T>(
+  path: string,
+  body: Record<string, unknown> = {},
+  fallbackUserId: DemoUserId = "user_priya"
+): Promise<T> {
+  const { readSupabaseAccessToken } = await import("@/lib/onboarding-access");
+  const accessToken = await readSupabaseAccessToken();
+  if (accessToken) {
+    const response = await fetch(`${API_BASE_URL}${path}`, {
+      method: "PATCH",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${accessToken}`
+      },
+      body: JSON.stringify(body),
+      cache: "no-store"
+    });
+    if (!response.ok) {
+      throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+    }
+    return (await response.json()) as T;
+  }
+  return apiPatch<T>(path, body, fallbackUserId);
 }
