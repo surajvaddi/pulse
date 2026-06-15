@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   buildOnboardingProgress,
   resolveOnboardingRoute,
+  sessionNeedsNotificationPreferencesOnboarding,
   sessionNeedsProfileOnboarding
 } from "./onboarding-progress";
 
@@ -35,7 +36,37 @@ assert.equal(
 assert.equal(
   resolveOnboardingRoute({
     claims,
-    session,
+    session: {
+      ...session,
+      needsNotificationPreferencesOnboarding: true,
+      needsIntegrationsOnboarding: true
+    },
+    facilityCount: 1,
+    employeeProfile: { id: "emp_owner" }
+  }),
+  "/onboarding/preferences"
+);
+assert.equal(
+  resolveOnboardingRoute({
+    claims,
+    session: {
+      ...session,
+      needsNotificationPreferencesOnboarding: false,
+      needsIntegrationsOnboarding: true
+    },
+    facilityCount: 1,
+    employeeProfile: { id: "emp_owner" }
+  }),
+  "/onboarding/integrations"
+);
+assert.equal(
+  resolveOnboardingRoute({
+    claims,
+    session: {
+      ...session,
+      needsNotificationPreferencesOnboarding: false,
+      needsIntegrationsOnboarding: false
+    },
     facilityCount: 1,
     employeeProfile: { id: "emp_owner" }
   }),
@@ -44,6 +75,13 @@ assert.equal(
 
 assert.equal(sessionNeedsProfileOnboarding(session, null), true);
 assert.equal(sessionNeedsProfileOnboarding(session, { id: "emp_owner" }), false);
+assert.equal(
+  sessionNeedsNotificationPreferencesOnboarding({
+    ...session,
+    needsNotificationPreferencesOnboarding: true
+  }),
+  true
+);
 
 const progress = buildOnboardingProgress({
   claims,

@@ -7,6 +7,8 @@ const accountActions = readFileSync("../../apps/web/app/account-actions.ts", "ut
 
 assert.ok(authSessionService.includes("buildMeResponse"));
 assert.ok(authSessionService.includes("needsProfileOnboarding"));
+assert.ok(authSessionService.includes("needsNotificationPreferencesOnboarding"));
+assert.ok(authSessionService.includes("needsIntegrationsOnboarding"));
 assert.ok(authSessionService.includes("facilityCount"));
 assert.ok(authController.includes("buildMeResponse"));
 assert.ok(accountActions.includes("resolveOnboardingRoute"));

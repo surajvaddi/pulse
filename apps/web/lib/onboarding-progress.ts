@@ -6,6 +6,8 @@ export type OnboardingProgress = {
   hasLinkedSession: boolean;
   hasFacilities: boolean;
   needsProfileOnboarding: boolean;
+  needsNotificationPreferencesOnboarding: boolean;
+  needsIntegrationsOnboarding: boolean;
 };
 
 export function hasLinkedSession(session: SessionSummary | null | undefined): session is SessionSummary {
@@ -22,6 +24,14 @@ export function sessionNeedsProfileOnboarding(
   return true;
 }
 
+export function sessionNeedsNotificationPreferencesOnboarding(session: SessionSummary): boolean {
+  return Boolean(session.needsNotificationPreferencesOnboarding);
+}
+
+export function sessionNeedsIntegrationsOnboarding(session: SessionSummary): boolean {
+  return Boolean(session.needsIntegrationsOnboarding);
+}
+
 export function buildOnboardingProgress(input: {
   session: SessionSummary | null;
   claims: SupabaseAccessTokenClaims;
@@ -35,7 +45,11 @@ export function buildOnboardingProgress(input: {
     needsProfileOnboarding:
       linked && input.session
         ? sessionNeedsProfileOnboarding(input.session, input.employeeProfile)
-        : false
+        : false,
+    needsNotificationPreferencesOnboarding:
+      linked && input.session ? sessionNeedsNotificationPreferencesOnboarding(input.session) : false,
+    needsIntegrationsOnboarding:
+      linked && input.session ? sessionNeedsIntegrationsOnboarding(input.session) : false
   };
 }
 
@@ -44,6 +58,8 @@ export type OnboardingRoute =
   | "/onboarding/organization"
   | "/onboarding/structure"
   | "/onboarding/profile"
+  | "/onboarding/preferences"
+  | "/onboarding/integrations"
   | "/app";
 
 export function resolveOnboardingRoute(input: {
@@ -76,6 +92,14 @@ export function resolveOnboardingRoute(input: {
 
   if (sessionNeedsProfileOnboarding(input.session, input.employeeProfile)) {
     return "/onboarding/profile";
+  }
+
+  if (sessionNeedsNotificationPreferencesOnboarding(input.session)) {
+    return "/onboarding/preferences";
+  }
+
+  if (sessionNeedsIntegrationsOnboarding(input.session)) {
+    return "/onboarding/integrations";
   }
 
   return "/app";

@@ -35,6 +35,8 @@ export type SessionSummary = {
     primaryUnitId: string;
   } | null;
   needsProfileOnboarding?: boolean;
+  needsNotificationPreferencesOnboarding?: boolean;
+  needsIntegrationsOnboarding?: boolean;
   facilityCount?: number;
 };
 

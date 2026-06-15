@@ -1,11 +1,21 @@
 import { BadRequestException, ForbiddenException, Injectable } from "@nestjs/common";
 import { prisma } from "@pulseshift/db";
-import { PermissionSchema, RolePermissionMap, type Scope } from "@pulseshift/domain";
+import {
+  PermissionSchema,
+  RoleNotificationPreferenceDefaults,
+  RolePermissionMap,
+  type AccountRole,
+  type Scope
+} from "@pulseshift/domain";
 
 import { FacilityRecordSchema, UnitRecordSchema } from "../admin/admin-contracts";
 import type { SupabaseJwtClaims } from "./supabase-jwt.service";
 import type { DemoSession } from "./demo-users";
 import {
+  IntegrationsOnboardingInputSchema,
+  IntegrationsOnboardingResultSchema,
+  NotificationPreferencesOnboardingInputSchema,
+  NotificationPreferencesOnboardingResultSchema,
   OrganizationStructureBootstrapInputSchema,
   OrganizationStructureBootstrapResultSchema,
   type OrganizationStructureBootstrapInput
@@ -13,6 +23,10 @@ import {
 
 function ownerPermissions() {
   return RolePermissionMap.ORGANIZATION_OWNER.map((permission) => PermissionSchema.parse(permission));
+}
+
+function isOrganizationAdministrator(role: AccountRole) {
+  return role === "ORGANIZATION_OWNER" || role === "SYSTEM_ADMIN";
 }
 
 @Injectable()
@@ -241,10 +255,117 @@ export class OnboardingService {
       primaryFacilityId: profile.primaryFacilityId,
       primaryUnitId: profile.primaryUnitId,
       roleId: profile.roleId,
-      nextStep:
-        session.role === "ORGANIZATION_OWNER" || session.role === "SYSTEM_ADMIN"
-          ? "/onboarding/organization"
-          : "/app/home"
+      nextStep: "/onboarding/preferences" as const
     };
+  }
+
+  async completeNotificationPreferences(
+    session: DemoSession,
+    input: {
+      phone?: string;
+      emailAlertsEnabled?: boolean;
+      smsAlertsEnabled?: boolean;
+    }
+  ) {
+    const parsed = NotificationPreferencesOnboardingInputSchema.parse(input);
+    const phone = parsed.phone?.trim() || undefined;
+    const smsEnabled = parsed.smsAlertsEnabled && Boolean(phone);
+
+    await prisma.$transaction(async (tx) => {
+      for (const preference of RoleNotificationPreferenceDefaults[session.role]) {
+        let enabled = preference.enabled;
+        if (preference.channel === "EMAIL" && !preference.required) {
+          enabled = parsed.emailAlertsEnabled;
+        }
+        if (preference.channel === "SMS" && !preference.required) {
+          enabled = smsEnabled;
+        }
+        await tx.notificationPreference.upsert({
+          where: {
+            userId_category_channel: {
+              userId: session.userId,
+              category: preference.category,
+              channel: preference.channel
+            }
+          },
+          update: {
+            role: session.role,
+            enabled,
+            required: preference.required,
+            priority: preference.priority
+          },
+          create: {
+            userId: session.userId,
+            role: session.role,
+            category: preference.category,
+            channel: preference.channel,
+            enabled,
+            required: preference.required,
+            priority: preference.priority
+          }
+        });
+      }
+
+      await tx.user.update({
+        where: { id: session.userId },
+        data: {
+          ...(phone ? { phone } : {}),
+          notificationPreferencesOnboardedAt: new Date()
+        }
+      });
+
+      await tx.auditLog.create({
+        data: {
+          organizationId: session.organizationId,
+          actorUserId: session.userId,
+          actorType: "USER",
+          action: "onboarding.preferences.completed",
+          objectType: "User",
+          objectId: session.userId,
+          after: {
+            emailAlertsEnabled: parsed.emailAlertsEnabled,
+            smsAlertsEnabled: smsEnabled,
+            phoneProvided: Boolean(phone)
+          }
+        }
+      });
+    });
+
+    return NotificationPreferencesOnboardingResultSchema.parse({
+      nextStep: isOrganizationAdministrator(session.role) ? "/onboarding/integrations" : "/app/home"
+    });
+  }
+
+  async completeIntegrationsOnboarding(
+    session: DemoSession,
+    input: { action?: "skip" | "continue" }
+  ) {
+    if (!isOrganizationAdministrator(session.role)) {
+      throw new ForbiddenException("Only organization administrators can complete integrations onboarding.");
+    }
+
+    const parsed = IntegrationsOnboardingInputSchema.parse(input);
+
+    await prisma.$transaction(async (tx) => {
+      await tx.user.update({
+        where: { id: session.userId },
+        data: { integrationsOnboardingCompletedAt: new Date() }
+      });
+      await tx.auditLog.create({
+        data: {
+          organizationId: session.organizationId,
+          actorUserId: session.userId,
+          actorType: "USER",
+          action: "onboarding.integrations.completed",
+          objectType: "User",
+          objectId: session.userId,
+          after: { action: parsed.action }
+        }
+      });
+    });
+
+    return IntegrationsOnboardingResultSchema.parse({
+      nextStep: "/onboarding/organization"
+    });
   }
 }

@@ -9,6 +9,8 @@ const onboardingAccess = readFileSync("lib/onboarding-access.ts", "utf8");
 assert.ok(onboardingAccess.includes("requireSupabaseAccessToken"));
 assert.ok(accountActions.includes('apiPostWithAccessToken('));
 assert.ok(accountActions.includes('"/onboarding/profile"'));
+assert.ok(accountActions.includes('"/onboarding/preferences"'));
+assert.ok(accountActions.includes('"/onboarding/integrations"'));
 assert.ok(accountActions.includes('"/users/invite"'));
 assert.equal(accountActions.includes('"user_admin"'), false);
 assert.ok(onboardingAccess.includes("readSupabaseAccessToken"));

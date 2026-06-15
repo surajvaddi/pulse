@@ -386,6 +386,8 @@ model User {
   authProvider         AuthProvider       @default(PASSWORD)
   status               UserStatus         @default(INVITED)
   lastLoginAt          DateTime?
+  notificationPreferencesOnboardedAt DateTime?
+  integrationsOnboardingCompletedAt    DateTime?
   roles                UserRole[]
   employeeProfile      EmployeeProfile?
   notifications        Notification[]

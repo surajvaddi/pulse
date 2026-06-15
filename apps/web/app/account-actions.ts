@@ -82,7 +82,7 @@ export async function bootstrapStructureAction(formData: FormData) {
 
 export async function upsertProfileAction(formData: FormData) {
   const accessToken = await requireSupabaseAccessToken();
-  await apiPostWithAccessToken(
+  const result = await apiPostWithAccessToken<{ nextStep: string }>(
     "/onboarding/profile",
     {
       legalName: String(formData.get("legalName") ?? ""),
@@ -95,11 +95,32 @@ export async function upsertProfileAction(formData: FormData) {
     },
     accessToken
   );
-  const session = await apiGetWithAccessToken<SessionSummary>("/auth/me", accessToken);
-  if (session.role === "ORGANIZATION_OWNER" || session.role === "SYSTEM_ADMIN") {
-    redirect("/onboarding/organization");
-  }
-  redirect("/app/home");
+  redirect(result.nextStep);
+}
+
+export async function completeNotificationPreferencesAction(formData: FormData) {
+  const accessToken = await requireSupabaseAccessToken();
+  const result = await apiPostWithAccessToken<{ nextStep: string }>(
+    "/onboarding/preferences",
+    {
+      phone: String(formData.get("phone") ?? ""),
+      emailAlertsEnabled: formData.get("emailAlertsEnabled") === "on",
+      smsAlertsEnabled: formData.get("smsAlertsEnabled") === "on"
+    },
+    accessToken
+  );
+  redirect(result.nextStep);
+}
+
+export async function completeIntegrationsOnboardingAction(formData: FormData) {
+  const accessToken = await requireSupabaseAccessToken();
+  const action = String(formData.get("action") ?? "skip") as "skip" | "continue";
+  const result = await apiPostWithAccessToken<{ nextStep: string }>(
+    "/onboarding/integrations",
+    { action },
+    accessToken
+  );
+  redirect(result.nextStep);
 }
 
 export async function inviteWorkforceMemberAction(formData: FormData) {

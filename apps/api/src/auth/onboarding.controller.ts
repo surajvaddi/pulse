@@ -46,4 +46,25 @@ export class OnboardingController {
   ) {
     return this.onboarding.upsertEmployeeProfile(session, body);
   }
+
+  @Post("preferences")
+  completePreferences(
+    @CurrentSession() session: DemoSession,
+    @Body()
+    body: {
+      phone?: string;
+      emailAlertsEnabled?: boolean;
+      smsAlertsEnabled?: boolean;
+    }
+  ) {
+    return this.onboarding.completeNotificationPreferences(session, body);
+  }
+
+  @Post("integrations")
+  completeIntegrations(
+    @CurrentSession() session: DemoSession,
+    @Body() body: { action?: "skip" | "continue" }
+  ) {
+    return this.onboarding.completeIntegrationsOnboarding(session, body);
+  }
 }

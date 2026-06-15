@@ -29,6 +29,10 @@ export default async function OrganizationOnboardingPage({
     redirect("/onboarding/structure");
   } else if (session.needsProfileOnboarding) {
     redirect("/onboarding/profile");
+  } else if (session.needsNotificationPreferencesOnboarding) {
+    redirect("/onboarding/preferences");
+  } else if (session.needsIntegrationsOnboarding) {
+    redirect("/onboarding/integrations");
   }
 
   const canInvite = Boolean(session && (session.facilityCount ?? 0) > 0);

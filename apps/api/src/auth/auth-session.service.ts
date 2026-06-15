@@ -98,9 +98,19 @@ export class AuthSessionService {
         ...base,
         employeeProfile: null,
         needsProfileOnboarding: false,
+        needsNotificationPreferencesOnboarding: false,
+        needsIntegrationsOnboarding: false,
         facilityCount: 1
       };
     }
+
+    const user = await prisma.user.findUnique({
+      where: { id: session.userId },
+      select: {
+        notificationPreferencesOnboardedAt: true,
+        integrationsOnboardingCompletedAt: true
+      }
+    });
 
     const [employeeProfile, facilityCount] = await Promise.all([
       prisma.employeeProfile.findUnique({
@@ -120,6 +130,10 @@ export class AuthSessionService {
       ...base,
       employeeProfile,
       needsProfileOnboarding: !employeeProfile,
+      needsNotificationPreferencesOnboarding: !user?.notificationPreferencesOnboardedAt,
+      needsIntegrationsOnboarding:
+        (session.role === "ORGANIZATION_OWNER" || session.role === "SYSTEM_ADMIN") &&
+        !user?.integrationsOnboardingCompletedAt,
       facilityCount
     };
   }
