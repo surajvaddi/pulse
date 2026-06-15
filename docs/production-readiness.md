@@ -82,6 +82,8 @@ Hosted setup:
    - `/onboarding/organization`
    - `/onboarding/structure`
    - `/onboarding/profile`
+   - `/onboarding/preferences`
+   - `/onboarding/integrations`
 5. Store Supabase anon/service-role/JWT settings in the deployment secret store.
 6. Set `ENABLE_DEMO_AUTH=false` outside local demos so requests require Supabase bearer tokens.
 7. Set `ENABLE_DEMO_RESET=false` outside local demos so destructive reset is not exposed.
@@ -106,11 +108,13 @@ New workspace owners should complete these steps in order:
 2. Create a workspace at `/onboarding/organization` when no PulseShift user is linked yet.
 3. Add the first facility and unit at `/onboarding/structure` with blank required fields.
 4. Complete the owner workforce profile at `/onboarding/profile`.
-5. Invite team members from `/onboarding/organization` once structure exists.
+5. Choose notification delivery at `/onboarding/preferences`.
+6. Review integrations at `/onboarding/integrations` or skip for now.
+7. Invite team members from `/onboarding/organization` once structure exists.
 
-Invited users should sign in, open the emailed invite link at `/invite/accept`, accept the invitation, then finish `/onboarding/profile`.
+Invited users should sign in, open the emailed invite link at `/invite/accept`, accept the invitation, then finish `/onboarding/profile` and `/onboarding/preferences`.
 
-`GET /auth/me` returns `facilityCount`, `employeeProfile`, and `needsProfileOnboarding` so the web router can send each account to the next incomplete step.
+`GET /auth/me` returns `facilityCount`, `employeeProfile`, `needsProfileOnboarding`, `needsNotificationPreferencesOnboarding`, and `needsIntegrationsOnboarding` so the web router can send each account to the next incomplete step.
 
 `GET /invitations/pending` lets a signed-in Supabase user discover pending invites by email before creating a duplicate workspace.
 
