@@ -1,25 +1,33 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Building2, Send, Settings2 } from "lucide-react";
+import { Building2, Settings2 } from "lucide-react";
 
-import { createOrganizationAction, inviteWorkforceMemberAction } from "../../account-actions";
-import { apiGetWithAccessToken, type Invitation } from "@/lib/api";
+import { createOrganizationAction, createWorkforceRoleAction } from "../../account-actions";
+import { apiGetWithAccessToken, type Invitation, type InvitationOptions } from "@/lib/api";
 import { loadOnboardingContext } from "@/lib/onboarding-guards";
+import { ScopedInvitationForm } from "./scoped-invitation-form";
 
 type OrganizationOnboardingPageProps = {
   searchParams: Promise<{
     invited?: string;
+    roleCreated?: string;
   }>;
 };
 
 export default async function OrganizationOnboardingPage({
   searchParams
 }: OrganizationOnboardingPageProps) {
-  const { invited } = await searchParams;
+  const { invited, roleCreated } = await searchParams;
   const { claims, session, route, accessToken } = await loadOnboardingContext();
   const pendingInvites = !session
     ? await apiGetWithAccessToken<Invitation[]>("/invitations/pending", accessToken).catch(() => [])
     : [];
+  const invitationOptions = session
+    ? await apiGetWithAccessToken<InvitationOptions>(
+        "/onboarding/invitation-options",
+        accessToken
+      )
+    : null;
 
   if (!session) {
     if (route !== "/onboarding/organization") {
@@ -50,6 +58,7 @@ export default async function OrganizationOnboardingPage({
           </p>
           <p className="form-note">Signed in as {claims.email ?? claims.sub}</p>
           {invited ? <div className="risk-strip">Invite created for the current organization.</div> : null}
+          {roleCreated ? <div className="risk-strip">Workforce role created.</div> : null}
         </div>
 
         {!session && pendingInvites.length > 0 ? (
@@ -87,25 +96,22 @@ export default async function OrganizationOnboardingPage({
         ) : null}
 
         {canInvite ? (
-          <form action={inviteWorkforceMemberAction} className="auth-form">
-            <label htmlFor="email">Invite email</label>
-            <input id="email" name="email" type="email" placeholder="new.rn@example.com" required />
-            <label htmlFor="role">Role</label>
-            <select id="role" name="role" defaultValue="EMPLOYEE">
-              <option value="EMPLOYEE">Employee</option>
-              <option value="UNIT_MANAGER">Unit manager</option>
-              <option value="PAYROLL_ADMIN">Payroll</option>
-              <option value="WORKFORCE_ADMIN">Workforce admin</option>
-            </select>
-            <button className="command-button" type="submit">
-              <Send size={18} aria-hidden="true" />
-              Send invite
-            </button>
+          <div className="detail-stack">
+            {invitationOptions?.workforceRoles.length === 0 ? (
+              <form action={createWorkforceRoleAction} className="auth-form">
+                <label htmlFor="workforceRoleName">First workforce role</label>
+                <input id="workforceRoleName" name="name" placeholder="Registered Nurse" required />
+                <label htmlFor="workforceRoleDescription">Description</label>
+                <input id="workforceRoleDescription" name="description" placeholder="Direct care nursing role" />
+                <button className="command-button" type="submit">Create workforce role</button>
+              </form>
+            ) : null}
+            {invitationOptions ? <ScopedInvitationForm options={invitationOptions} /> : null}
             <Link className="command-button" href="/app/admin">
               <Settings2 size={18} aria-hidden="true" />
               Open admin workspace
             </Link>
-          </form>
+          </div>
         ) : null}
       </section>
     </main>

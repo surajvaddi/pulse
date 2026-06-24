@@ -1,6 +1,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import {
+  AccountRoleSchema,
+  onboardingRequirementsForRole
+} from "@pulseshift/domain";
 
 import { apiPatch, apiPost, apiPatchSession, apiPostSession, type DemoUserId } from "@/lib/api";
 import { demoResetEnabledForEnv } from "@/lib/demo-controls";
@@ -240,10 +244,43 @@ export async function assignAdminRoleAction(formData: FormData) {
 }
 
 export async function createAdminInvitationAction(formData: FormData) {
+  const role = AccountRoleSchema.parse(
+    String(formData.get("role") ?? "EMPLOYEE")
+  );
+  const facilityId = String(formData.get("facilityId") ?? "");
+  const unitId = String(formData.get("unitId") ?? "");
+  const facilityScoped =
+    role === "WORKFORCE_ADMIN" || role === "FLOAT_POOL_COORDINATOR";
+  const unitScoped = role === "UNIT_MANAGER" || role === "CHARGE_NURSE";
+  const requiresWorkforceAssignment =
+    onboardingRequirementsForRole(role).requiresEmployeeProfile;
+  const employeeNumberPolicy = String(
+    formData.get("employeeNumberPolicy") ?? "AUTO"
+  ) as "AUTO" | "ASSIGNED";
+  const employeeNumber = String(formData.get("employeeNumber") ?? "").trim();
   await apiPostSession("/admin/invitations", {
     email: String(formData.get("email") ?? ""),
-    role: String(formData.get("role") ?? "EMPLOYEE"),
-    selection: {},
+    role,
+    selection: {
+      ...(facilityScoped && facilityId ? { facilityIds: [facilityId] } : {}),
+      ...(unitScoped && unitId ? { unitIds: [unitId] } : {})
+    },
+    ...(requiresWorkforceAssignment
+      ? {
+          workforceAssignment: {
+            facilityId,
+            unitId,
+            workforceRoleId: String(formData.get("workforceRoleId") ?? ""),
+            employmentType: String(
+              formData.get("employmentType") ?? "FULL_TIME"
+            ),
+            employeeNumberPolicy,
+            ...(employeeNumberPolicy === "ASSIGNED" && employeeNumber
+              ? { employeeNumber }
+              : {})
+          }
+        }
+      : {}),
     reason: String(formData.get("reason") ?? "Invited from admin UI")
   }, "user_admin");
   revalidatePath("/app/admin/invitations");

@@ -1,10 +1,11 @@
-import { Send } from "lucide-react";
-
-import { createAdminInvitationAction } from "@/app/app/actions";
-import { apiGetSession, type AdminInvitation } from "@/lib/api";
+import { apiGetSession, type AdminInvitation, type InvitationOptions } from "@/lib/api";
+import { ScopedInvitationForm } from "@/app/onboarding/organization/scoped-invitation-form";
 
 export default async function AdminInvitationsPage() {
-  const invitations = await apiGetSession<AdminInvitation[]>("/admin/invitations", "user_admin");
+  const [invitations, options] = await Promise.all([
+    apiGetSession<AdminInvitation[]>("/admin/invitations", "user_admin"),
+    apiGetSession<InvitationOptions>("/onboarding/invitation-options", "user_admin")
+  ]);
 
   return (
     <section className="page-stack">
@@ -34,20 +35,7 @@ export default async function AdminInvitationsPage() {
           <div className="section-heading">
             <h2>Send invite</h2>
           </div>
-          <form action={createAdminInvitationAction} className="detail-stack">
-            <input name="email" type="email" placeholder="member@example.com" required />
-            <select name="role" defaultValue="EMPLOYEE">
-              <option value="EMPLOYEE">Employee</option>
-              <option value="UNIT_MANAGER">Unit Manager</option>
-              <option value="PAYROLL_ADMIN">Payroll Admin</option>
-              <option value="SYSTEM_ADMIN">System Admin</option>
-            </select>
-            <input name="reason" placeholder="Audit reason" required />
-            <button className="command-button" type="submit">
-              <Send size={16} aria-hidden="true" />
-              Send invite
-            </button>
-          </form>
+          <ScopedInvitationForm options={options} mode="admin" />
         </aside>
       </section>
     </section>

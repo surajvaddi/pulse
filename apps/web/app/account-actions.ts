@@ -1,6 +1,10 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import {
+  AccountRoleSchema,
+  onboardingRequirementsForRole
+} from "@pulseshift/domain";
 import { cookies } from "next/headers";
 import { accessTokenCookieOptions, demoUserCookieOptions, sessionCookieNames } from "@pulseshift/tools";
 
@@ -121,17 +125,62 @@ export async function completeIntegrationsOnboardingAction(formData: FormData) {
 export async function inviteWorkforceMemberAction(formData: FormData) {
   const accessToken = await requireSupabaseAccessToken();
   const email = String(formData.get("email") ?? "").trim();
-  const role = String(formData.get("role") ?? "EMPLOYEE");
+  const role = AccountRoleSchema.parse(
+    String(formData.get("role") ?? "EMPLOYEE")
+  );
+  const facilityId = String(formData.get("facilityId") ?? "");
+  const unitId = String(formData.get("unitId") ?? "");
+  const facilityScoped =
+    role === "WORKFORCE_ADMIN" || role === "FLOAT_POOL_COORDINATOR";
+  const unitScoped = role === "UNIT_MANAGER" || role === "CHARGE_NURSE";
+  const requiresWorkforceAssignment =
+    onboardingRequirementsForRole(role).requiresEmployeeProfile;
+  const employeeNumberPolicy = String(
+    formData.get("employeeNumberPolicy") ?? "AUTO"
+  ) as "AUTO" | "ASSIGNED";
+  const employeeNumber = String(formData.get("employeeNumber") ?? "").trim();
   await apiPostWithAccessToken(
     "/users/invite",
     {
       email,
       role,
-      selection: {}
+      selection: {
+        ...(facilityScoped && facilityId ? { facilityIds: [facilityId] } : {}),
+        ...(unitScoped && unitId ? { unitIds: [unitId] } : {})
+      },
+      ...(requiresWorkforceAssignment
+        ? {
+            workforceAssignment: {
+              facilityId,
+              unitId,
+              workforceRoleId: String(formData.get("workforceRoleId") ?? ""),
+              employmentType: String(
+                formData.get("employmentType") ?? "FULL_TIME"
+              ),
+              employeeNumberPolicy,
+              ...(employeeNumberPolicy === "ASSIGNED" && employeeNumber
+                ? { employeeNumber }
+                : {})
+            }
+          }
+        : {})
     },
     accessToken
   );
   redirect("/onboarding/organization?invited=1");
+}
+
+export async function createWorkforceRoleAction(formData: FormData) {
+  const accessToken = await requireSupabaseAccessToken();
+  await apiPostWithAccessToken(
+    "/onboarding/workforce-roles",
+    {
+      name: String(formData.get("name") ?? ""),
+      description: String(formData.get("description") ?? "")
+    },
+    accessToken
+  );
+  redirect("/onboarding/organization?roleCreated=1");
 }
 
 export async function acceptInvitationAction(formData: FormData) {

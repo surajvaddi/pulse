@@ -73,6 +73,16 @@ export type Invitation = {
   };
 };
 
+export type InvitationOptions = {
+  facilities: Array<{ id: string; name: string }>;
+  units: Array<{ id: string; name: string; facilityId: string }>;
+  workforceRoles: Array<{
+    id: string;
+    name: string;
+    description?: string | null;
+  }>;
+};
+
 export type DemoShift = {
   id: string;
   employeeId?: string;

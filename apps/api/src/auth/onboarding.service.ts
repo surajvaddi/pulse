@@ -27,11 +27,67 @@ function ownerPermissions() {
 }
 
 function isOrganizationAdministrator(role: AccountRole) {
-  return role === "ORGANIZATION_OWNER" || role === "SYSTEM_ADMIN";
+  return (
+    role === "ORGANIZATION_OWNER" ||
+    role === "SYSTEM_ADMIN" ||
+    role === "WORKFORCE_ADMIN"
+  );
 }
 
 @Injectable()
 export class OnboardingService {
+  async listInvitationOptions(session: DemoSession) {
+    if (!isOrganizationAdministrator(session.role)) {
+      throw new ForbiddenException(
+        "Only organization administrators can configure invitations."
+      );
+    }
+    const [facilities, units, workforceRoles] = await Promise.all([
+      prisma.facility.findMany({
+        where: { organizationId: session.organizationId, status: "ACTIVE" },
+        orderBy: { name: "asc" },
+        select: { id: true, name: true }
+      }),
+      prisma.unit.findMany({
+        where: {
+          facility: { organizationId: session.organizationId },
+          status: "ACTIVE"
+        },
+        orderBy: { name: "asc" },
+        select: { id: true, name: true, facilityId: true }
+      }),
+      prisma.workforceRole.findMany({
+        where: { organizationId: session.organizationId },
+        orderBy: { name: "asc" },
+        select: { id: true, name: true, description: true }
+      })
+    ]);
+    return { facilities, units, workforceRoles };
+  }
+
+  async createWorkforceRole(
+    session: DemoSession,
+    input: { name?: string; description?: string }
+  ) {
+    if (!isOrganizationAdministrator(session.role)) {
+      throw new ForbiddenException(
+        "Only organization administrators can create workforce roles."
+      );
+    }
+    const name = input.name?.trim();
+    if (!name) {
+      throw new BadRequestException("Workforce role name is required.");
+    }
+    return prisma.workforceRole.create({
+      data: {
+        organizationId: session.organizationId,
+        name,
+        description: input.description?.trim() || null
+      },
+      select: { id: true, name: true, description: true }
+    });
+  }
+
   async createOrganizationForSupabaseUser(
     claims: SupabaseJwtClaims,
     input: { name?: string; timezone?: string; displayName?: string }

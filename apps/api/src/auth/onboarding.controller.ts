@@ -1,4 +1,4 @@
-import { Body, Controller, Inject, Post, Req, UnauthorizedException } from "@nestjs/common";
+import { Body, Controller, Get, Inject, Post, Req, UnauthorizedException } from "@nestjs/common";
 import type { Request } from "express";
 
 import type { DemoSession } from "./demo-users";
@@ -45,6 +45,19 @@ export class OnboardingController {
     }
   ) {
     return this.onboarding.upsertEmployeeProfile(session, body);
+  }
+
+  @Get("invitation-options")
+  invitationOptions(@CurrentSession() session: DemoSession) {
+    return this.onboarding.listInvitationOptions(session);
+  }
+
+  @Post("workforce-roles")
+  createWorkforceRole(
+    @CurrentSession() session: DemoSession,
+    @Body() body: { name?: string; description?: string }
+  ) {
+    return this.onboarding.createWorkforceRole(session, body);
   }
 
   @Post("preferences")
