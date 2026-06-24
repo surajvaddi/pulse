@@ -1,7 +1,21 @@
 import { randomBytes, createHash } from "node:crypto";
-import { ForbiddenException, Inject, Injectable, UnauthorizedException } from "@nestjs/common";
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  Inject,
+  Injectable,
+  UnauthorizedException
+} from "@nestjs/common";
 import { prisma } from "@pulseshift/db";
-import { ScopeSchema, type AccountRole, type Scope } from "@pulseshift/domain";
+import {
+  InvitationWorkforceAssignmentSchema,
+  ScopeSchema,
+  onboardingRequirementsForRole,
+  type AccountRole,
+  type InvitationWorkforceAssignment,
+  type Scope
+} from "@pulseshift/domain";
 
 import { AuthSessionService } from "./auth-session.service";
 import type { DemoSession } from "./demo-users";
@@ -20,6 +34,7 @@ type DemoInvitation = {
   expiresAt: string;
   acceptedAt?: string;
   createdAt: string;
+  workforceAssignment?: InvitationWorkforceAssignment;
 };
 
 const demoInvitations: DemoInvitation[] = [];
@@ -49,6 +64,12 @@ type PrismaInvitation = {
   expiresAt: Date;
   acceptedAt: Date | null;
   createdAt: Date;
+  facilityId: string | null;
+  unitId: string | null;
+  workforceRoleId: string | null;
+  employmentType: InvitationWorkforceAssignment["employmentType"] | null;
+  employeeNumberPolicy: InvitationWorkforceAssignment["employeeNumberPolicy"] | null;
+  employeeNumber: string | null;
 };
 
 @Injectable()
@@ -62,17 +83,47 @@ export class InvitationService {
     scope: Scope;
     invitedByUserId: string;
     expiresAt?: string;
+    workforceAssignment?: InvitationWorkforceAssignment;
   }) {
     const token = randomBytes(24).toString("base64url");
     const expiresAt = args.expiresAt ?? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+    const workforceAssignment = args.workforceAssignment
+      ? InvitationWorkforceAssignmentSchema.parse(args.workforceAssignment)
+      : undefined;
+    const requiresWorkforceAssignment =
+      onboardingRequirementsForRole(args.role).requiresEmployeeProfile;
+
+    if (requiresWorkforceAssignment && !workforceAssignment) {
+      throw new BadRequestException(
+        "This account role requires an organization-assigned workforce placement."
+      );
+    }
+    if (!requiresWorkforceAssignment && workforceAssignment) {
+      throw new BadRequestException(
+        "Administrative account roles cannot receive a workforce placement through this invitation."
+      );
+    }
 
     if (authPersistenceEnabled()) {
+      if (workforceAssignment) {
+        await this.validateWorkforceAssignment(args.organizationId, workforceAssignment);
+      }
       const invitation = await prisma.invitation.create({
         data: {
           organizationId: args.organizationId,
           email: args.email.toLowerCase(),
           role: args.role,
           scope: args.scope,
+          ...(workforceAssignment
+            ? {
+                facilityId: workforceAssignment.facilityId,
+                unitId: workforceAssignment.unitId,
+                workforceRoleId: workforceAssignment.workforceRoleId,
+                employmentType: workforceAssignment.employmentType,
+                employeeNumberPolicy: workforceAssignment.employeeNumberPolicy,
+                employeeNumber: workforceAssignment.employeeNumber ?? null
+              }
+            : {}),
           tokenHash: hashToken(token),
           status: "PENDING",
           invitedByUserId: args.invitedByUserId,
@@ -96,7 +147,8 @@ export class InvitationService {
       status: "PENDING",
       invitedByUserId: args.invitedByUserId,
       expiresAt,
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      ...(workforceAssignment ? { workforceAssignment } : {})
     };
     demoInvitations.push(invitation);
     return {
@@ -137,7 +189,10 @@ export class InvitationService {
         role: prismaInvitation.role,
         scope: ScopeSchema.parse(prismaInvitation.scope),
         supabaseAuthId: claims.sub,
-        displayName: claims.email
+        displayName: claims.email,
+        ...(this.workforceAssignmentFromPrisma(prismaInvitation)
+          ? { workforceAssignment: this.workforceAssignmentFromPrisma(prismaInvitation) }
+          : {})
       });
 
       const accepted = await prisma.invitation.update({
@@ -210,6 +265,7 @@ export class InvitationService {
   }
 
   private publicPrismaInvitation(invitation: PrismaInvitation) {
+    const workforceAssignment = this.workforceAssignmentFromPrisma(invitation);
     const result = {
       id: invitation.id,
       organizationId: invitation.organizationId,
@@ -223,8 +279,61 @@ export class InvitationService {
     };
     return {
       ...result,
+      ...(workforceAssignment ? { workforceAssignment } : {}),
       ...(invitation.acceptedByUserId ? { acceptedByUserId: invitation.acceptedByUserId } : {}),
       ...(invitation.acceptedAt ? { acceptedAt: invitation.acceptedAt.toISOString() } : {})
     };
+  }
+
+  private workforceAssignmentFromPrisma(
+    invitation: PrismaInvitation
+  ): InvitationWorkforceAssignment | undefined {
+    if (
+      !invitation.facilityId ||
+      !invitation.unitId ||
+      !invitation.workforceRoleId ||
+      !invitation.employmentType ||
+      !invitation.employeeNumberPolicy
+    ) {
+      return undefined;
+    }
+    return InvitationWorkforceAssignmentSchema.parse({
+      facilityId: invitation.facilityId,
+      unitId: invitation.unitId,
+      workforceRoleId: invitation.workforceRoleId,
+      employmentType: invitation.employmentType,
+      employeeNumberPolicy: invitation.employeeNumberPolicy,
+      ...(invitation.employeeNumber ? { employeeNumber: invitation.employeeNumber } : {})
+    });
+  }
+
+  private async validateWorkforceAssignment(
+    organizationId: string,
+    assignment: InvitationWorkforceAssignment
+  ) {
+    const [facility, unit, workforceRole, duplicateEmployeeNumber] = await Promise.all([
+      prisma.facility.findFirst({ where: { id: assignment.facilityId, organizationId } }),
+      prisma.unit.findFirst({
+        where: { id: assignment.unitId, facility: { organizationId } }
+      }),
+      prisma.workforceRole.findFirst({
+        where: { id: assignment.workforceRoleId, organizationId }
+      }),
+      assignment.employeeNumber
+        ? prisma.employeeProfile.findFirst({
+            where: { organizationId, employeeNumber: assignment.employeeNumber }
+          })
+        : null
+    ]);
+    if (!facility || !unit || unit.facilityId !== facility.id || !workforceRole) {
+      throw new BadRequestException(
+        "Invitation workforce placement must belong to the current organization."
+      );
+    }
+    if (duplicateEmployeeNumber) {
+      throw new ConflictException(
+        `Employee number ${assignment.employeeNumber} is already in use.`
+      );
+    }
   }
 }

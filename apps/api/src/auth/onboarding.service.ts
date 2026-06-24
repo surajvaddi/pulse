@@ -190,51 +190,121 @@ export class OnboardingService {
     }
   ) {
     const legalName = input.legalName?.trim() || session.displayName || session.email;
-    const roleName = input.roleName?.trim() || "RN";
-    const facilityId = input.facilityId?.trim();
-    const unitId = input.unitId?.trim();
-    if (!facilityId || !unitId) {
-      throw new BadRequestException("Facility and unit are required to create a workforce profile.");
-    }
-
-    const [facility, unit] = await Promise.all([
-      prisma.facility.findFirst({ where: { id: facilityId, organizationId: session.organizationId } }),
-      prisma.unit.findFirst({ where: { id: unitId, facility: { organizationId: session.organizationId } } })
-    ]);
-    if (!facility || !unit || unit.facilityId !== facility.id) {
-      throw new BadRequestException("Profile facility and unit must belong to the current organization.");
-    }
-
-    const role = await prisma.workforceRole.upsert({
-      where: { organizationId_name: { organizationId: session.organizationId, name: roleName } },
-      update: {},
-      create: {
-        organizationId: session.organizationId,
-        name: roleName,
-        description: "Created during workforce profile onboarding"
-      }
+    const existingProfile = await prisma.employeeProfile.findUnique({
+      where: { userId: session.userId }
     });
-    const profile = await prisma.employeeProfile.upsert({
-      where: { userId: session.userId },
-      update: {
-        legalName,
-        preferredName: input.preferredName?.trim() || legalName,
-        primaryFacilityId: facility.id,
-        primaryUnitId: unit.id,
-        roleId: role.id,
-        employmentType: input.employmentType ?? "FULL_TIME",
-        status: "ACTIVE"
+    if (existingProfile) {
+      const profile = await prisma.employeeProfile.update({
+        where: { id: existingProfile.id },
+        data: {
+          legalName,
+          preferredName: input.preferredName?.trim() || legalName
+        }
+      });
+      return {
+        id: profile.id,
+        employeeNumber: profile.employeeNumber,
+        legalName: profile.legalName,
+        primaryFacilityId: profile.primaryFacilityId,
+        primaryUnitId: profile.primaryUnitId,
+        roleId: profile.roleId,
+        nextStep: "/onboarding/preferences" as const
+      };
+    }
+
+    const invitation = await prisma.invitation.findFirst({
+      where: {
+        organizationId: session.organizationId,
+        acceptedByUserId: session.userId,
+        status: "ACCEPTED"
       },
-      create: {
+      orderBy: { acceptedAt: "desc" }
+    });
+    if (
+      !invitation?.facilityId ||
+      !invitation.unitId ||
+      !invitation.workforceRoleId ||
+      !invitation.employmentType ||
+      !invitation.employeeNumberPolicy
+    ) {
+      throw new BadRequestException(
+        "A valid accepted workforce invitation is required before creating this profile."
+      );
+    }
+
+    const submittedAssignment = {
+      facilityId: input.facilityId?.trim(),
+      unitId: input.unitId?.trim(),
+      roleName: input.roleName?.trim(),
+      employmentType: input.employmentType,
+      employeeNumber: input.employeeNumber?.trim()
+    };
+    if (
+      (submittedAssignment.facilityId &&
+        submittedAssignment.facilityId !== invitation.facilityId) ||
+      (submittedAssignment.unitId && submittedAssignment.unitId !== invitation.unitId) ||
+      (submittedAssignment.employmentType &&
+        submittedAssignment.employmentType !== invitation.employmentType) ||
+      (submittedAssignment.employeeNumber &&
+        submittedAssignment.employeeNumber !== invitation.employeeNumber)
+    ) {
+      throw new BadRequestException(
+        "Workforce placement is controlled by the accepted invitation and cannot be changed here."
+      );
+    }
+
+    const [facility, unit, role] = await Promise.all([
+      prisma.facility.findFirst({
+        where: { id: invitation.facilityId, organizationId: session.organizationId }
+      }),
+      prisma.unit.findFirst({
+        where: {
+          id: invitation.unitId,
+          facility: { organizationId: session.organizationId }
+        }
+      }),
+      prisma.workforceRole.findFirst({
+        where: {
+          id: invitation.workforceRoleId,
+          organizationId: session.organizationId
+        }
+      })
+    ]);
+    if (!facility || !unit || unit.facilityId !== facility.id || !role) {
+      throw new BadRequestException(
+        "Invitation workforce placement no longer belongs to the current organization."
+      );
+    }
+
+    const employeeNumber =
+      invitation.employeeNumberPolicy === "ASSIGNED"
+        ? invitation.employeeNumber
+        : `EMP-${session.userId.replace(/[^a-zA-Z0-9]/g, "").slice(-10).toUpperCase()}`;
+    if (!employeeNumber) {
+      throw new BadRequestException(
+        "The invitation requires an assigned employee number."
+      );
+    }
+    const duplicateEmployeeNumber = await prisma.employeeProfile.findFirst({
+      where: { organizationId: session.organizationId, employeeNumber }
+    });
+    if (duplicateEmployeeNumber) {
+      throw new BadRequestException(
+        `Employee number ${employeeNumber} is already in use. Ask an administrator to update the invitation.`
+      );
+    }
+
+    const profile = await prisma.employeeProfile.create({
+      data: {
         userId: session.userId,
         organizationId: session.organizationId,
-        employeeNumber: input.employeeNumber?.trim() || `EMP-${session.userId.slice(0, 8)}`,
+        employeeNumber,
         legalName,
         preferredName: input.preferredName?.trim() || legalName,
         primaryFacilityId: facility.id,
         primaryUnitId: unit.id,
         roleId: role.id,
-        employmentType: input.employmentType ?? "FULL_TIME",
+        employmentType: invitation.employmentType,
         status: "ACTIVE"
       }
     });

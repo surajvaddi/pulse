@@ -86,12 +86,7 @@ export async function upsertProfileAction(formData: FormData) {
     "/onboarding/profile",
     {
       legalName: String(formData.get("legalName") ?? ""),
-      preferredName: String(formData.get("preferredName") ?? ""),
-      employeeNumber: String(formData.get("employeeNumber") ?? ""),
-      facilityId: String(formData.get("facilityId") ?? ""),
-      unitId: String(formData.get("unitId") ?? ""),
-      roleName: String(formData.get("roleName") ?? "RN"),
-      employmentType: String(formData.get("employmentType") ?? "FULL_TIME")
+      preferredName: String(formData.get("preferredName") ?? "")
     },
     accessToken
   );

@@ -10,7 +10,11 @@ import {
   UnauthorizedException
 } from "@nestjs/common";
 import type { Request } from "express";
-import type { AccountRole, Scope } from "@pulseshift/domain";
+import type {
+  AccountRole,
+  InvitationWorkforceAssignment,
+  Scope
+} from "@pulseshift/domain";
 
 import type { DemoSession } from "./demo-users";
 import { InvitationService } from "./invitation.service";
@@ -34,6 +38,7 @@ export class InvitationController {
       role?: AccountRole;
       scope?: Scope;
       expiresAt?: string;
+      workforceAssignment?: InvitationWorkforceAssignment;
     }
   ) {
     this.assertUserAdmin(session);
@@ -42,7 +47,10 @@ export class InvitationController {
       email: body.email ?? "new.employee@example.com",
       role: body.role ?? "EMPLOYEE",
       scope: body.scope ?? { type: "SELF" },
-      invitedByUserId: session.userId
+      invitedByUserId: session.userId,
+      ...(body.workforceAssignment
+        ? { workforceAssignment: body.workforceAssignment }
+        : {})
     };
     return this.invitations.createInvitation(
       body.expiresAt ? { ...invitation, expiresAt: body.expiresAt } : invitation

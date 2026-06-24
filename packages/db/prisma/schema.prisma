@@ -77,6 +77,11 @@ enum EmploymentType {
   AGENCY
 }
 
+enum EmployeeNumberPolicy {
+  AUTO
+  ASSIGNED
+}
+
 enum EmployeeStatus {
   ACTIVE
   ON_LEAVE
@@ -412,6 +417,12 @@ model Invitation {
   email            String
   role             AccountRole
   scope            Json
+  facilityId       String?
+  unitId           String?
+  workforceRoleId  String?
+  employmentType   EmploymentType?
+  employeeNumberPolicy EmployeeNumberPolicy?
+  employeeNumber   String?
   tokenHash        String           @unique
   status           InvitationStatus @default(PENDING)
   invitedByUserId  String

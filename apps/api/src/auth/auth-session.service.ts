@@ -113,7 +113,7 @@ export class AuthSessionService {
       }
     });
 
-    const [employeeProfile, facilityCount] = await Promise.all([
+    const [employeeProfile, facilityCount, acceptedWorkforceInvitation] = await Promise.all([
       prisma.employeeProfile.findUnique({
         where: { userId: session.userId },
         select: {
@@ -124,14 +124,40 @@ export class AuthSessionService {
           primaryUnitId: true
         }
       }),
-      prisma.facility.count({ where: { organizationId: session.organizationId } })
+      prisma.facility.count({ where: { organizationId: session.organizationId } }),
+      prisma.invitation.findFirst({
+        where: {
+          organizationId: session.organizationId,
+          acceptedByUserId: session.userId,
+          status: "ACCEPTED",
+          facilityId: { not: null },
+          unitId: { not: null },
+          workforceRoleId: { not: null }
+        },
+        orderBy: { acceptedAt: "desc" },
+        select: {
+          facilityId: true,
+          unitId: true,
+          workforceRoleId: true,
+          employmentType: true,
+          employeeNumberPolicy: true,
+          employeeNumber: true
+        }
+      })
     ]);
+    const workforceOnboardingAssignment = acceptedWorkforceInvitation
+      ? await this.describeWorkforceAssignment(
+          session.organizationId,
+          acceptedWorkforceInvitation
+        )
+      : null;
 
     const onboardingRequirements = onboardingRequirementsForRole(session.role);
 
     return {
       ...base,
       employeeProfile,
+      workforceOnboardingAssignment,
       needsProfileOnboarding:
         onboardingRequirements.requiresEmployeeProfile && !employeeProfile,
       needsNotificationPreferencesOnboarding:
@@ -141,6 +167,56 @@ export class AuthSessionService {
         onboardingRequirements.requiresIntegrations &&
         !user?.integrationsOnboardingCompletedAt,
       facilityCount
+    };
+  }
+
+  private async describeWorkforceAssignment(
+    organizationId: string,
+    assignment: {
+      facilityId: string | null;
+      unitId: string | null;
+      workforceRoleId: string | null;
+      employmentType: string | null;
+      employeeNumberPolicy: string | null;
+      employeeNumber: string | null;
+    }
+  ) {
+    if (
+      !assignment.facilityId ||
+      !assignment.unitId ||
+      !assignment.workforceRoleId ||
+      !assignment.employmentType ||
+      !assignment.employeeNumberPolicy
+    ) {
+      return null;
+    }
+    const [facility, unit, workforceRole] = await Promise.all([
+      prisma.facility.findFirst({
+        where: { id: assignment.facilityId, organizationId },
+        select: { id: true, name: true }
+      }),
+      prisma.unit.findFirst({
+        where: {
+          id: assignment.unitId,
+          facility: { organizationId }
+        },
+        select: { id: true, name: true, facilityId: true }
+      }),
+      prisma.workforceRole.findFirst({
+        where: { id: assignment.workforceRoleId, organizationId },
+        select: { id: true, name: true }
+      })
+    ]);
+    if (!facility || !unit || unit.facilityId !== facility.id || !workforceRole) {
+      return null;
+    }
+    return {
+      facility,
+      unit: { id: unit.id, name: unit.name },
+      workforceRole,
+      employmentType: assignment.employmentType,
+      employeeNumberPolicy: assignment.employeeNumberPolicy,
+      employeeNumber: assignment.employeeNumber
     };
   }
 

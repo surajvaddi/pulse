@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 
 import {
   AccountRoleSchema,
+  InvitationWorkforceAssignmentSchema,
   onboardingRequirementsForRole,
   onboardingRouteAfterStructure,
   type AccountRole
@@ -44,3 +45,24 @@ for (const role of AccountRoleSchema.options) {
 
 assert.equal(onboardingRouteAfterStructure("ORGANIZATION_OWNER"), "/onboarding/preferences");
 assert.equal(onboardingRouteAfterStructure("EMPLOYEE"), "/onboarding/profile");
+
+assert.equal(
+  InvitationWorkforceAssignmentSchema.parse({
+    facilityId: "fac_1",
+    unitId: "unit_1",
+    workforceRoleId: "role_rn",
+    employmentType: "FULL_TIME",
+    employeeNumberPolicy: "ASSIGNED",
+    employeeNumber: "RN-100"
+  }).employeeNumber,
+  "RN-100"
+);
+assert.throws(() =>
+  InvitationWorkforceAssignmentSchema.parse({
+    facilityId: "fac_1",
+    unitId: "unit_1",
+    workforceRoleId: "role_rn",
+    employmentType: "FULL_TIME",
+    employeeNumberPolicy: "ASSIGNED"
+  })
+);

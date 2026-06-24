@@ -34,6 +34,14 @@ export type SessionSummary = {
     primaryFacilityId: string;
     primaryUnitId: string;
   } | null;
+  workforceOnboardingAssignment?: {
+    facility: { id: string; name: string };
+    unit: { id: string; name: string };
+    workforceRole: { id: string; name: string };
+    employmentType: string;
+    employeeNumberPolicy: string;
+    employeeNumber?: string | null;
+  } | null;
   needsProfileOnboarding?: boolean;
   needsNotificationPreferencesOnboarding?: boolean;
   needsIntegrationsOnboarding?: boolean;
@@ -55,6 +63,14 @@ export type Invitation = {
   acceptUrl?: string;
   token?: string;
   nextStep?: string;
+  workforceAssignment?: {
+    facilityId: string;
+    unitId: string;
+    workforceRoleId: string;
+    employmentType: "FULL_TIME" | "PART_TIME" | "PER_DIEM" | "CONTRACT" | "AGENCY";
+    employeeNumberPolicy: "AUTO" | "ASSIGNED";
+    employeeNumber?: string;
+  };
 };
 
 export type DemoShift = {

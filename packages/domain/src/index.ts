@@ -256,6 +256,39 @@ export const AccountRoleSchema = z.enum([
 ]);
 export type AccountRole = z.infer<typeof AccountRoleSchema>;
 
+export const EmployeeNumberPolicySchema = z.enum(["AUTO", "ASSIGNED"]);
+export type EmployeeNumberPolicy = z.infer<typeof EmployeeNumberPolicySchema>;
+
+export const InvitationWorkforceAssignmentSchema = z
+  .object({
+    facilityId: z.string().min(1),
+    unitId: z.string().min(1),
+    workforceRoleId: z.string().min(1),
+    employmentType: EmploymentTypeSchema,
+    employeeNumberPolicy: EmployeeNumberPolicySchema,
+    employeeNumber: z.string().min(1).optional()
+  })
+  .strict()
+  .superRefine((value, context) => {
+    if (value.employeeNumberPolicy === "ASSIGNED" && !value.employeeNumber) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["employeeNumber"],
+        message: "Assigned employee number policy requires an employee number"
+      });
+    }
+    if (value.employeeNumberPolicy === "AUTO" && value.employeeNumber) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["employeeNumber"],
+        message: "Automatic employee number policy cannot include an employee number"
+      });
+    }
+  });
+export type InvitationWorkforceAssignment = z.infer<
+  typeof InvitationWorkforceAssignmentSchema
+>;
+
 export type OnboardingRequirements = {
   requiresEmployeeProfile: boolean;
   requiresNotificationPreferences: boolean;

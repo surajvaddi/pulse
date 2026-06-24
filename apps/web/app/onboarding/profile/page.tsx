@@ -2,18 +2,11 @@ import Link from "next/link";
 import { ArrowRight, BadgeCheck } from "lucide-react";
 
 import { upsertProfileAction } from "../../account-actions";
-import { apiGetWithAccessToken, type AdminFacility, type AdminUnit } from "@/lib/api";
 import { requireOnboardingStep } from "@/lib/onboarding-guards";
 
 export default async function ProfileOnboardingPage() {
-  const { accessToken, session } = await requireOnboardingStep("/onboarding/profile");
-  const [facilities, units] = await Promise.all([
-    apiGetWithAccessToken<AdminFacility[]>("/admin/facilities", accessToken),
-    apiGetWithAccessToken<AdminUnit[]>("/admin/units", accessToken)
-  ]);
-  const firstFacility = facilities.at(0);
-  const facilityUnits = firstFacility ? units.filter((unit) => unit.facilityId === firstFacility.id) : units;
-  const firstUnit = facilityUnits.at(0);
+  const { session } = await requireOnboardingStep("/onboarding/profile");
+  const assignment = session?.workforceOnboardingAssignment;
 
   return (
     <main className="auth-shell">
@@ -26,18 +19,18 @@ export default async function ProfileOnboardingPage() {
           </p>
         </div>
 
-        {!firstFacility || !firstUnit ? (
+        {!assignment ? (
           <div className="detail-stack">
             <article className="list-row">
               <div>
-                <strong>Facility and unit required</strong>
-                <span>Create at least one facility and unit before building workforce profiles.</span>
+                <strong>Workforce assignment required</strong>
+                <span>Ask an organization administrator to send a new invitation with your facility, unit, and role.</span>
               </div>
               <BadgeCheck size={18} aria-hidden="true" />
             </article>
-            <Link className="command-button" href="/onboarding/structure">
+            <Link className="command-button" href="/onboarding/organization">
               <ArrowRight size={18} aria-hidden="true" />
-              Set up facilities
+              Review workspace invitation
             </Link>
           </div>
         ) : (
@@ -46,34 +39,29 @@ export default async function ProfileOnboardingPage() {
             <input id="legalName" name="legalName" type="text" defaultValue={session?.displayName ?? ""} required />
             <label htmlFor="preferredName">Preferred name</label>
             <input id="preferredName" name="preferredName" type="text" defaultValue={session?.displayName ?? ""} />
-            <label htmlFor="employeeNumber">Employee number</label>
-            <input id="employeeNumber" name="employeeNumber" type="text" placeholder="EMP-1001" />
-            <label htmlFor="facilityId">Home facility</label>
-            <select id="facilityId" name="facilityId" defaultValue={firstFacility.id}>
-              {facilities.map((facility) => (
-                <option key={facility.id} value={facility.id}>
-                  {facility.name}
-                </option>
-              ))}
-            </select>
-            <label htmlFor="unitId">Home unit</label>
-            <select id="unitId" name="unitId" defaultValue={firstUnit.id}>
-              {units.map((unit) => (
-                <option key={unit.id} value={unit.id}>
-                  {unit.name}
-                </option>
-              ))}
-            </select>
-            <label htmlFor="roleName">Workforce role</label>
-            <input id="roleName" name="roleName" type="text" defaultValue="RN" />
-            <label htmlFor="employmentType">Employment type</label>
-            <select id="employmentType" name="employmentType" defaultValue="FULL_TIME">
-              <option value="FULL_TIME">Full time</option>
-              <option value="PART_TIME">Part time</option>
-              <option value="PER_DIEM">Per diem</option>
-              <option value="CONTRACT">Contract</option>
-              <option value="AGENCY">Agency</option>
-            </select>
+            <div className="detail-stack" aria-label="Organization-assigned workforce details">
+              <article className="list-row">
+                <div>
+                  <strong>{assignment.workforceRole.name}</strong>
+                  <span>{assignment.employmentType.replaceAll("_", " ").toLowerCase()}</span>
+                </div>
+                <BadgeCheck size={18} aria-hidden="true" />
+              </article>
+              <article className="list-row">
+                <div>
+                  <strong>{assignment.unit.name}</strong>
+                  <span>{assignment.facility.name}</span>
+                </div>
+                <BadgeCheck size={18} aria-hidden="true" />
+              </article>
+              <article className="list-row">
+                <div>
+                  <strong>{assignment.employeeNumber ?? "Assigned automatically"}</strong>
+                  <span>Employee number</span>
+                </div>
+                <BadgeCheck size={18} aria-hidden="true" />
+              </article>
+            </div>
             <button className="command-button" type="submit">
               <ArrowRight size={18} aria-hidden="true" />
               Save profile

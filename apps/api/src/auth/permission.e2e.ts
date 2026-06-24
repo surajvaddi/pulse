@@ -448,7 +448,14 @@ async function main() {
     .send({
       email: "new.rn@example.com",
       role: "EMPLOYEE",
-      scope: { type: "SELF" }
+      scope: { type: "SELF" },
+      workforceAssignment: {
+        facilityId: "facility_main",
+        unitId: "unit_icu",
+        workforceRoleId: "role_rn",
+        employmentType: "FULL_TIME",
+        employeeNumberPolicy: "AUTO"
+      }
     })
     .expect(201);
   assert.equal(invite.body.email, "new.rn@example.com");
