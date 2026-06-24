@@ -1,6 +1,16 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 
 import { buildManagerDashboard } from "@/lib/manager-dashboard";
+
+const managerPage = readFileSync("app/app/manager/page.tsx", "utf8");
+const actions = readFileSync("app/app/actions.ts", "utf8");
+assert.equal(managerPage.includes("ICU operations"), false);
+assert.equal(managerPage.includes("unitId=unit_icu"), false);
+assert.ok(managerPage.includes("context.activeSelection.unitId"));
+assert.ok(actions.includes(
+  'apiPostSession(`/shift-pipeline/slots/${slotId}/assign`'
+));
 import type { AuditLog, DemoShift, ShiftSwapRequest, StaffingGap } from "@/lib/api";
 
 const shifts: DemoShift[] = [

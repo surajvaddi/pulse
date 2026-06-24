@@ -9,22 +9,27 @@ import {
   type ShiftPipelineClaim,
   type ShiftPipelineSlot,
   type ShiftSwapRequest,
-  type StaffingGap
+  type StaffingGap,
+  type WorkspaceContext
 } from "@/lib/api";
 import { buildManagerDashboard } from "@/lib/manager-dashboard";
 import { approveShiftClaimAction, decideCanonicalSwapAction, denyShiftClaimAction, directAssignShiftAction } from "../actions";
 import { WorkflowNote } from "../workflow-note";
 
 export default async function ManagerPage() {
-  const [shifts, auditLogs, gaps, swaps, slots, claims, approvals] = await Promise.all([
-    apiGetSession<DemoShift[]>("/demo/schedule/unit/unit_icu", "user_jordan_manager"),
-    apiGetSession<AuditLog[]>("/demo/audit", "user_admin"),
+  const [context, shifts, gaps, swaps, slots, claims, approvals] = await Promise.all([
+    apiGetSession<WorkspaceContext>("/auth/workspace-context", "user_jordan_manager"),
+    apiGetSession<DemoShift[]>("/demo/schedule/visible", "user_jordan_manager"),
     apiGetSession<StaffingGap[]>("/operations/staffing/gaps", "user_jordan_manager"),
     apiGetSession<ShiftSwapRequest[]>("/swap-pipeline/swaps?status=PENDING_MANAGER", "user_jordan_manager"),
-    apiGetSession<ShiftPipelineSlot[]>("/shift-pipeline/slots?unitId=unit_icu&statuses=OPEN,CLAIM_PENDING", "user_jordan_manager"),
+    apiGetSession<ShiftPipelineSlot[]>("/shift-pipeline/slots?statuses=OPEN,CLAIM_PENDING", "user_jordan_manager"),
     apiGetSession<ShiftPipelineClaim[]>("/shift-pipeline/claims?statuses=PENDING_APPROVAL", "user_jordan_manager"),
     apiGetSession<ShiftPipelineApproval[]>("/shift-pipeline/approvals?status=PENDING", "user_jordan_manager")
   ]);
+  const auditLogs: AuditLog[] = [];
+  const activeUnit = context.units.find(
+    (unit) => unit.id === context.activeSelection.unitId
+  );
   const dashboard = buildManagerDashboard({ shifts, auditLogs, gaps, swaps, slots, claims, approvals });
   const icons = [Users, CheckCircle2, Clock3, AlertTriangle];
 
@@ -32,7 +37,7 @@ export default async function ManagerPage() {
     <section className="page-stack">
       <div className="page-hero">
         <p className="eyebrow">Manager Dashboard</p>
-        <h1>ICU operations</h1>
+        <h1>{activeUnit?.name ?? "Scoped operations"}</h1>
         <p>Review coverage, approvals, staffing risk, and recent audit activity for your unit.</p>
       </div>
       <WorkflowNote route="/app/manager" role="UNIT_MANAGER" />
@@ -57,7 +62,7 @@ export default async function ManagerPage() {
         {dashboard.priorityGap ? (
           <article className="list-row">
             <div>
-              <strong>ICU {dashboard.priorityGap.role}</strong>
+              <strong>{activeUnit?.name ?? "Unit"} {dashboard.priorityGap.role}</strong>
               <span>
                 Required {dashboard.priorityGap.requiredCount}, assigned{" "}
                 {dashboard.priorityGap.assignedCount}, gap {dashboard.priorityGap.gapCount}

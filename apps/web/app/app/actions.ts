@@ -84,10 +84,9 @@ export async function respondCanonicalSwapAction(formData: FormData) {
 export async function decideCanonicalSwapAction(formData: FormData) {
   const swapId = String(formData.get("swapId"));
   const decision = String(formData.get("decision") ?? "deny");
-  await apiPost(
+  await apiPostSession(
     `/swap-pipeline/swaps/${swapId}/decide`,
-    { decision, reason: "Reviewed from canonical swap center" },
-    "user_jordan_manager"
+    { decision, reason: "Reviewed from canonical swap center" }
   );
   revalidatePath("/app/swaps");
   revalidatePath("/app/schedule");
@@ -96,10 +95,9 @@ export async function decideCanonicalSwapAction(formData: FormData) {
 
 export async function approveShiftClaimAction(formData: FormData) {
   const claimId = String(formData.get("claimId"));
-  await apiPost(
+  await apiPostSession(
     `/shift-pipeline/claims/${claimId}/approve`,
-    { reason: "Manager approved from coverage dashboard" },
-    "user_jordan_manager"
+    { reason: "Manager approved from coverage dashboard" }
   );
   revalidatePath("/app/manager");
   revalidatePath("/app/open-shifts");
@@ -108,10 +106,9 @@ export async function approveShiftClaimAction(formData: FormData) {
 
 export async function denyShiftClaimAction(formData: FormData) {
   const claimId = String(formData.get("claimId"));
-  await apiPost(
+  await apiPostSession(
     `/shift-pipeline/claims/${claimId}/deny`,
-    { reason: "Manager denied from coverage dashboard" },
-    "user_jordan_manager"
+    { reason: "Manager denied from coverage dashboard" }
   );
   revalidatePath("/app/manager");
   revalidatePath("/app/open-shifts");
@@ -120,7 +117,7 @@ export async function denyShiftClaimAction(formData: FormData) {
 export async function directAssignShiftAction(formData: FormData) {
   const slotId = String(formData.get("slotId"));
   const userId = String(formData.get("userId") ?? "user_maya");
-  await apiPost(`/shift-pipeline/slots/${slotId}/assign`, { userId }, "user_jordan_manager");
+  await apiPostSession(`/shift-pipeline/slots/${slotId}/assign`, { userId });
   revalidatePath("/app/manager");
   revalidatePath("/app/open-shifts");
   revalidatePath("/app/schedule");
