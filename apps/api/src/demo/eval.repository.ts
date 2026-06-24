@@ -1,4 +1,5 @@
 import { Inject, Injectable } from "@nestjs/common";
+import { Prisma, prisma } from "@pulseshift/db";
 import type { CopilotEvalRun } from "@pulseshift/evals";
 
 import { demoCopilotEvalRuns } from "./demo-data";
@@ -30,7 +31,31 @@ export class InMemoryEvalRepository implements EvalRepository {
 }
 
 @Injectable()
-export class PrismaEvalRepository extends InMemoryEvalRepository {}
+export class PrismaEvalRepository implements EvalRepository {
+  async listCopilotRuns(query: { organizationId: string; limit?: number }) {
+    const records = await prisma.evaluationRunRecord.findMany({
+      where: { organizationId: query.organizationId },
+      orderBy: { createdAt: "desc" },
+      ...(query.limit ? { take: query.limit } : {})
+    });
+    return records.map(
+      (record) => record.payload as unknown as CopilotEvalRun
+    );
+  }
+
+  async appendCopilotRun(input: CopilotEvalRun & { organizationId: string }) {
+    const { organizationId, ...run } = input;
+    await prisma.evaluationRunRecord.create({
+      data: {
+        id: run.id,
+        organizationId,
+        payload: run as unknown as Prisma.InputJsonValue,
+        createdAt: new Date(run.createdAt)
+      }
+    });
+    return run;
+  }
+}
 
 @Injectable()
 export class EvalRepositoryProvider {

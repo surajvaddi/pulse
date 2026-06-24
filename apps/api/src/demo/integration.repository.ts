@@ -1,4 +1,5 @@
 import { Inject, Injectable } from "@nestjs/common";
+import { Prisma, prisma } from "@pulseshift/db";
 import {
   createCsvImportPreview,
   type CsvPreviewRow,
@@ -59,7 +60,87 @@ export class InMemoryIntegrationRepository implements IntegrationRepository {
 }
 
 @Injectable()
-export class PrismaIntegrationRepository extends InMemoryIntegrationRepository {}
+export class PrismaIntegrationRepository implements IntegrationRepository {
+  async listConnections(query: { organizationId: string }) {
+    const records = await prisma.integrationConnectionRecord.findMany({
+      where: { organizationId: query.organizationId },
+      orderBy: { createdAt: "asc" }
+    });
+    return records.map(
+      (record) => record.payload as unknown as IntegrationConnection
+    );
+  }
+
+  async listSyncRuns(query: { organizationId: string; integrationId: string }) {
+    const records = await prisma.integrationSyncRunRecord.findMany({
+      where: {
+        organizationId: query.organizationId,
+        integrationId: query.integrationId
+      },
+      orderBy: { startedAt: "desc" }
+    });
+    return records.map(
+      (record) => record.payload as unknown as IntegrationSyncRun
+    );
+  }
+
+  async previewImport(query: { organizationId: string; integrationId: string }) {
+    const record = await prisma.integrationImportPreviewRecord.findFirst({
+      where: {
+        organizationId: query.organizationId,
+        integrationId: query.integrationId
+      },
+      orderBy: { createdAt: "desc" }
+    });
+    if (!record) {
+      return {
+        integrationId: query.integrationId,
+        totalRows: 0,
+        acceptedRows: 0,
+        rejectedRows: 0,
+        rows: []
+      };
+    }
+    return record.payload as unknown as {
+      integrationId: string;
+      totalRows: number;
+      acceptedRows: number;
+      rejectedRows: number;
+      rows: CsvPreviewRow[];
+    };
+  }
+
+  async appendSyncRun(input: IntegrationSyncRun & { organizationId: string }) {
+    const connection = await prisma.integrationConnectionRecord.findFirst({
+      where: { id: input.integrationId, organizationId: input.organizationId }
+    });
+    if (!connection) {
+      throw new Error("Integration connection not found in this organization.");
+    }
+    const { organizationId, ...run } = input;
+    await prisma.integrationSyncRunRecord.create({
+      data: {
+        id: run.id,
+        organizationId,
+        integrationId: run.integrationId,
+        payload: run as unknown as Prisma.InputJsonValue,
+        startedAt: new Date(run.startedAt)
+      }
+    });
+    const connectionPayload =
+      connection.payload as unknown as IntegrationConnection;
+    await prisma.integrationConnectionRecord.update({
+      where: { id: connection.id },
+      data: {
+        payload: {
+          ...connectionPayload,
+          lastSyncAt: run.finishedAt
+        } as unknown as Prisma.InputJsonValue
+      }
+    });
+    return run;
+  }
+}
 
 @Injectable()
 export class IntegrationRepositoryProvider {

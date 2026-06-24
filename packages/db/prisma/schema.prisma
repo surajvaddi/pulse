@@ -341,6 +341,10 @@ model Organization {
   aiConversations    AIConversation[]
   auditLogs          AuditLog[]
   invitations        Invitation[]
+  integrationConnections IntegrationConnectionRecord[]
+  integrationSyncRuns IntegrationSyncRunRecord[]
+  integrationImportPreviews IntegrationImportPreviewRecord[]
+  evaluationRuns     EvaluationRunRecord[]
 
   @@map("organizations")
 }
@@ -892,4 +896,56 @@ model AuditLog {
   @@index([organizationId, createdAt])
   @@index([objectType, objectId])
   @@map("audit_logs")
+}
+
+model IntegrationConnectionRecord {
+  id             String       @id
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  payload        Json
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  syncRuns       IntegrationSyncRunRecord[]
+  importPreviews IntegrationImportPreviewRecord[]
+
+  @@index([organizationId])
+  @@map("integration_connections")
+}
+
+model IntegrationSyncRunRecord {
+  id             String       @id
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  integrationId  String
+  integration    IntegrationConnectionRecord @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+  payload        Json
+  startedAt      DateTime
+  createdAt      DateTime     @default(now())
+
+  @@index([organizationId, integrationId, startedAt])
+  @@map("integration_sync_runs")
+}
+
+model IntegrationImportPreviewRecord {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  integrationId  String
+  integration    IntegrationConnectionRecord @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+  payload        Json
+  createdAt      DateTime     @default(now())
+
+  @@index([organizationId, integrationId, createdAt])
+  @@map("integration_import_previews")
+}
+
+model EvaluationRunRecord {
+  id             String       @id
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  payload        Json
+  createdAt      DateTime
+
+  @@index([organizationId, createdAt])
+  @@map("evaluation_runs")
 }
