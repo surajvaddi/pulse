@@ -13,6 +13,6 @@ import { SupabaseJwtService } from "./supabase-jwt.service";
 @Module({
   controllers: [AuthController, InvitationController, OnboardingController],
   providers: [PermissionService, SupabaseJwtService, AuthSessionService, InvitationService, OnboardingService, WorkspaceContextService],
-  exports: [PermissionService, SupabaseJwtService, AuthSessionService]
+  exports: [PermissionService, SupabaseJwtService, AuthSessionService, WorkspaceContextService]
 })
 export class AuthModule {}

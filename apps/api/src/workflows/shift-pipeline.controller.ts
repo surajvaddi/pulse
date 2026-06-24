@@ -1,9 +1,13 @@
-import { BadRequestException, Body, Controller, Get, Inject, Param, Post, Query } from "@nestjs/common";
+import { BadRequestException, Body, Controller, ForbiddenException, Get, Inject, Param, Post, Query } from "@nestjs/common";
 import type { ShiftAssignmentStatus, ShiftClaimStatus, ShiftSlotStatus } from "@pulseshift/domain";
 
 import type { DemoSession } from "../auth/demo-users";
 import { CurrentSession } from "../auth/session.decorator";
+import { WorkspaceContextService } from "../auth/workspace-context.service";
+import { scopeQueryForSession } from "../auth/scope-query";
 import { demoApprovals } from "../demo/demo-data";
+import { demoEmployeeByUserId } from "../demo/demo-data";
+import { prisma } from "@pulseshift/db";
 import { ShiftClaimService } from "./shift-claim.service";
 import { ShiftManagerService } from "./shift-manager.service";
 import { demoShiftSlots, ShiftPipelineRepositoryProvider } from "./shift-pipeline.repository";
@@ -22,11 +26,13 @@ export class ShiftPipelineController {
   constructor(
     @Inject(ShiftPipelineRepositoryProvider) private readonly repositories: ShiftPipelineRepositoryProvider,
     @Inject(ShiftClaimService) private readonly claims: ShiftClaimService,
-    @Inject(ShiftManagerService) private readonly managers: ShiftManagerService
+    @Inject(ShiftManagerService) private readonly managers: ShiftManagerService,
+    @Inject(WorkspaceContextService)
+    private readonly workspaceContext: WorkspaceContextService
   ) {}
 
   @Get("slots")
-  listSlots(
+  async listSlots(
     @CurrentSession() session: DemoSession,
     @Query("unitId") unitId?: string,
     @Query("facilityId") facilityId?: string,
@@ -34,16 +40,25 @@ export class ShiftPipelineController {
   ) {
     this.ensureSeeded();
     const parsedStatuses = statuses ? splitStatuses<ShiftSlotStatus>(statuses) : [];
-    return this.repositories.repository().listSlots({
-      organizationId: session.organizationId,
+    const query = scopeQueryForSession(
+      session,
+      await this.workspaceContext.getContext(session),
+      "schedule"
+    );
+    this.assertRequestedScope(query, {
       ...(unitId ? { unitId } : {}),
-      ...(facilityId ? { facilityId } : {}),
+      ...(facilityId ? { facilityId } : {})
+    });
+    return this.repositories.repository().listSlots({
+      organizationId: query.organizationId,
+      ...(query.unitId ? { unitId: query.unitId } : {}),
+      ...(query.facilityId ? { facilityId: query.facilityId } : {}),
       ...(parsedStatuses.length > 0 ? { statuses: parsedStatuses } : {})
     });
   }
 
   @Get("claims")
-  listClaims(
+  async listClaims(
     @CurrentSession() session: DemoSession,
     @Query("slotId") slotId?: string,
     @Query("employeeId") employeeId?: string,
@@ -51,16 +66,33 @@ export class ShiftPipelineController {
   ) {
     this.ensureSeeded();
     const parsedStatuses = statuses ? splitStatuses<ShiftClaimStatus>(statuses) : [];
-    return this.repositories.repository().listClaims({
+    const repository = this.repositories.repository();
+    const query = scopeQueryForSession(
+      session,
+      await this.workspaceContext.getContext(session),
+      "approvals"
+    );
+    const allowedSlots = await repository.listSlots({
+      organizationId: query.organizationId,
+      ...(query.unitId ? { unitId: query.unitId } : {}),
+      ...(query.facilityId ? { facilityId: query.facilityId } : {})
+    });
+    const allowedSlotIds = new Set(allowedSlots.map((slot) => slot.id));
+    const claims = await repository.listClaims({
       organizationId: session.organizationId,
       ...(slotId ? { slotId } : {}),
       ...(employeeId ? { employeeId } : {}),
       ...(parsedStatuses.length > 0 ? { statuses: parsedStatuses } : {})
     });
+    return claims.filter(
+      (claim) =>
+        allowedSlotIds.has(claim.slotId) &&
+        (!query.userId || claim.userId === query.userId)
+    );
   }
 
   @Get("assignments")
-  listAssignments(
+  async listAssignments(
     @CurrentSession() session: DemoSession,
     @Query("slotId") slotId?: string,
     @Query("employeeId") employeeId?: string,
@@ -68,23 +100,56 @@ export class ShiftPipelineController {
   ) {
     this.ensureSeeded();
     const parsedStatuses = statuses ? splitStatuses<ShiftAssignmentStatus>(statuses) : [];
-    return this.repositories.repository().listAssignments({
+    const repository = this.repositories.repository();
+    const query = scopeQueryForSession(
+      session,
+      await this.workspaceContext.getContext(session),
+      "schedule"
+    );
+    const allowedSlots = await repository.listSlots({
+      organizationId: query.organizationId,
+      ...(query.unitId ? { unitId: query.unitId } : {}),
+      ...(query.facilityId ? { facilityId: query.facilityId } : {})
+    });
+    const allowedSlotIds = new Set(allowedSlots.map((slot) => slot.id));
+    const assignments = await repository.listAssignments({
       organizationId: session.organizationId,
       ...(slotId ? { slotId } : {}),
       ...(employeeId ? { employeeId } : {}),
       ...(parsedStatuses.length > 0 ? { statuses: parsedStatuses } : {})
     });
+    const scopedEmployeeId = query.userId
+      ? await this.employeeIdForUser(query.userId)
+      : undefined;
+    return assignments.filter(
+      (assignment) =>
+        allowedSlotIds.has(assignment.slotId) &&
+        (!query.userId || assignment.employeeId === scopedEmployeeId)
+    );
   }
 
   @Get("approvals")
-  listApprovals(@CurrentSession() session: DemoSession, @Query("status") status?: "PENDING" | "APPROVED" | "DENIED") {
+  async listApprovals(@CurrentSession() session: DemoSession, @Query("status") status?: "PENDING" | "APPROVED" | "DENIED") {
     this.ensureSeeded();
     if (usePrismaWorkflow()) {
       return [];
     }
+    const repository = this.repositories.repository();
+    const query = scopeQueryForSession(
+      session,
+      await this.workspaceContext.getContext(session),
+      "approvals"
+    );
+    const allowedSlots = await repository.listSlots({
+      organizationId: query.organizationId,
+      ...(query.unitId ? { unitId: query.unitId } : {}),
+      ...(query.facilityId ? { facilityId: query.facilityId } : {})
+    });
+    const allowedSlotIds = new Set(allowedSlots.map((slot) => slot.id));
     return demoApprovals.filter(
       (approval) =>
         approval.targetObjectType === "ShiftSlot" &&
+        allowedSlotIds.has(approval.targetObjectId) &&
         (!status || approval.status === status) &&
         (approval.requestedByUserId === session.userId || approval.approverUserId === session.userId || session.role !== "EMPLOYEE")
     );
@@ -141,5 +206,31 @@ export class ShiftPipelineController {
     if (!usePrismaWorkflow() && demoShiftSlots.length === 0) {
       seedDemoShiftPipelineState();
     }
+  }
+
+  private assertRequestedScope(
+    query: { facilityId?: string; unitId?: string },
+    requested: { facilityId?: string; unitId?: string }
+  ) {
+    if (
+      (requested.unitId && requested.unitId !== query.unitId) ||
+      (requested.facilityId && requested.facilityId !== query.facilityId)
+    ) {
+      throw new ForbiddenException(
+        "Requested filters are outside the active workspace context."
+      );
+    }
+  }
+
+  private async employeeIdForUser(userId: string) {
+    if (!usePrismaWorkflow()) {
+      return demoEmployeeByUserId.get(userId);
+    }
+    return (
+      await prisma.employeeProfile.findUnique({
+        where: { userId },
+        select: { id: true }
+      })
+    )?.id;
   }
 }

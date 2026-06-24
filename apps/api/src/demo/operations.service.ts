@@ -3,21 +3,35 @@ import { Inject, Injectable } from "@nestjs/common";
 import type { DemoSession } from "../auth/demo-users";
 import { AuditService } from "./audit.service";
 import { OperationsRepositoryProvider } from "./operations.repository";
+import { WorkspaceContextService } from "../auth/workspace-context.service";
+import { scopeQueryForSession } from "../auth/scope-query";
 
 @Injectable()
 export class OperationsService {
   constructor(
     @Inject(OperationsRepositoryProvider) private readonly repositories: OperationsRepositoryProvider,
-    @Inject(AuditService) private readonly auditLogs: AuditService
+    @Inject(AuditService) private readonly auditLogs: AuditService,
+    @Inject(WorkspaceContextService)
+    private readonly workspaceContext: WorkspaceContextService
   ) {}
 
-  staffingGaps(session: DemoSession) {
+  async staffingGaps(session: DemoSession) {
+    const query = scopeQueryForSession(
+      session,
+      await this.workspaceContext.getContext(session),
+      "staffing"
+    );
     return this.repositories.repository().listStaffingGaps({
-      organizationId: session.organizationId
+      organizationId: query.organizationId,
+      ...(query.unitId ? { unitId: query.unitId } : {})
     });
   }
 
   async coverageCandidates(session: DemoSession, gapId: string) {
+    const gaps = await this.staffingGaps(session);
+    if (!gaps.some((gap) => gap.id === gapId)) {
+      return { gapId, candidates: [] };
+    }
     return {
       gapId,
       candidates: await this.repositories.repository().listCoverageCandidates({
@@ -27,15 +41,27 @@ export class OperationsService {
     };
   }
 
-  credentialWarnings(session: DemoSession) {
+  async credentialWarnings(session: DemoSession) {
+    const query = scopeQueryForSession(
+      session,
+      await this.workspaceContext.getContext(session),
+      "staff"
+    );
     return this.repositories.repository().listCredentialWarnings({
-      organizationId: session.organizationId
+      organizationId: query.organizationId,
+      ...(query.unitId ? { unitId: query.unitId } : {})
     });
   }
 
-  staffDirectory(session: DemoSession) {
+  async staffDirectory(session: DemoSession) {
+    const query = scopeQueryForSession(
+      session,
+      await this.workspaceContext.getContext(session),
+      "staff"
+    );
     return this.repositories.repository().listStaff({
-      organizationId: session.organizationId,
+      organizationId: query.organizationId,
+      ...(query.unitId ? { unitId: query.unitId } : {}),
       limitedView: session.role === "EMPLOYEE"
     });
   }

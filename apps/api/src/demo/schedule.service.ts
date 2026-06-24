@@ -3,12 +3,16 @@ import { BadRequestException, ForbiddenException, Inject, Injectable } from "@ne
 import type { DemoSession } from "../auth/demo-users";
 import { PermissionService } from "../auth/permission.service";
 import { ScheduleRepositoryProvider } from "./schedule.repository";
+import { WorkspaceContextService } from "../auth/workspace-context.service";
+import { scopeQueryForSession } from "../auth/scope-query";
 
 @Injectable()
 export class ScheduleService {
   constructor(
     @Inject(PermissionService) private readonly permissions: PermissionService,
-    @Inject(ScheduleRepositoryProvider) private readonly repositories: ScheduleRepositoryProvider
+    @Inject(ScheduleRepositoryProvider) private readonly repositories: ScheduleRepositoryProvider,
+    @Inject(WorkspaceContextService)
+    private readonly workspaceContext: WorkspaceContextService
   ) {}
 
   async mySchedule(session: DemoSession) {
@@ -33,45 +37,44 @@ export class ScheduleService {
 
   async visibleSchedule(session: DemoSession) {
     const repository = this.repositories.repository();
-    if (
-      this.permissions.hasPermission(session, "schedule:read:facility", {
-        type: "FACILITY",
-        facilityId: "fac_mercy_main"
-      })
-    ) {
-      return repository.findFacilitySchedule({
-        organizationId: session.organizationId,
-        facilityId: "fac_mercy_main"
-      });
+    const context = await this.workspaceContext.getContext(session);
+    const query = scopeQueryForSession(session, context, "schedule");
+    if (query.userId) {
+      return this.mySchedule(session);
     }
-
-    if (
-      this.permissions.hasPermission(session, "schedule:read:unit", {
-        type: "UNIT",
-        unitId: "unit_icu"
-      })
-    ) {
+    if (query.unitId) {
       return repository.findUnitSchedule({
-        organizationId: session.organizationId,
-        unitId: "unit_icu"
+        organizationId: query.organizationId,
+        unitId: query.unitId
       });
     }
-
+    if (query.facilityId) {
+      return repository.findFacilitySchedule({
+        organizationId: query.organizationId,
+        facilityId: query.facilityId
+      });
+    }
     return this.mySchedule(session);
   }
 
   async unitSchedule(session: DemoSession, unitId: string) {
+    const context = await this.workspaceContext.getContext(session);
+    const query = scopeQueryForSession(session, context, "schedule");
     this.assertAllowed(
       session,
-      this.permissions.hasPermission(session, "schedule:read:unit", {
-        type: "UNIT",
-        unitId
-      })
+      query.unitId === unitId &&
+        this.permissions.hasPermission(session, "schedule:read:unit", {
+          type: "UNIT",
+          unitId
+        })
     );
+    if (!query.unitId) {
+      throw new ForbiddenException("Active workspace does not include a unit.");
+    }
 
     return this.repositories.repository().findUnitSchedule({
-      organizationId: session.organizationId,
-      unitId
+      organizationId: query.organizationId,
+      unitId: query.unitId
     });
   }
 
