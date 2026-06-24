@@ -1,4 +1,4 @@
-import { Controller, Get, Inject, Post, Res } from "@nestjs/common";
+import { Body, Controller, Get, Inject, Post, Res } from "@nestjs/common";
 import { clearSessionCookieHeaders } from "@pulseshift/tools";
 import type { Response } from "express";
 
@@ -25,6 +25,14 @@ export class AuthController {
   @Get("workspace-context")
   workspace(@CurrentSession() session: DemoSession) {
     return this.workspaceContext.getContext(session);
+  }
+
+  @Post("workspace-context")
+  updateWorkspace(
+    @CurrentSession() session: DemoSession,
+    @Body() body: { facilityId?: string; unitId?: string }
+  ) {
+    return this.workspaceContext.setContext(session, body);
   }
 
   @Post("logout")

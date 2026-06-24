@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { ForbiddenException, Injectable } from "@nestjs/common";
 import { prisma } from "@pulseshift/db";
 import type { Scope } from "@pulseshift/domain";
 
@@ -14,6 +14,45 @@ export type WorkspaceContext = {
   activeSelection: { facilityId?: string; unitId?: string };
   roleGrants: DemoSession["grants"];
 };
+
+export function permittedWorkspaceSelection(
+  context: Pick<WorkspaceContext, "facilities" | "units">,
+  requested: { facilityId?: string; unitId?: string }
+): { facilityId?: string; unitId?: string } | null {
+  const unit = requested.unitId
+    ? context.units.find((candidate) => candidate.id === requested.unitId)
+    : undefined;
+  const facilityId = requested.facilityId ?? unit?.facilityId;
+  const facility = facilityId
+    ? context.facilities.find((candidate) => candidate.id === facilityId)
+    : undefined;
+  if (requested.unitId && !unit) {
+    return null;
+  }
+  if (facilityId && !facility) {
+    return null;
+  }
+  if (unit && facility && unit.facilityId !== facility.id) {
+    return null;
+  }
+  const defaultUnit =
+    unit ??
+    (facility
+      ? context.units.find(
+          (candidate) => candidate.facilityId === facility.id
+        )
+      : context.units.at(0));
+  const defaultFacility =
+    facility ??
+    context.facilities.find(
+      (candidate) => candidate.id === defaultUnit?.facilityId
+    ) ??
+    context.facilities.at(0);
+  return {
+    ...(defaultFacility ? { facilityId: defaultFacility.id } : {}),
+    ...(defaultUnit ? { unitId: defaultUnit.id } : {})
+  };
+}
 
 export function resolveWorkspaceScope(input: {
   organizationId: string;
@@ -101,11 +140,16 @@ export function resolveWorkspaceScope(input: {
 
 @Injectable()
 export class WorkspaceContextService {
+  private readonly demoSelections = new Map<
+    string,
+    { facilityId?: string; unitId?: string }
+  >();
+
   async getContext(session: DemoSession): Promise<WorkspaceContext> {
     if (session.userId.startsWith("user_")) {
       return this.demoContext(session);
     }
-    const [facilities, units, employeeProfile] = await Promise.all([
+    const [facilities, units, employeeProfile, userPreference] = await Promise.all([
       prisma.facility.findMany({
         where: { organizationId: session.organizationId, status: "ACTIVE" },
         orderBy: { name: "asc" },
@@ -122,6 +166,10 @@ export class WorkspaceContextService {
       prisma.employeeProfile.findUnique({
         where: { userId: session.userId },
         select: { primaryFacilityId: true, primaryUnitId: true }
+      }),
+      prisma.user.findUnique({
+        where: { id: session.userId },
+        select: { activeFacilityId: true, activeUnitId: true }
       })
     ]);
     const resolved = resolveWorkspaceScope({
@@ -131,11 +179,58 @@ export class WorkspaceContextService {
       units,
       employeeProfile
     });
+    const storedSelection = permittedWorkspaceSelection(resolved, {
+      ...(userPreference?.activeFacilityId
+        ? { facilityId: userPreference.activeFacilityId }
+        : {}),
+      ...(userPreference?.activeUnitId
+        ? { unitId: userPreference.activeUnitId }
+        : {})
+    });
+    const activeSelection = storedSelection ?? resolved.defaultSelection;
+    if (
+      userPreference &&
+      (userPreference.activeFacilityId !== activeSelection.facilityId ||
+        userPreference.activeUnitId !== activeSelection.unitId)
+    ) {
+      await prisma.user.update({
+        where: { id: session.userId },
+        data: {
+          activeFacilityId: activeSelection.facilityId ?? null,
+          activeUnitId: activeSelection.unitId ?? null
+        }
+      });
+    }
     return {
       ...resolved,
-      activeSelection: resolved.defaultSelection,
+      activeSelection,
       roleGrants: session.grants
     };
+  }
+
+  async setContext(
+    session: DemoSession,
+    requested: { facilityId?: string; unitId?: string }
+  ) {
+    const context = await this.getContext(session);
+    const selection = permittedWorkspaceSelection(context, requested);
+    if (!selection) {
+      throw new ForbiddenException(
+        "Requested workspace is outside your current access."
+      );
+    }
+    if (session.userId.startsWith("user_")) {
+      this.demoSelections.set(session.userId, selection);
+    } else {
+      await prisma.user.update({
+        where: { id: session.userId },
+        data: {
+          activeFacilityId: selection.facilityId ?? null,
+          activeUnitId: selection.unitId ?? null
+        }
+      });
+    }
+    return { ...context, activeSelection: selection };
   }
 
   private demoContext(session: DemoSession): WorkspaceContext {
@@ -159,9 +254,14 @@ export class WorkspaceContextService {
       units,
       employeeProfile
     });
+    const storedSelection = this.demoSelections.get(session.userId);
+    const activeSelection =
+      (storedSelection
+        ? permittedWorkspaceSelection(resolved, storedSelection)
+        : null) ?? resolved.defaultSelection;
     return {
       ...resolved,
-      activeSelection: resolved.defaultSelection,
+      activeSelection,
       roleGrants: session.grants
     };
   }

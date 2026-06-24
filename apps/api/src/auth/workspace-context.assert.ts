@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 
-import { resolveWorkspaceScope } from "./workspace-context.service";
+import {
+  permittedWorkspaceSelection,
+  resolveWorkspaceScope
+} from "./workspace-context.service";
 
 const facilities = [
   { id: "fac_a", name: "A" },
@@ -50,3 +53,22 @@ const wrongOrganization = resolveWorkspaceScope({
   units
 });
 assert.equal(wrongOrganization.facilities.length, 0);
+
+assert.deepEqual(
+  permittedWorkspaceSelection(owner, {
+    facilityId: "fac_a",
+    unitId: "unit_a2"
+  }),
+  { facilityId: "fac_a", unitId: "unit_a2" }
+);
+assert.equal(
+  permittedWorkspaceSelection(manager, { unitId: "unit_a1" }),
+  null
+);
+assert.equal(
+  permittedWorkspaceSelection(owner, {
+    facilityId: "fac_a",
+    unitId: "unit_b1"
+  }),
+  null
+);

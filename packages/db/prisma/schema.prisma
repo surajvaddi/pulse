@@ -393,6 +393,8 @@ model User {
   lastLoginAt          DateTime?
   notificationPreferencesOnboardedAt DateTime?
   integrationsOnboardingCompletedAt    DateTime?
+  activeFacilityId      String?
+  activeUnitId          String?
   roles                UserRole[]
   employeeProfile      EmployeeProfile?
   notifications        Notification[]
