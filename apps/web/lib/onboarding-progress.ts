@@ -1,6 +1,7 @@
 import type { SessionSummary } from "@/lib/api";
 import type { PulseShiftSessionIdentity, SupabaseAccessTokenClaims } from "@/lib/supabase-session";
 import { pulseShiftSessionMatchesSupabaseClaims, requiresOrganizationOnboarding } from "@/lib/supabase-session";
+import { AccountRoleSchema, onboardingRequirementsForRole } from "@pulseshift/domain";
 
 export type OnboardingProgress = {
   hasLinkedSession: boolean;
@@ -18,6 +19,10 @@ export function sessionNeedsProfileOnboarding(
   session: SessionSummary,
   employeeProfile?: { id: string } | null
 ): boolean {
+  const role = AccountRoleSchema.parse(session.role);
+  if (!onboardingRequirementsForRole(role).requiresEmployeeProfile) {
+    return false;
+  }
   if (employeeProfile?.id) {
     return false;
   }

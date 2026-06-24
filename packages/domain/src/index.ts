@@ -256,6 +256,26 @@ export const AccountRoleSchema = z.enum([
 ]);
 export type AccountRole = z.infer<typeof AccountRoleSchema>;
 
+export type OnboardingRequirements = {
+  requiresEmployeeProfile: boolean;
+  requiresNotificationPreferences: boolean;
+  requiresIntegrations: boolean;
+};
+
+const SchedulableAccountRoles = new Set<AccountRole>([
+  "UNIT_MANAGER",
+  "CHARGE_NURSE",
+  "EMPLOYEE"
+]);
+
+export function onboardingRequirementsForRole(role: AccountRole): OnboardingRequirements {
+  return {
+    requiresEmployeeProfile: SchedulableAccountRoles.has(role),
+    requiresNotificationPreferences: role !== "AI_AGENT_SERVICE",
+    requiresIntegrations: role === "ORGANIZATION_OWNER" || role === "SYSTEM_ADMIN"
+  };
+}
+
 export const ScopeSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("SELF") }),
   z.object({ type: z.literal("UNIT"), unitIds: z.array(z.string()).min(1) }),

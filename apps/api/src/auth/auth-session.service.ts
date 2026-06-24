@@ -4,6 +4,7 @@ import {
   PermissionSchema,
   RolePermissionMap,
   ScopeSchema,
+  onboardingRequirementsForRole,
   type AccountRole,
   type PermissionGrant,
   type Scope
@@ -126,13 +127,18 @@ export class AuthSessionService {
       prisma.facility.count({ where: { organizationId: session.organizationId } })
     ]);
 
+    const onboardingRequirements = onboardingRequirementsForRole(session.role);
+
     return {
       ...base,
       employeeProfile,
-      needsProfileOnboarding: !employeeProfile,
-      needsNotificationPreferencesOnboarding: !user?.notificationPreferencesOnboardedAt,
+      needsProfileOnboarding:
+        onboardingRequirements.requiresEmployeeProfile && !employeeProfile,
+      needsNotificationPreferencesOnboarding:
+        onboardingRequirements.requiresNotificationPreferences &&
+        !user?.notificationPreferencesOnboardedAt,
       needsIntegrationsOnboarding:
-        (session.role === "ORGANIZATION_OWNER" || session.role === "SYSTEM_ADMIN") &&
+        onboardingRequirements.requiresIntegrations &&
         !user?.integrationsOnboardingCompletedAt,
       facilityCount
     };

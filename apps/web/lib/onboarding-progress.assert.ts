@@ -15,7 +15,14 @@ const session = {
   email: "owner@example.com",
   role: "ORGANIZATION_OWNER",
   permissions: [],
-  supabaseAuthId: "supabase_owner"
+  supabaseAuthId: "supabase_owner",
+  needsNotificationPreferencesOnboarding: true,
+  needsIntegrationsOnboarding: true
+};
+const workforceSession = {
+  ...session,
+  userId: "clemployee",
+  role: "EMPLOYEE" as const
 };
 
 assert.equal(resolveOnboardingRoute({ claims: null, session: null, facilityCount: 0 }), "/login");
@@ -28,6 +35,15 @@ assert.equal(
   resolveOnboardingRoute({
     claims,
     session,
+    facilityCount: 1,
+    employeeProfile: null
+  }),
+  "/onboarding/preferences"
+);
+assert.equal(
+  resolveOnboardingRoute({
+    claims,
+    session: workforceSession,
     facilityCount: 1,
     employeeProfile: null
   }),
@@ -73,8 +89,10 @@ assert.equal(
   "/app"
 );
 
-assert.equal(sessionNeedsProfileOnboarding(session, null), true);
+assert.equal(sessionNeedsProfileOnboarding(session, null), false);
 assert.equal(sessionNeedsProfileOnboarding(session, { id: "emp_owner" }), false);
+assert.equal(sessionNeedsProfileOnboarding(workforceSession, null), true);
+assert.equal(sessionNeedsProfileOnboarding(workforceSession, { id: "emp_employee" }), false);
 assert.equal(
   sessionNeedsNotificationPreferencesOnboarding({
     ...session,
@@ -91,4 +109,4 @@ const progress = buildOnboardingProgress({
 });
 assert.equal(progress.hasLinkedSession, true);
 assert.equal(progress.hasFacilities, false);
-assert.equal(progress.needsProfileOnboarding, true);
+assert.equal(progress.needsProfileOnboarding, false);

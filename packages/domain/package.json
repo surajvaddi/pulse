@@ -9,7 +9,7 @@
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc --noEmit",
     "lint": "eslint \"src/**/*.ts\"",
-    "test": "tsx src/organization-structure-bootstrap.assert.ts && tsx src/shift-pipeline.assert.ts && tsc --noEmit"
+    "test": "tsx src/onboarding.assert.ts && tsx src/organization-structure-bootstrap.assert.ts && tsx src/shift-pipeline.assert.ts && tsc --noEmit"
   },
   "dependencies": {
     "zod": "^3.24.1"
