@@ -3,6 +3,85 @@ import { demoAuthEnabledForEnv } from "@/lib/demo-controls";
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000";
 export const demoAuthEnabled = demoAuthEnabledForEnv();
 
+export type ApiErrorCategory =
+  | "LOGIN_REQUIRED"
+  | "PERMISSION_DENIED"
+  | "NOT_FOUND"
+  | "WORKFLOW_CONFLICT"
+  | "RETRYABLE"
+  | "REQUEST_FAILED";
+
+export class ApiRequestError extends Error {
+  constructor(
+    public readonly status: number,
+    public readonly requestId: string | null,
+    public readonly category: ApiErrorCategory,
+    message: string
+  ) {
+    super(message);
+    this.name = "ApiRequestError";
+  }
+}
+
+export function apiRequestErrorFor(
+  status: number,
+  requestId: string | null = null
+) {
+  if (status === 401) {
+    return new ApiRequestError(
+      status,
+      requestId,
+      "LOGIN_REQUIRED",
+      "Your session has expired. Sign in again."
+    );
+  }
+  if (status === 403) {
+    return new ApiRequestError(
+      status,
+      requestId,
+      "PERMISSION_DENIED",
+      "Your account does not have access to this action."
+    );
+  }
+  if (status === 404) {
+    return new ApiRequestError(
+      status,
+      requestId,
+      "NOT_FOUND",
+      "The requested resource could not be found."
+    );
+  }
+  if (status === 409) {
+    return new ApiRequestError(
+      status,
+      requestId,
+      "WORKFLOW_CONFLICT",
+      "This workflow changed before the action completed. Refresh and try again."
+    );
+  }
+  if (status >= 500) {
+    return new ApiRequestError(
+      status,
+      requestId,
+      "RETRYABLE",
+      "The service is temporarily unavailable. Try again."
+    );
+  }
+  return new ApiRequestError(
+    status,
+    requestId,
+    "REQUEST_FAILED",
+    "The request could not be completed."
+  );
+}
+
+function requestError(response: Response) {
+  return apiRequestErrorFor(
+    response.status,
+    response.headers.get("x-request-id")
+  );
+}
+
 export type DemoUserId =
   | "user_priya"
   | "user_maya"
@@ -551,7 +630,7 @@ export async function apiGet<T>(path: string, userId: DemoUserId = "user_priya")
   });
 
   if (!response.ok) {
-    throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+    throw requestError(response);
   }
 
   return (await response.json()) as T;
@@ -573,7 +652,7 @@ export async function apiPost<T>(
   });
 
   if (!response.ok) {
-    throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+    throw requestError(response);
   }
 
   return (await response.json()) as T;
@@ -595,7 +674,7 @@ export async function apiPatch<T>(
   });
 
   if (!response.ok) {
-    throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+    throw requestError(response);
   }
 
   return (await response.json()) as T;
@@ -607,7 +686,7 @@ export async function apiPublicGet<T>(path: string): Promise<T> {
   });
 
   if (!response.ok) {
-    throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+    throw requestError(response);
   }
 
   return (await response.json()) as T;
@@ -629,7 +708,7 @@ export async function apiPostWithAccessToken<T>(
   });
 
   if (!response.ok) {
-    throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+    throw requestError(response);
   }
 
   return (await response.json()) as T;
@@ -644,7 +723,7 @@ export async function apiGetWithAccessToken<T>(path: string, accessToken: string
   });
 
   if (!response.ok) {
-    throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+    throw requestError(response);
   }
 
   return (await response.json()) as T;
@@ -690,7 +769,7 @@ export async function apiPatchSession<T>(
       cache: "no-store"
     });
     if (!response.ok) {
-      throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+      throw requestError(response);
     }
     return (await response.json()) as T;
   }
