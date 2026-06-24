@@ -1,6 +1,12 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 
 import { buildAdminDashboard } from "@/lib/admin-dashboard";
+
+const adminPage = readFileSync("app/app/admin/page.tsx", "utf8");
+assert.ok(adminPage.includes("Promise.allSettled"));
+assert.ok(adminPage.includes("Some admin data is unavailable"));
+assert.ok(adminPage.includes("Available sections remain usable"));
 
 const dashboard = buildAdminDashboard({
   users: [

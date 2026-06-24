@@ -15,7 +15,7 @@ import { buildAdminDashboard } from "@/lib/admin-dashboard";
 import { WorkflowNote } from "../workflow-note";
 
 export default async function AdminDashboardPage() {
-  const [users, facilities, units, invitations, integrations, auditLogs, setup] = await Promise.all([
+  const results = await Promise.allSettled([
     apiGetSession<AdminUser[]>("/admin/users", "user_admin"),
     apiGetSession<AdminFacility[]>("/admin/facilities", "user_admin"),
     apiGetSession<AdminUnit[]>("/admin/units", "user_admin"),
@@ -24,6 +24,30 @@ export default async function AdminDashboardPage() {
     apiGetSession<AuditLog[]>("/demo/audit", "user_admin"),
     apiGetSession<AdminSetupProgress>("/admin/setup-progress", "user_admin")
   ]);
+  const value = <T,>(index: number, fallback: T): T =>
+    results[index]?.status === "fulfilled"
+      ? (results[index].value as T)
+      : fallback;
+  const users = value<AdminUser[]>(0, []);
+  const facilities = value<AdminFacility[]>(1, []);
+  const units = value<AdminUnit[]>(2, []);
+  const invitations = value<AdminInvitation[]>(3, []);
+  const integrations = value<IntegrationConnection[]>(4, []);
+  const auditLogs = value<AuditLog[]>(5, []);
+  const setup = value<AdminSetupProgress>(6, {
+    completed: 0,
+    total: 0,
+    items: []
+  });
+  const failedPanels = [
+    "Users",
+    "Facilities",
+    "Units",
+    "Invitations",
+    "Integrations",
+    "Audit activity",
+    "Setup progress"
+  ].filter((_, index) => results[index]?.status === "rejected");
   const dashboard = buildAdminDashboard({
     users,
     facilities,
@@ -42,6 +66,18 @@ export default async function AdminDashboardPage() {
         <p>Monitor accounts, facilities, invitations, integrations, and audit activity.</p>
       </div>
       <WorkflowNote route="/app/admin" role="SYSTEM_ADMIN" />
+
+      {failedPanels.length ? (
+        <section className="panel" role="status">
+          <div className="section-heading">
+            <h2>Some admin data is unavailable</h2>
+            <span>Retry this page</span>
+          </div>
+          <p className="empty-state">
+            {failedPanels.join(", ")} could not be loaded. Available sections remain usable.
+          </p>
+        </section>
+      ) : null}
 
       <section className="panel">
         <div className="section-heading">
