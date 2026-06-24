@@ -1,4 +1,9 @@
-import { randomBytes, createHash } from "node:crypto";
+import {
+  createHash,
+  createHmac,
+  randomBytes,
+  timingSafeEqual
+} from "node:crypto";
 import {
   BadRequestException,
   ConflictException,
@@ -41,6 +46,30 @@ const demoInvitations: DemoInvitation[] = [];
 
 function hashToken(token: string) {
   return createHash("sha256").update(token).digest("hex");
+}
+
+function acceptanceHandleFor(invitation: {
+  id: string;
+  email: string;
+  expiresAt: Date | string;
+  tokenHash: string;
+}) {
+  const expiresAt =
+    invitation.expiresAt instanceof Date
+      ? invitation.expiresAt.toISOString()
+      : invitation.expiresAt;
+  return createHmac("sha256", invitation.tokenHash)
+    .update(`${invitation.id}:${invitation.email.toLowerCase()}:${expiresAt}`)
+    .digest("base64url");
+}
+
+function handlesMatch(expected: string, actual: string) {
+  const expectedBytes = Buffer.from(expected);
+  const actualBytes = Buffer.from(actual);
+  return (
+    expectedBytes.length === actualBytes.length &&
+    timingSafeEqual(expectedBytes, actualBytes)
+  );
 }
 
 function authPersistenceEnabled() {
@@ -171,6 +200,50 @@ export class InvitationService {
     claims?: SupabaseJwtClaims;
   }) {
     const invitation = await this.findPendingInvitation(args.token);
+    return this.acceptResolvedInvitation(invitation, args);
+  }
+
+  async acceptPendingInvitation(args: {
+    invitationId: string;
+    acceptanceHandle: string;
+    claims?: SupabaseJwtClaims;
+  }) {
+    const claims = args.claims;
+    if (!claims?.sub || !claims.email) {
+      throw new UnauthorizedException(
+        "Sign in with Supabase before accepting this invitation"
+      );
+    }
+    const invitation = authPersistenceEnabled()
+      ? await prisma.invitation.findFirst({
+          where: {
+            id: args.invitationId,
+            email: claims.email.toLowerCase(),
+            status: "PENDING",
+            expiresAt: { gt: new Date() }
+          }
+        })
+      : demoInvitations.find(
+          (candidate) =>
+            candidate.id === args.invitationId &&
+            candidate.email === claims.email?.toLowerCase() &&
+            candidate.status === "PENDING" &&
+            new Date(candidate.expiresAt) > new Date()
+        );
+    if (!invitation) {
+      throw new ForbiddenException("Invitation is invalid or expired");
+    }
+    const expectedHandle = acceptanceHandleFor(invitation);
+    if (!handlesMatch(expectedHandle, args.acceptanceHandle)) {
+      throw new ForbiddenException("Invitation acceptance handle is invalid");
+    }
+    return this.acceptResolvedInvitation(invitation, { claims });
+  }
+
+  private async acceptResolvedInvitation(
+    invitation: PrismaInvitation | DemoInvitation,
+    args: { session?: DemoSession; claims?: SupabaseJwtClaims }
+  ) {
     const acceptedAt = new Date();
 
     if (authPersistenceEnabled()) {
@@ -195,13 +268,23 @@ export class InvitationService {
           : {})
       });
 
-      const accepted = await prisma.invitation.update({
-        where: { id: prismaInvitation.id },
+      const claimed = await prisma.invitation.updateMany({
+        where: {
+          id: prismaInvitation.id,
+          status: "PENDING",
+          acceptedAt: null
+        },
         data: {
           status: "ACCEPTED",
-          acceptedAt,
-          acceptedByUserId: user.id
+          acceptedAt
         }
+      });
+      if (claimed.count !== 1) {
+        throw new ConflictException("Invitation has already been accepted.");
+      }
+      const accepted = await prisma.invitation.update({
+        where: { id: prismaInvitation.id },
+        data: { acceptedByUserId: user.id }
       });
 
       return {
@@ -211,12 +294,17 @@ export class InvitationService {
     }
 
     const demoInvitation = invitation as DemoInvitation;
-    if (!args.session) {
-      throw new UnauthorizedException("Sign in before accepting this invitation");
+    if (!args.session && !args.claims?.sub) {
+      throw new UnauthorizedException(
+        "Sign in before accepting this invitation"
+      );
     }
     demoInvitation.status = "ACCEPTED";
     demoInvitation.acceptedAt = acceptedAt.toISOString();
-    demoInvitation.acceptedByUserId = args.session.userId;
+    const acceptedByUserId = args.session?.userId ?? args.claims?.sub;
+    if (acceptedByUserId) {
+      demoInvitation.acceptedByUserId = acceptedByUserId;
+    }
     return {
       ...publicInvitation(demoInvitation),
       nextStep: "/onboarding/profile"
@@ -234,7 +322,10 @@ export class InvitationService {
         },
         orderBy: { createdAt: "desc" }
       });
-      return invitations.map((invitation) => this.publicPrismaInvitation(invitation));
+      return invitations.map((invitation) => ({
+        ...this.publicPrismaInvitation(invitation),
+        acceptanceHandle: acceptanceHandleFor(invitation)
+      }));
     }
 
     return demoInvitations
@@ -244,7 +335,10 @@ export class InvitationService {
           invitation.status === "PENDING" &&
           new Date(invitation.expiresAt) > new Date()
       )
-      .map((invitation) => publicInvitation(invitation));
+      .map((invitation) => ({
+        ...publicInvitation(invitation),
+        acceptanceHandle: acceptanceHandleFor(invitation)
+      }));
   }
 
   private async findPendingInvitation(token: string) {

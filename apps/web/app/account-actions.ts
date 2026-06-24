@@ -198,3 +198,26 @@ export async function acceptInvitationAction(formData: FormData) {
   });
   redirect(destination === "/app" ? "/app/home" : destination);
 }
+
+export async function acceptPendingInvitationAction(formData: FormData) {
+  const invitationId = String(formData.get("invitationId") ?? "");
+  const acceptanceHandle = String(formData.get("acceptanceHandle") ?? "");
+  const accessToken = await requireSupabaseAccessToken();
+  await apiPostWithAccessToken<Invitation>(
+    `/invitations/pending/${invitationId}/accept`,
+    { acceptanceHandle },
+    accessToken
+  );
+  const claims = decodeSupabaseAccessTokenClaims(accessToken);
+  const session = await apiGetWithAccessToken<SessionSummary>(
+    "/auth/me",
+    accessToken
+  );
+  const destination = resolveOnboardingRoute({
+    claims,
+    session,
+    facilityCount: session.facilityCount ?? 0,
+    employeeProfile: session.employeeProfile ?? null
+  });
+  redirect(destination === "/app" ? "/app/home" : destination);
+}

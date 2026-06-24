@@ -88,6 +88,25 @@ export class InvitationController {
     return this.invitations.listPendingForEmail(email);
   }
 
+  @Post("invitations/pending/:invitationId/accept")
+  acceptPendingInvitation(
+    @Param("invitationId") invitationId: string,
+    @Body() body: { acceptanceHandle?: string },
+    @Req()
+    request: Request & {
+      supabaseClaims?: SupabaseJwtClaims;
+    }
+  ) {
+    if (!body.acceptanceHandle) {
+      throw new BadRequestException("Invitation acceptance handle is required.");
+    }
+    return this.invitations.acceptPendingInvitation({
+      invitationId,
+      acceptanceHandle: body.acceptanceHandle,
+      ...(request.supabaseClaims ? { claims: request.supabaseClaims } : {})
+    });
+  }
+
   @Get("invitations/:token")
   async getInvitation(@Param("token") token: string) {
     return this.invitations.getPublicInvitation(token);

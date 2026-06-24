@@ -2,7 +2,11 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Building2, Settings2 } from "lucide-react";
 
-import { createOrganizationAction, createWorkforceRoleAction } from "../../account-actions";
+import {
+  acceptPendingInvitationAction,
+  createOrganizationAction,
+  createWorkforceRoleAction
+} from "../../account-actions";
 import { apiGetWithAccessToken, type Invitation, type InvitationOptions } from "@/lib/api";
 import { loadOnboardingContext } from "@/lib/onboarding-guards";
 import { ScopedInvitationForm } from "./scoped-invitation-form";
@@ -68,10 +72,22 @@ export default async function OrganizationOnboardingPage({
                 <div>
                   <strong>Pending invite found</strong>
                   <span>
-                    You were invited as {invitation.role.replaceAll("_", " ").toLowerCase()}. Open the invite
-                    link from your email to join this workspace.
+                    You were invited as {invitation.role.replaceAll("_", " ").toLowerCase()}.
                   </span>
                 </div>
+                {invitation.acceptanceHandle ? (
+                  <form action={acceptPendingInvitationAction}>
+                    <input type="hidden" name="invitationId" value={invitation.id} />
+                    <input
+                      type="hidden"
+                      name="acceptanceHandle"
+                      value={invitation.acceptanceHandle}
+                    />
+                    <button className="command-button" type="submit">
+                      Join workspace
+                    </button>
+                  </form>
+                ) : null}
               </article>
             ))}
             <Link className="command-button" href="/login">

@@ -63,6 +63,7 @@ export type Invitation = {
   acceptUrl?: string;
   token?: string;
   nextStep?: string;
+  acceptanceHandle?: string;
   workforceAssignment?: {
     facilityId: string;
     unitId: string;
