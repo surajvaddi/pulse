@@ -29,6 +29,12 @@ export class AdminController {
     return this.organizations.getSummary(session.organizationId);
   }
 
+  @Get("setup-progress")
+  setupProgress(@CurrentSession() session: DemoSession) {
+    this.assertAdmin(session);
+    return this.organizations.setupProgress(session.organizationId);
+  }
+
   @Patch("organization")
   updateOrganization(@CurrentSession() session: DemoSession, @Body() body: OrganizationSettingsUpdate) {
     this.assertAdmin(session);

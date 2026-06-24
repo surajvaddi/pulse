@@ -16,6 +16,92 @@ function usePrismaAdmin() {
 
 @Injectable()
 export class OrganizationAdminService implements OrganizationAdminServiceContract {
+  async setupProgress(organizationId: string) {
+    if (!usePrismaAdmin()) {
+      return {
+        completed: 6,
+        total: 6,
+        items: [
+          "structure",
+          "workforceRoles",
+          "invitations",
+          "schedules",
+          "integrations",
+          "notifications"
+        ].map((id) => ({ id, complete: true }))
+      };
+    }
+    const [
+      facilityCount,
+      unitCount,
+      workforceRoleCount,
+      invitationCount,
+      shiftCount,
+      integrationOnboardingCount,
+      notificationPreferenceCount
+    ] = await Promise.all([
+      prisma.facility.count({ where: { organizationId, status: "ACTIVE" } }),
+      prisma.unit.count({
+        where: { facility: { organizationId }, status: "ACTIVE" }
+      }),
+      prisma.workforceRole.count({ where: { organizationId } }),
+      prisma.invitation.count({ where: { organizationId } }),
+      prisma.shift.count({ where: { organizationId } }),
+      prisma.user.count({
+        where: {
+          organizationId,
+          integrationsOnboardingCompletedAt: { not: null }
+        }
+      }),
+      prisma.notificationPreference.count({
+        where: { user: { organizationId } }
+      })
+    ]);
+    const items = [
+      {
+        id: "structure",
+        label: "Organization structure",
+        complete: facilityCount > 0 && unitCount > 0,
+        href: "/app/admin/facilities"
+      },
+      {
+        id: "workforceRoles",
+        label: "Workforce roles",
+        complete: workforceRoleCount > 0,
+        href: "/onboarding/organization"
+      },
+      {
+        id: "invitations",
+        label: "Team invitations",
+        complete: invitationCount > 0,
+        href: "/app/admin/invitations"
+      },
+      {
+        id: "schedules",
+        label: "Initial schedule",
+        complete: shiftCount > 0,
+        href: "/app/manager"
+      },
+      {
+        id: "integrations",
+        label: "Integration review",
+        complete: integrationOnboardingCount > 0,
+        href: "/app/admin/integrations"
+      },
+      {
+        id: "notifications",
+        label: "Notification preferences",
+        complete: notificationPreferenceCount > 0,
+        href: "/app/admin/notifications"
+      }
+    ];
+    return {
+      completed: items.filter((item) => item.complete).length,
+      total: items.length,
+      items
+    };
+  }
+
   async getSummary(organizationId: string) {
     if (usePrismaAdmin()) {
       const organization = await prisma.organization.findUnique({ where: { id: organizationId } });

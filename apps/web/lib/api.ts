@@ -95,6 +95,17 @@ export type WorkspaceContext = {
   }>;
 };
 
+export type AdminSetupProgress = {
+  completed: number;
+  total: number;
+  items: Array<{
+    id: string;
+    label?: string;
+    complete: boolean;
+    href?: string;
+  }>;
+};
+
 export type DemoShift = {
   id: string;
   employeeId?: string;

@@ -6,6 +6,7 @@ import {
   type AdminFacility,
   type AdminInvitation,
   type AdminUnit,
+  type AdminSetupProgress,
   type AdminUser,
   type AuditLog,
   type IntegrationConnection
@@ -14,13 +15,14 @@ import { buildAdminDashboard } from "@/lib/admin-dashboard";
 import { WorkflowNote } from "../workflow-note";
 
 export default async function AdminDashboardPage() {
-  const [users, facilities, units, invitations, integrations, auditLogs] = await Promise.all([
+  const [users, facilities, units, invitations, integrations, auditLogs, setup] = await Promise.all([
     apiGetSession<AdminUser[]>("/admin/users", "user_admin"),
     apiGetSession<AdminFacility[]>("/admin/facilities", "user_admin"),
     apiGetSession<AdminUnit[]>("/admin/units", "user_admin"),
     apiGetSession<AdminInvitation[]>("/admin/invitations", "user_admin"),
     apiGetSession<IntegrationConnection[]>("/integrations", "user_admin"),
-    apiGetSession<AuditLog[]>("/demo/audit", "user_admin")
+    apiGetSession<AuditLog[]>("/demo/audit", "user_admin"),
+    apiGetSession<AdminSetupProgress>("/admin/setup-progress", "user_admin")
   ]);
   const dashboard = buildAdminDashboard({
     users,
@@ -40,6 +42,28 @@ export default async function AdminDashboardPage() {
         <p>Monitor accounts, facilities, invitations, integrations, and audit activity.</p>
       </div>
       <WorkflowNote route="/app/admin" role="SYSTEM_ADMIN" />
+
+      <section className="panel">
+        <div className="section-heading">
+          <h2>Workspace setup</h2>
+          <span>{setup.completed} of {setup.total} complete</span>
+        </div>
+        <div className="item-list">
+          {setup.items.map((item) => (
+            <article className="list-row" key={item.id}>
+              <div>
+                <strong>{item.label ?? item.id}</strong>
+                <span>{item.complete ? "Configured" : "Action required"}</span>
+              </div>
+              {item.complete ? (
+                <span className="status-pill">Ready</span>
+              ) : item.href ? (
+                <Link className="command-button" href={item.href}>Configure</Link>
+              ) : null}
+            </article>
+          ))}
+        </div>
+      </section>
 
       <div className="dashboard-grid">
         {dashboard.cards.map((card, index) => {
