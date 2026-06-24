@@ -6,17 +6,25 @@ import { CurrentSession } from "./session.decorator";
 import type { DemoSession } from "./demo-users";
 import { PermissionService } from "./permission.service";
 import { AuthSessionService } from "./auth-session.service";
+import { WorkspaceContextService } from "./workspace-context.service";
 
 @Controller("auth")
 export class AuthController {
   constructor(
     @Inject(PermissionService) private readonly permissions: PermissionService,
-    @Inject(AuthSessionService) private readonly sessions: AuthSessionService
+    @Inject(AuthSessionService) private readonly sessions: AuthSessionService,
+    @Inject(WorkspaceContextService)
+    private readonly workspaceContext: WorkspaceContextService
   ) {}
 
   @Get("me")
   async me(@CurrentSession() session: DemoSession) {
     return this.sessions.buildMeResponse(session, this.permissions);
+  }
+
+  @Get("workspace-context")
+  workspace(@CurrentSession() session: DemoSession) {
+    return this.workspaceContext.getContext(session);
   }
 
   @Post("logout")
