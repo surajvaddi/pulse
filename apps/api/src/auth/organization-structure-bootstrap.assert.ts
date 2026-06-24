@@ -47,6 +47,6 @@ const validResult = OrganizationStructureBootstrapResultSchema.parse({
     managerUserIds: [],
     active: true
   },
-  nextStep: "/onboarding/profile"
+  nextStep: "/onboarding/preferences"
 });
-assert.equal(validResult.nextStep, "/onboarding/profile");
+assert.equal(validResult.nextStep, "/onboarding/preferences");

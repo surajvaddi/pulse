@@ -67,7 +67,7 @@ export async function createOrganizationAction(formData: FormData) {
 
 export async function bootstrapStructureAction(formData: FormData) {
   const accessToken = await requireSupabaseAccessToken();
-  await apiPostWithAccessToken(
+  const result = await apiPostWithAccessToken<{ nextStep: string }>(
     "/onboarding/structure",
     {
       facilityName: String(formData.get("facilityName") ?? ""),
@@ -77,7 +77,7 @@ export async function bootstrapStructureAction(formData: FormData) {
     },
     accessToken
   );
-  redirect("/onboarding/profile");
+  redirect(result.nextStep);
 }
 
 export async function upsertProfileAction(formData: FormData) {

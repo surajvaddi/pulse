@@ -12,6 +12,16 @@ assert.ok(onboardingService.includes("bootstrapOrganizationStructure"));
 assert.ok(onboardingService.includes("onboarding.structure.created"));
 assert.ok(onboardingService.includes("OrganizationStructureBootstrapInputSchema"));
 assert.ok(onboardingService.includes("ORGANIZATION_OWNER"));
+assert.ok(onboardingService.includes("onboardingRouteAfterStructure(session.role)"));
+assert.equal(
+  onboardingService
+    .slice(
+      onboardingService.indexOf("async createOrganizationForSupabaseUser"),
+      onboardingService.indexOf("async bootstrapOrganizationStructure")
+    )
+    .includes("employeeProfile"),
+  false
+);
 
 const input = OrganizationStructureBootstrapInputSchema.parse({
   facilityName: "North Campus",
@@ -37,6 +47,6 @@ const result = OrganizationStructureBootstrapResultSchema.parse({
     managerUserIds: ["user_owner"],
     active: true
   },
-  nextStep: "/onboarding/profile"
+  nextStep: "/onboarding/preferences"
 });
-assert.equal(result.nextStep, "/onboarding/profile");
+assert.equal(result.nextStep, "/onboarding/preferences");

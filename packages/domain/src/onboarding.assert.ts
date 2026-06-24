@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   AccountRoleSchema,
   onboardingRequirementsForRole,
+  onboardingRouteAfterStructure,
   type AccountRole
 } from "./index.js";
 
@@ -40,3 +41,6 @@ for (const role of AccountRoleSchema.options) {
     `${role} integrations requirement`
   );
 }
+
+assert.equal(onboardingRouteAfterStructure("ORGANIZATION_OWNER"), "/onboarding/preferences");
+assert.equal(onboardingRouteAfterStructure("EMPLOYEE"), "/onboarding/profile");

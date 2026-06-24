@@ -4,6 +4,7 @@ import {
   PermissionSchema,
   RoleNotificationPreferenceDefaults,
   RolePermissionMap,
+  onboardingRouteAfterStructure,
   type AccountRole,
   type Scope
 } from "@pulseshift/domain";
@@ -169,7 +170,7 @@ export class OnboardingService {
           managerUserIds: unit.managerUserIds,
           active: unit.status === "ACTIVE"
         }),
-        nextStep: "/onboarding/profile" as const
+        nextStep: onboardingRouteAfterStructure(session.role)
       };
     });
 

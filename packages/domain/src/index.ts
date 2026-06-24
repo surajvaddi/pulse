@@ -276,6 +276,14 @@ export function onboardingRequirementsForRole(role: AccountRole): OnboardingRequ
   };
 }
 
+export function onboardingRouteAfterStructure(
+  role: AccountRole
+): "/onboarding/profile" | "/onboarding/preferences" {
+  return onboardingRequirementsForRole(role).requiresEmployeeProfile
+    ? "/onboarding/profile"
+    : "/onboarding/preferences";
+}
+
 export const ScopeSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("SELF") }),
   z.object({ type: z.literal("UNIT"), unitIds: z.array(z.string()).min(1) }),

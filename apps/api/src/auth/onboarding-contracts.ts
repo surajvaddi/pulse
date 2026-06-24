@@ -16,7 +16,7 @@ export const OrganizationStructureBootstrapResultSchema = z
   .object({
     facility: FacilityRecordSchema,
     unit: UnitRecordSchema,
-    nextStep: z.literal("/onboarding/profile")
+    nextStep: z.enum(["/onboarding/profile", "/onboarding/preferences"])
   })
   .strict();
 
