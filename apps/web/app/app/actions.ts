@@ -243,7 +243,7 @@ export async function createAdminInvitationAction(formData: FormData) {
   await apiPostSession("/admin/invitations", {
     email: String(formData.get("email") ?? ""),
     role: String(formData.get("role") ?? "EMPLOYEE"),
-    scope: { type: "SELF" },
+    selection: {},
     reason: String(formData.get("reason") ?? "Invited from admin UI")
   }, "user_admin");
   revalidatePath("/app/admin/invitations");

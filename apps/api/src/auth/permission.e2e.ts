@@ -56,7 +56,7 @@ async function main() {
   });
   assert.equal(UserStatusMutationSchema.parse({ status: "SUSPENDED", reason: "Policy review" }).status, "SUSPENDED");
   assert.throws(() => RoleAssignmentSchema.parse({ userId: "user", role: "EMPLOYEE", permissions: [] }));
-  assert.throws(() => InvitationMutationSchema.parse({ email: "bad", role: "EMPLOYEE", scope: { type: "SELF" }, reason: "Invite" }));
+  assert.throws(() => InvitationMutationSchema.parse({ email: "bad", role: "EMPLOYEE", selection: {}, reason: "Invite" }));
   const organizationAdmin = new OrganizationAdminService();
   const organizationSummary = await organizationAdmin.getSummary("org_pulseshift_demo");
   assert.equal(organizationSummary.name, "PulseShift Demo Health");
@@ -176,7 +176,14 @@ async function main() {
   const adminInvitation = await invitationAdmin.create("org_pulseshift_demo", "user_admin", {
     email: "new.unit.manager@example.com",
     role: "UNIT_MANAGER",
-    scope: { type: "UNIT", unitIds: ["unit_icu"] },
+    selection: { unitIds: ["unit_icu"] },
+    workforceAssignment: {
+      facilityId: "facility_main",
+      unitId: "unit_icu",
+      workforceRoleId: "role_rn",
+      employmentType: "FULL_TIME",
+      employeeNumberPolicy: "AUTO"
+    },
     reason: "Testing admin invitation"
   });
   assert.equal(adminInvitation.status, "PENDING");
@@ -244,7 +251,14 @@ async function main() {
     .send({
       email: "api.invite@example.com",
       role: "EMPLOYEE",
-      scope: { type: "SELF" },
+      selection: {},
+      workforceAssignment: {
+        facilityId: "facility_main",
+        unitId: "unit_icu",
+        workforceRoleId: "role_rn",
+        employmentType: "FULL_TIME",
+        employeeNumberPolicy: "AUTO"
+      },
       reason: "API invite test"
     })
     .expect(201);
@@ -448,7 +462,7 @@ async function main() {
     .send({
       email: "new.rn@example.com",
       role: "EMPLOYEE",
-      scope: { type: "SELF" },
+      selection: {},
       workforceAssignment: {
         facilityId: "facility_main",
         unitId: "unit_icu",

@@ -1,5 +1,6 @@
 import {
   Body,
+  BadRequestException,
   Controller,
   ForbiddenException,
   Get,
@@ -12,9 +13,10 @@ import {
 import type { Request } from "express";
 import type {
   AccountRole,
+  InvitationScopeSelection,
   InvitationWorkforceAssignment,
-  Scope
 } from "@pulseshift/domain";
+import { scopeForInvitation } from "@pulseshift/domain";
 
 import type { DemoSession } from "./demo-users";
 import { InvitationService } from "./invitation.service";
@@ -36,17 +38,32 @@ export class InvitationController {
     body: {
       email?: string;
       role?: AccountRole;
-      scope?: Scope;
+      selection?: Omit<InvitationScopeSelection, "organizationId">;
       expiresAt?: string;
       workforceAssignment?: InvitationWorkforceAssignment;
     }
   ) {
     this.assertUserAdmin(session);
+    const role = body.role ?? "EMPLOYEE";
+    let scope;
+    try {
+      scope = scopeForInvitation(role, {
+        organizationId: session.organizationId,
+        ...(body.selection?.facilityIds
+          ? { facilityIds: body.selection.facilityIds }
+          : {}),
+        ...(body.selection?.unitIds ? { unitIds: body.selection.unitIds } : {})
+      });
+    } catch (error) {
+      throw new BadRequestException(
+        error instanceof Error ? error.message : "Invalid invitation scope."
+      );
+    }
     const invitation = {
       organizationId: session.organizationId,
       email: body.email ?? "new.employee@example.com",
-      role: body.role ?? "EMPLOYEE",
-      scope: body.scope ?? { type: "SELF" },
+      role,
+      scope,
       invitedByUserId: session.userId,
       ...(body.workforceAssignment
         ? { workforceAssignment: body.workforceAssignment }

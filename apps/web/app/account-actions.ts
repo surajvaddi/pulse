@@ -127,7 +127,7 @@ export async function inviteWorkforceMemberAction(formData: FormData) {
     {
       email,
       role,
-      scope: { type: "SELF" }
+      selection: {}
     },
     accessToken
   );

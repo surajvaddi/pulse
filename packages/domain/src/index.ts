@@ -325,6 +325,62 @@ export const ScopeSchema = z.discriminatedUnion("type", [
 ]);
 export type Scope = z.infer<typeof ScopeSchema>;
 
+export const InvitationScopeSelectionSchema = z
+  .object({
+    organizationId: z.string().min(1),
+    facilityIds: z.array(z.string().min(1)).optional(),
+    unitIds: z.array(z.string().min(1)).optional()
+  })
+  .strict();
+export type InvitationScopeSelection = z.infer<
+  typeof InvitationScopeSelectionSchema
+>;
+
+export function scopeForInvitation(
+  role: AccountRole,
+  selection: InvitationScopeSelection
+): Scope {
+  const parsed = InvitationScopeSelectionSchema.parse(selection);
+  switch (role) {
+    case "EMPLOYEE":
+      if (parsed.facilityIds?.length || parsed.unitIds?.length) {
+        throw new Error("Employee invitations use self scope.");
+      }
+      return { type: "SELF" };
+    case "UNIT_MANAGER":
+    case "CHARGE_NURSE":
+      if (!parsed.unitIds?.length || parsed.facilityIds?.length) {
+        throw new Error(`${role} invitations require unit scope.`);
+      }
+      return { type: "UNIT", unitIds: [...new Set(parsed.unitIds)] };
+    case "WORKFORCE_ADMIN":
+    case "FLOAT_POOL_COORDINATOR":
+      if (!parsed.facilityIds?.length || parsed.unitIds?.length) {
+        throw new Error(`${role} invitations require facility scope.`);
+      }
+      return {
+        type: "FACILITY",
+        facilityIds: [...new Set(parsed.facilityIds)]
+      };
+    case "ORGANIZATION_OWNER":
+    case "SYSTEM_ADMIN":
+    case "PAYROLL_ADMIN":
+    case "CREDENTIALING_ADMIN":
+    case "COMPLIANCE_AUDITOR":
+    case "EXECUTIVE_VIEWER":
+      if (parsed.facilityIds?.length || parsed.unitIds?.length) {
+        throw new Error(`${role} invitations use organization scope.`);
+      }
+      return { type: "ORG", organizationId: parsed.organizationId };
+    case "EXTERNAL_AGENCY_ADMIN":
+      throw new Error(
+        "Agency invitations are disabled until agency scope is implemented."
+      );
+    case "AI_AGENT_SERVICE":
+      throw new Error("AI service identities cannot be created by invitation.");
+  }
+}
+
 export const PermissionGrantSchema = z.object({
   permission: PermissionSchema,
   scope: ScopeSchema

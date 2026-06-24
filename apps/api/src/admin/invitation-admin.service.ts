@@ -1,6 +1,11 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from "@nestjs/common";
 import { prisma } from "@pulseshift/db";
 import { createHash, randomBytes } from "node:crypto";
+import {
+  onboardingRequirementsForRole,
+  scopeForInvitation,
+  type InvitationWorkforceAssignment
+} from "@pulseshift/domain";
 
 import {
   InvitationMutationSchema,
@@ -47,14 +52,44 @@ export class InvitationAdminService implements InvitationAdminServiceContract {
 
   async create(organizationId: string, invitedByUserId: string, input: InvitationMutation) {
     const parsed = InvitationMutationSchema.parse(input);
+    const scope = scopeForInvitation(parsed.role, {
+      organizationId,
+      ...parsed.selection
+    });
+    const requiresWorkforceAssignment =
+      onboardingRequirementsForRole(parsed.role).requiresEmployeeProfile;
+    if (requiresWorkforceAssignment !== Boolean(parsed.workforceAssignment)) {
+      throw new BadRequestException(
+        requiresWorkforceAssignment
+          ? "This account role requires an organization-assigned workforce placement."
+          : "Administrative account roles cannot receive a workforce placement through this invitation."
+      );
+    }
     if (usePrismaAdmin()) {
+      if (parsed.workforceAssignment) {
+        await this.validateWorkforceAssignment(
+          organizationId,
+          parsed.workforceAssignment
+        );
+      }
       const token = randomBytes(24).toString("base64url");
       const invitation = await prisma.invitation.create({
         data: {
           organizationId,
           email: parsed.email.toLowerCase(),
           role: parsed.role,
-          scope: parsed.scope,
+          scope,
+          ...(parsed.workforceAssignment
+            ? {
+                facilityId: parsed.workforceAssignment.facilityId,
+                unitId: parsed.workforceAssignment.unitId,
+                workforceRoleId: parsed.workforceAssignment.workforceRoleId,
+                employmentType: parsed.workforceAssignment.employmentType,
+                employeeNumberPolicy:
+                  parsed.workforceAssignment.employeeNumberPolicy,
+                employeeNumber: parsed.workforceAssignment.employeeNumber ?? null
+              }
+            : {}),
           tokenHash: hashToken(token),
           status: "PENDING",
           invitedByUserId,
@@ -92,7 +127,7 @@ export class InvitationAdminService implements InvitationAdminServiceContract {
       organizationId,
       email: parsed.email.toLowerCase(),
       role: parsed.role,
-      scope: parsed.scope,
+      scope,
       status: "PENDING" as const,
       invitedByUserId,
       expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7).toISOString(),
@@ -221,5 +256,38 @@ export class InvitationAdminService implements InvitationAdminServiceContract {
       ...publicInvitation,
       status: invitationStatusFor(invitation)
     });
+  }
+
+  private async validateWorkforceAssignment(
+    organizationId: string,
+    assignment: InvitationWorkforceAssignment
+  ) {
+    const [facility, unit, workforceRole, duplicateEmployeeNumber] =
+      await Promise.all([
+        prisma.facility.findFirst({
+          where: { id: assignment.facilityId, organizationId }
+        }),
+        prisma.unit.findFirst({
+          where: { id: assignment.unitId, facility: { organizationId } }
+        }),
+        prisma.workforceRole.findFirst({
+          where: { id: assignment.workforceRoleId, organizationId }
+        }),
+        assignment.employeeNumber
+          ? prisma.employeeProfile.findFirst({
+              where: { organizationId, employeeNumber: assignment.employeeNumber }
+            })
+          : null
+      ]);
+    if (!facility || !unit || unit.facilityId !== facility.id || !workforceRole) {
+      throw new BadRequestException(
+        "Invitation workforce placement must belong to the current organization."
+      );
+    }
+    if (duplicateEmployeeNumber) {
+      throw new ConflictException(
+        `Employee number ${assignment.employeeNumber} is already in use.`
+      );
+    }
   }
 }

@@ -3,6 +3,7 @@ import {
   AccountRoleSchema,
   FacilityStatusSchema,
   InvitationStatusSchema,
+  InvitationWorkforceAssignmentSchema,
   OrganizationStatusSchema,
   PermissionSchema,
   ScopeSchema,
@@ -100,7 +101,13 @@ export const InvitationRecordSchema = z.object({
 export const InvitationMutationSchema = z.object({
   email: z.string().email(),
   role: AccountRoleSchema,
-  scope: ScopeSchema,
+  selection: z
+    .object({
+      facilityIds: z.array(z.string().min(1)).optional(),
+      unitIds: z.array(z.string().min(1)).optional()
+    })
+    .strict(),
+  workforceAssignment: InvitationWorkforceAssignmentSchema.optional(),
   reason: AdminAuditReasonSchema.shape.reason
 }).strict();
 
