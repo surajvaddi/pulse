@@ -84,6 +84,17 @@ export type InvitationOptions = {
   }>;
 };
 
+export type WorkspaceContext = {
+  facilities: Array<{ id: string; name: string }>;
+  units: Array<{ id: string; name: string; facilityId: string }>;
+  defaultSelection: { facilityId?: string; unitId?: string };
+  activeSelection: { facilityId?: string; unitId?: string };
+  roleGrants: Array<{
+    permission: string;
+    scope: Record<string, unknown>;
+  }>;
+};
+
 export type DemoShift = {
   id: string;
   employeeId?: string;

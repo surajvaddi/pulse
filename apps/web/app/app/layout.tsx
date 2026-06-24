@@ -25,7 +25,8 @@ import {
   demoUsers,
   type DemoUserId,
   type NotificationSummary,
-  type SessionSummary
+  type SessionSummary,
+  type WorkspaceContext
 } from "@/lib/api";
 import {
   navigationForSession,
@@ -33,6 +34,7 @@ import {
   type NavigationIconKey,
   type NavigationItem
 } from "@/lib/navigation";
+import { WorkspaceSwitchers } from "./workspace-switchers";
 
 const navIcons: Record<NavigationIconKey, typeof Home> = {
   bell: Bell,
@@ -65,9 +67,10 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   if (!demoAuthEnabled && !hasSupabaseSession) {
     redirect("/login");
   }
-  const [session, notificationSummary] = await Promise.all([
+  const [session, notificationSummary, workspaceContext] = await Promise.all([
     apiGet<SessionSummary>("/auth/me"),
-    apiGet<NotificationSummary>("/notifications/summary")
+    apiGet<NotificationSummary>("/notifications/summary"),
+    apiGet<WorkspaceContext>("/auth/workspace-context")
   ]);
   const navItems = navigationForSession(session);
   const mobileNavItems = primaryMobileNavigation(navItems);
@@ -91,17 +94,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
 
       <div className="workspace">
         <header className="topbar">
-          <div className="switchers">
-            <select aria-label="Facility">
-              <option>Mercy Main Hospital</option>
-              <option>Mercy North Clinic</option>
-            </select>
-            <select aria-label="Unit">
-              <option>ICU</option>
-              <option>Emergency Department</option>
-              <option>Med-Surg</option>
-            </select>
-          </div>
+          <WorkspaceSwitchers context={workspaceContext} />
           <div className="profile-strip">
             <Link className="icon-button" aria-label="Notifications" href="/app/notifications">
               <Bell size={18} />

@@ -18,6 +18,16 @@ export async function claimOpenShiftAction(formData: FormData) {
   revalidatePath("/app/manager");
 }
 
+export async function updateWorkspaceContextAction(formData: FormData) {
+  const facilityId = String(formData.get("facilityId") ?? "");
+  const unitId = String(formData.get("unitId") ?? "");
+  await apiPostSession("/auth/workspace-context", {
+    ...(facilityId ? { facilityId } : {}),
+    ...(unitId ? { unitId } : {})
+  });
+  revalidatePath("/app", "layout");
+}
+
 export async function createSwapAction(formData: FormData) {
   const originalShiftId = String(formData.get("originalShiftId"));
   await apiPost(
