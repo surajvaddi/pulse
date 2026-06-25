@@ -8,7 +8,7 @@ import { ScheduleWorkspace } from "./schedule-workspace";
 export default async function SchedulePage() {
   const [session, shifts] = await Promise.all([
     apiGet<SessionSummary>("/auth/me"),
-    apiGet<DemoShift[]>("/demo/schedule/visible")
+    apiGet<DemoShift[]>("/schedule/visible")
   ]);
   const schedule = buildScheduleViewModel(shifts);
   const scheduleTitle =

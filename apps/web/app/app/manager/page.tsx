@@ -20,7 +20,7 @@ import { WorkflowNote } from "../workflow-note";
 export default async function ManagerPage() {
   const [context, shifts, gaps, swaps, slots, claims, approvals] = await Promise.all([
     apiGetSession<WorkspaceContext>("/auth/workspace-context", "user_jordan_manager"),
-    apiGetSession<DemoShift[]>("/demo/schedule/visible", "user_jordan_manager"),
+    apiGetSession<DemoShift[]>("/schedule/visible", "user_jordan_manager"),
     apiGetSession<StaffingGap[]>("/operations/staffing/gaps", "user_jordan_manager"),
     apiGetSession<ShiftSwapRequest[]>("/swap-pipeline/swaps?status=PENDING_MANAGER", "user_jordan_manager"),
     apiGetSession<ShiftPipelineSlot[]>("/shift-pipeline/slots?statuses=OPEN,CLAIM_PENDING", "user_jordan_manager"),

@@ -68,6 +68,7 @@ import { ShiftCreationService } from "../workflows/shift-creation.service";
 import { ShiftEligibilityService } from "../workflows/shift-eligibility.service";
 import { ShiftManagerService } from "../workflows/shift-manager.service";
 import { ShiftPipelineController } from "../workflows/shift-pipeline.controller";
+import { OperationalScheduleController } from "../workflows/operational-schedule.controller";
 import { ShiftSwapEligibilityService } from "../workflows/shift-swap-eligibility.service";
 import { ShiftSwapPipelineController } from "../workflows/shift-swap-pipeline.controller";
 import { ShiftSwapService } from "../workflows/shift-swap.service";
@@ -94,6 +95,7 @@ import {
     EvalController,
     TimeclockController,
     ShiftPipelineController,
+    OperationalScheduleController,
     ShiftSwapPipelineController
   ],
   providers: [

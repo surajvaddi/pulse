@@ -50,7 +50,7 @@ export default async function HomePage() {
   }
 
   const [shifts, exceptions, clockStatus] = await Promise.all([
-    apiGet<DemoShift[]>("/demo/schedule/me"),
+    apiGet<DemoShift[]>("/schedule/me"),
     apiGet<TimecardException[]>("/demo/timecards/exceptions"),
     apiGet<TimeclockStatus>("/timeclock/status")
   ]);
