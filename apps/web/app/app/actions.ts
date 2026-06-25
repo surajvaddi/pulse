@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import {
   AccountRoleSchema,
   onboardingRequirementsForRole
@@ -160,11 +161,12 @@ export async function updateNotificationPreferenceAction(formData: FormData) {
 }
 
 export async function askCopilotAction(formData: FormData) {
-  const message = String(formData.get("message") ?? "");
-  const userId = String(formData.get("userId") ?? "user_priya") as DemoUserId;
+  const message = String(formData.get("message") ?? "").trim();
+  if (!message) {
+    redirect("/app/copilot");
+  }
   const encoded = encodeURIComponent(message);
-  await apiPost("/copilot/messages", { message }, userId);
-  revalidatePath(`/app/copilot?last=${encoded}`);
+  redirect(`/app/copilot?last=${encoded}`);
 }
 
 export async function resolveTimecardAction(formData: FormData) {

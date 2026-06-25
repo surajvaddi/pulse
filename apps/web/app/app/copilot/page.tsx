@@ -22,9 +22,13 @@ export default async function CopilotPage({
   searchParams?: Promise<{ last?: string }>;
 }) {
   const params = await searchParams;
-  const lastPrompt = params?.last ? decodeURIComponent(params.last) : "When do I work next?";
+  const lastPrompt = params?.last ? decodeURIComponent(params.last) : "";
   const session = await apiGet<SessionSummary>("/auth/me");
-  const response = await apiPost<CopilotResponse>("/copilot/messages", { message: lastPrompt });
+  const response = lastPrompt
+    ? await apiPost<CopilotResponse>("/copilot/messages", {
+        message: lastPrompt
+      })
+    : null;
 
   return (
     <section className="page-stack">
@@ -37,13 +41,12 @@ export default async function CopilotPage({
         <label htmlFor="copilot-full">Ask PulseShift</label>
         <form action={askCopilotAction} className="prompt-form">
           <input id="copilot-full" name="message" defaultValue={lastPrompt} />
-          <input type="hidden" name="userId" value={session.userId} />
           <button className="command-button" type="submit">
             Ask
           </button>
         </form>
       </section>
-      <section className="panel">
+      {response ? <section className="panel">
         <div className="section-heading">
           <h2>{response.mode.replace("_", " ")}</h2>
           <span>{response.toolCalls.length} tool call</span>
@@ -60,7 +63,11 @@ export default async function CopilotPage({
             </article>
           ))}
         </div>
-      </section>
+      </section> : (
+        <section className="panel">
+          <p className="empty-state">Enter a question or choose a suggestion to begin.</p>
+        </section>
+      )}
       <div className="dashboard-grid">
         {promptGroups.map((group) => (
           <article className="panel" key={group.title}>
@@ -70,9 +77,10 @@ export default async function CopilotPage({
             </div>
             <div className="item-list">
               {group.prompts.map((prompt) => (
-                <button className="command-button" key={prompt}>
-                  {prompt}
-                </button>
+                <form action={askCopilotAction} key={prompt}>
+                  <input type="hidden" name="message" value={prompt} />
+                  <button className="command-button" type="submit">{prompt}</button>
+                </form>
               ))}
             </div>
           </article>
