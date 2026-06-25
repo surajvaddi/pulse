@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint \"src/**/*.ts\"",
     "test": "tsx src/gateway.assert.ts && tsx src/gateway-factory.assert.ts && tsx src/eval-fixtures.assert.ts && tsc --noEmit",
-    "test:live": "tsx src/live-smoke.assert.ts"
+    "test:live": "tsx src/live-smoke.assert.ts",
+    "test:routing-live": "tsx src/live-routing-smoke.assert.ts"
   },
   "dependencies": {
     "@pulseshift/tools": "*",
