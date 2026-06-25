@@ -7,6 +7,10 @@ const managerPage = readFileSync("app/app/manager/page.tsx", "utf8");
 const actions = readFileSync("app/app/actions.ts", "utf8");
 assert.equal(managerPage.includes("ICU operations"), false);
 assert.equal(managerPage.includes("unitId=unit_icu"), false);
+assert.equal(managerPage.includes("Assign Maya"), false);
+assert.equal(managerPage.includes('value="user_maya"'), false);
+assert.ok(managerPage.includes("Select a candidate"));
+assert.ok(managerPage.includes("candidate.eligibility"));
 assert.ok(managerPage.includes("context.activeSelection.unitId"));
 assert.ok(actions.includes(
   'apiPostSession(`/shift-pipeline/slots/${slotId}/assign`'

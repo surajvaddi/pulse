@@ -3,6 +3,7 @@ import { AlertTriangle, CheckCircle2, Clock3, Users } from "lucide-react";
 
 import {
   apiGetSession,
+  type AssignmentCandidate,
   type AuditLog,
   type DemoShift,
   type ShiftPipelineApproval,
@@ -31,6 +32,19 @@ export default async function ManagerPage() {
     (unit) => unit.id === context.activeSelection.unitId
   );
   const dashboard = buildManagerDashboard({ shifts, auditLogs, gaps, swaps, slots, claims, approvals });
+  const candidateEntries = await Promise.all(
+    dashboard.openSlots.map(async (slot) => [
+      slot.id,
+      await apiGetSession<AssignmentCandidate[]>(
+        `/shift-pipeline/slots/${slot.id}/candidates`,
+        "user_jordan_manager"
+      )
+    ] as const)
+  );
+  const candidatesBySlot = new Map(candidateEntries);
+  const canOverride = context.roleGrants.some(
+    (grant) => grant.permission === "shift:assign:override"
+  );
   const icons = [Users, CheckCircle2, Clock3, AlertTriangle];
 
   return (
@@ -150,11 +164,42 @@ export default async function ManagerPage() {
                 </div>
                 <form action={directAssignShiftAction}>
                   <input type="hidden" name="slotId" value={slot.id} />
-                  <input type="hidden" name="userId" value="user_maya" />
+                  <label htmlFor={`candidate-${slot.id}`}>Candidate</label>
+                  <select id={`candidate-${slot.id}`} name="userId" defaultValue="" required>
+                    <option value="" disabled>Select a candidate</option>
+                    {(candidatesBySlot.get(slot.id) ?? []).map((candidate) => (
+                      <option
+                        key={candidate.userId}
+                        value={candidate.userId}
+                        disabled={candidate.eligibility === "BLOCKED"}
+                      >
+                        {candidate.displayName} - {candidate.eligibility.toLowerCase()}
+                      </option>
+                    ))}
+                  </select>
+                  {canOverride &&
+                  (candidatesBySlot.get(slot.id) ?? []).some(
+                    (candidate) => candidate.eligibility === "WARNING"
+                  ) ? (
+                    <input
+                      name="overrideReason"
+                      placeholder="Override reason for warning candidate"
+                    />
+                  ) : null}
                   <button className="command-button" type="submit">
-                    Assign Maya
+                    Assign selected
                   </button>
                 </form>
+                <div className="detail-stack">
+                  {(candidatesBySlot.get(slot.id) ?? []).map((candidate) => (
+                    <div className="form-note" key={`${candidate.userId}-reason`}>
+                      <strong>{candidate.displayName}</strong>
+                      {candidate.reasons.length
+                        ? `: ${candidate.reasons.join(" ")}`
+                        : ": Eligible for assignment."}
+                    </div>
+                  ))}
+                </div>
               </article>
             ))
           ) : (

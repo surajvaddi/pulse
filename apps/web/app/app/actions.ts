@@ -116,8 +116,15 @@ export async function denyShiftClaimAction(formData: FormData) {
 
 export async function directAssignShiftAction(formData: FormData) {
   const slotId = String(formData.get("slotId"));
-  const userId = String(formData.get("userId") ?? "user_maya");
-  await apiPostSession(`/shift-pipeline/slots/${slotId}/assign`, { userId });
+  const userId = String(formData.get("userId") ?? "");
+  const overrideReason = String(formData.get("overrideReason") ?? "").trim();
+  if (!userId) {
+    throw new Error("Select an assignment candidate.");
+  }
+  await apiPostSession(`/shift-pipeline/slots/${slotId}/assign`, {
+    userId,
+    ...(overrideReason ? { overrideReason } : {})
+  });
   revalidatePath("/app/manager");
   revalidatePath("/app/open-shifts");
   revalidatePath("/app/schedule");

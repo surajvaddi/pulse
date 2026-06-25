@@ -273,26 +273,57 @@ export class ShiftManagerService {
       throw new BadRequestException("Shift slot already has an active assignment.");
     }
 
+    const candidate = (await this.listAssignmentCandidates(session, slotId)).find(
+      (item) => item.userId === assigneeUserId
+    );
+    if (!candidate) {
+      throw new BadRequestException(
+        "Selected assignee is not an assignment candidate for this slot."
+      );
+    }
+    if (candidate.eligibility === "BLOCKED") {
+      throw new BadRequestException({
+        message: "Direct assignment blocked by policy",
+        candidate
+      });
+    }
+    if (candidate.eligibility === "WARNING") {
+      if (!options.overrideReason) {
+        throw new BadRequestException(
+          "Policy warnings require an override reason."
+        );
+      }
+      if (
+        !this.permissions.hasPermission(session, "shift:assign:override", {
+          type: "UNIT",
+          unitId: slot.unitId
+        })
+      ) {
+        throw new ForbiddenException(
+          "Direct assignment override requires shift override permission."
+        );
+      }
+    }
+
     const assignee = await this.assigneeForUser(session.organizationId, assigneeUserId);
     const assigneeSession = assignee.session;
     const employeeId = assignee.employeeId;
 
-    const policyDecision = this.eligibility.evaluateClaim({
-      session: assigneeSession,
-      slot,
-      employeeId
-    });
-    if (!policyDecision.allowed) {
-      if (!options.overrideReason) {
-        throw new BadRequestException({
-          message: "Direct assignment blocked by policy",
-          policyDecision
-        });
-      }
-      if (!this.permissions.hasPermission(session, "shift:assign:override", { type: "UNIT", unitId: slot.unitId })) {
-        throw new ForbiddenException("Direct assignment override requires shift override permission.");
-      }
-    }
+    const policyDecision =
+      process.env.WORKFLOW_PERSISTENCE === "prisma"
+        ? {
+            allowed: true,
+            requiresApproval: candidate.eligibility === "WARNING",
+            riskFlags: candidate.riskFlags,
+            blockingReasons: [],
+            warnings: candidate.reasons,
+            evaluatedAt: new Date().toISOString()
+          }
+        : this.eligibility.evaluateClaim({
+            session: assigneeSession,
+            slot,
+            employeeId
+          });
 
     const assignment = await repository.createAssignment({
       organizationId: session.organizationId,

@@ -248,6 +248,15 @@ export type ShiftPipelineAssignment = {
   endedAt?: string;
 };
 
+export type AssignmentCandidate = {
+  employeeId: string;
+  userId: string;
+  displayName: string;
+  eligibility: "ELIGIBLE" | "WARNING" | "BLOCKED";
+  reasons: string[];
+  riskFlags: string[];
+};
+
 export type OperationalShift = {
   id: string;
   organizationId: string;
