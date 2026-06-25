@@ -88,8 +88,7 @@ export async function createCanonicalSwapAction(formData: FormData) {
 export async function respondCanonicalSwapAction(formData: FormData) {
   const swapId = String(formData.get("swapId"));
   const decision = String(formData.get("decision") ?? "decline");
-  const userId = String(formData.get("userId") ?? "user_maya") as DemoUserId;
-  await apiPost(`/swap-pipeline/swaps/${swapId}/respond`, { decision }, userId);
+  await apiPostSession(`/swap-pipeline/swaps/${swapId}/respond`, { decision });
   revalidatePath("/app/swaps");
   revalidatePath("/app/manager");
 }

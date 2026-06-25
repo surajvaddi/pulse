@@ -1,5 +1,5 @@
-import { apiGet, type OperationalShift, type ShiftSwapCandidate, type ShiftSwapRequest } from "@/lib/api";
-import { createCanonicalSwapAction, decideCanonicalSwapAction, respondCanonicalSwapAction } from "../actions";
+import { apiGet, type OperationalShift, type SessionSummary, type ShiftSwapCandidate, type ShiftSwapRequest } from "@/lib/api";
+import { createCanonicalSwapAction, respondCanonicalSwapAction } from "../actions";
 
 const tabs = ["Start Swap", "Requests For Me", "Waiting On Manager", "History"];
 
@@ -23,10 +23,12 @@ export default async function SwapsPage({
   searchParams: Promise<{ slotId?: string }>;
 }) {
   const { slotId } = await searchParams;
-  const [swappableShifts, swaps] = await Promise.all([
+  const [session, swappableShifts, swaps] = await Promise.all([
+    apiGet<SessionSummary>("/auth/me"),
     apiGet<OperationalShift[]>("/swap-pipeline/eligible-original-shifts"),
     apiGet<ShiftSwapRequest[]>("/swap-pipeline/swaps")
   ]);
+  const canCreate = session.permissions.includes("shift:swap:create");
   const orderedShifts = [...swappableShifts].sort((left, right) =>
     left.slotId === slotId ? -1 : right.slotId === slotId ? 1 : 0
   );
@@ -57,7 +59,7 @@ export default async function SwapsPage({
         ))}
       </div>
 
-      <section className="panel">
+      {canCreate ? <section className="panel">
         <div className="section-heading">
           <div>
             <p className="eyebrow">Start Swap</p>
@@ -115,9 +117,9 @@ export default async function SwapsPage({
             })}
           </div>
         )}
-      </section>
+      </section> : null}
 
-      <section className="panel">
+      {canCreate ? <section className="panel">
         <div className="section-heading">
           <div>
             <p className="eyebrow">Requests For Me</p>
@@ -139,7 +141,6 @@ export default async function SwapsPage({
                 <div className="action-row">
                   <form action={respondCanonicalSwapAction}>
                     <input type="hidden" name="swapId" value={swap.id} />
-                    <input type="hidden" name="userId" value={swap.proposedUserId} />
                     <input type="hidden" name="decision" value="accept" />
                     <button className="command-button" type="submit">
                       Accept
@@ -147,7 +148,6 @@ export default async function SwapsPage({
                   </form>
                   <form action={respondCanonicalSwapAction}>
                     <input type="hidden" name="swapId" value={swap.id} />
-                    <input type="hidden" name="userId" value={swap.proposedUserId} />
                     <input type="hidden" name="decision" value="decline" />
                     <button className="secondary-button" type="submit">
                       Decline
@@ -158,13 +158,13 @@ export default async function SwapsPage({
             ))}
           </div>
         )}
-      </section>
+      </section> : null}
 
       <section className="panel">
         <div className="section-heading">
           <div>
             <p className="eyebrow">Waiting On Manager</p>
-            <h2>Approval queue</h2>
+            <h2>Pending manager review</h2>
           </div>
           <span>{managerQueue.length} pending</span>
         </div>
@@ -181,22 +181,7 @@ export default async function SwapsPage({
                 <span className="risk-strip">
                   {swap.policyDecision.riskFlags.map((flag) => flag.replaceAll("_", " ")).join(", ")}
                 </span>
-                <div className="action-row">
-                  <form action={decideCanonicalSwapAction}>
-                    <input type="hidden" name="swapId" value={swap.id} />
-                    <input type="hidden" name="decision" value="approve" />
-                    <button className="command-button" type="submit">
-                      Approve
-                    </button>
-                  </form>
-                  <form action={decideCanonicalSwapAction}>
-                    <input type="hidden" name="swapId" value={swap.id} />
-                    <input type="hidden" name="decision" value="deny" />
-                    <button className="secondary-button" type="submit">
-                      Deny
-                    </button>
-                  </form>
-                </div>
+                <span className="status-pill">Manager review</span>
               </article>
             ))}
           </div>
