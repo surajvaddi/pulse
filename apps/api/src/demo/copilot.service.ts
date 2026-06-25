@@ -212,7 +212,7 @@ export class CopilotService {
       llmRuntimeToolRegistry.get("get_my_schedule")?.roleAccess[session.role] !==
       "BLOCKED"
     ) {
-      return this.mockProposal("get_my_schedule", { userId: session.userId });
+      return this.mockProposal("get_my_schedule", {});
     }
     return undefined;
   }

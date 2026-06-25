@@ -79,11 +79,10 @@ export class LlmWorkflowDispatcherService {
             ? { statuses: parsed.statuses as never[] }
             : {})
         });
-      case "claim_open_shift":
       case "claim_shift_slot":
         return this.claims.claimOpenSlot(
           session,
-          String(parsed.slotId ?? parsed.shiftId)
+          String(parsed.slotId)
         );
       case "decide_shift_claim":
         return this.managers.decidePendingClaim(

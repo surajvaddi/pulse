@@ -91,3 +91,35 @@ assert.equal(blockedTimecardTool.roleAccess.SYSTEM_ADMIN, "BLOCKED");
 const blockedSqlTool = llmWorkflowTools.find((tool) => tool.name === "blocked_database_request");
 assert.ok(blockedSqlTool);
 assert.equal(blockedSqlTool.riskLevel, "BLOCKED");
+
+assert.equal(
+  llmWorkflowTools.some((tool) => tool.name === "claim_open_shift"),
+  false
+);
+assert.equal(
+  llmWorkflowTools.some((tool) => tool.pageContexts.includes("*")),
+  false
+);
+assert.equal(
+  llmWorkflowTools
+    .filter((tool) => tool.scopeRequirement === "SELF")
+    .some((tool) => {
+      const shape = (tool.inputSchema as { shape?: Record<string, unknown> }).shape;
+      return Boolean(shape?.userId);
+    }),
+  false
+);
+assert.equal(
+  llmWorkflowToolRegistry.availableFor(
+    { role: "EMPLOYEE", currentPage: "/app/open-shifts" },
+    "WORKFLOW_PREVIEW"
+  ).some((tool) => tool.name === "claim_shift_slot"),
+  true
+);
+assert.equal(
+  llmWorkflowToolRegistry.availableFor(
+    { role: "EMPLOYEE", currentPage: "/app/timecards" },
+    "WORKFLOW_PREVIEW"
+  ).some((tool) => tool.name === "claim_shift_slot"),
+  false
+);

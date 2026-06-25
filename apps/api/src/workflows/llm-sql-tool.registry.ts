@@ -61,9 +61,26 @@ export const llmSqlReportTools: LlmToolDefinition[] = sqlReportRegistry.map((rep
   name: report.name,
   description: report.description,
   routeAvailability: ["SQL_REPORT_SUMMARY", "MANAGER_OPERATIONS", "SELF_SERVICE_CHAT"],
-  pageContexts: ["*", "/app/copilot", "/app/schedule", "/app/staffing-gaps", "/app/timecards"],
+  pageContexts: ["/app/copilot", "/app/schedule", "/app/staffing-gaps", "/app/timecards"],
   inputSchema: report.parameterSchema as z.ZodType<unknown>,
-  outputSchema: z.array(z.record(z.unknown())),
+  outputSchema: z.array(
+    z.object(
+      Object.fromEntries(
+        report.resultColumns.map((column) => [
+          column.key,
+          column.type === "number"
+            ? z.number()
+            : column.type === "boolean"
+              ? z.boolean()
+              : column.type === "string[]"
+                ? z.array(z.string())
+                : column.type === "datetime"
+                  ? z.union([z.date(), z.string().datetime()])
+                  : z.string()
+        ])
+      )
+    )
+  ),
   riskLevel: "READ_ONLY",
   scopeRequirement: reportScopeRequirement[report.name],
   roleAccess: roleAccessFor(reportRoleAccess[report.name]),

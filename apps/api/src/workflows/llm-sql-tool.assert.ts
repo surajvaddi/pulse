@@ -42,3 +42,20 @@ assert.equal(
   ).some((tool) => tool.name === "get_staffing_gaps_report"),
   false
 );
+assert.equal(
+  llmSqlReportTools.some((tool) => tool.pageContexts.includes("*")),
+  false
+);
+assert.equal(
+  staffing.outputSchema.safeParse([
+    {
+      unitId: "unit_1",
+      role: "RN",
+      requiredCount: 2,
+      assignedCount: 1,
+      gapCount: 1,
+      severity: "HIGH"
+    }
+  ]).success,
+  true
+);
