@@ -51,6 +51,93 @@ function mapDemoStaff(employee: (typeof demoStaffDirectory)[number]): StaffDirec
   };
 }
 
+export function calculateCoverageGap(input: {
+  id: string;
+  unitId: string;
+  role: string;
+  roleId: string;
+  requiredCount: number;
+  certificationRequiredIds: string[];
+  startsAt: string;
+  endsAt: string;
+  slots: Array<{
+    status: string;
+    assignments: Array<{
+      status: string;
+      employee: {
+        roleId: string;
+        certifications: Array<{
+          certificationId: string;
+          status: string;
+          expiresAt?: string | null;
+        }>;
+        availabilityWindows: Array<{
+          type: string;
+          status: string;
+          startsAt: string;
+          endsAt: string;
+        }>;
+      };
+    }>;
+  }>;
+}): StaffingGapRecord {
+  const startsAt = new Date(input.startsAt);
+  const assignedCount = input.slots.reduce((total, slot) => {
+    if (slot.status === "CANCELLED") return total;
+    const qualifiedAssignments = slot.assignments.filter((assignment) => {
+      if (assignment.status !== "ACTIVE") return false;
+      const employee = assignment.employee;
+      if (employee.roleId !== input.roleId) return false;
+      const qualified = input.certificationRequiredIds.every((requiredId) =>
+        employee.certifications.some(
+          (credential) =>
+            credential.certificationId === requiredId &&
+            credential.status === "VERIFIED" &&
+            (!credential.expiresAt ||
+              new Date(credential.expiresAt) > startsAt)
+        )
+      );
+      const absent = employee.availabilityWindows.some(
+        (window) =>
+          window.status === "ACTIVE" &&
+          window.type === "UNAVAILABLE" &&
+          new Date(window.startsAt) < new Date(input.endsAt) &&
+          new Date(window.endsAt) > startsAt
+      );
+      return qualified && !absent;
+    });
+    return total + qualifiedAssignments.length;
+  }, 0);
+  const gapCount = Math.max(0, input.requiredCount - assignedCount);
+  const openSlots = input.slots.filter((slot) => slot.status === "OPEN").length;
+  return {
+    id: `gap_${input.id}`,
+    unitId: input.unitId,
+    role: input.role,
+    requiredCount: input.requiredCount,
+    assignedCount,
+    gapCount,
+    severity:
+      assignedCount > input.requiredCount
+        ? "OVERSTAFFED"
+        : gapCount === 0
+          ? "RESOLVED"
+          : gapCount >= 2
+            ? "HIGH"
+            : "MEDIUM",
+    recommendedActions:
+      gapCount > 0
+        ? [
+            `${openSlots} open slot${openSlots === 1 ? "" : "s"} available`,
+            "Review qualified staff",
+            "Broadcast to eligible employees"
+          ]
+        : assignedCount > input.requiredCount
+          ? ["Review surplus coverage before publishing"]
+          : ["Coverage requirement is satisfied"]
+  };
+}
+
 @Injectable()
 export class InMemoryOperationsRepository implements OperationsRepository {
   async listStaffingGaps(query: { organizationId: string; unitId?: string }) {
@@ -142,26 +229,67 @@ export class InMemoryOperationsRepository implements OperationsRepository {
 @Injectable()
 export class PrismaOperationsRepository implements OperationsRepository {
   async listStaffingGaps(query: { organizationId: string; unitId?: string }) {
-    const openShifts = await prisma.shift.findMany({
+    const requirements = await prisma.staffingRequirement.findMany({
       where: {
-        organizationId: query.organizationId,
-        status: "OPEN",
+        unit: { facility: { organizationId: query.organizationId } },
         ...(query.unitId ? { unitId: query.unitId } : {})
       },
       include: {
-        roleRequired: { select: { name: true } }
+        role: { select: { name: true } },
+        shiftSlots: {
+          include: {
+            assignments: {
+              where: { status: "ACTIVE" },
+              include: {
+                employee: {
+                  include: {
+                    certifications: true,
+                    availabilityWindows: {
+                      where: { status: "ACTIVE", type: "UNAVAILABLE" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
       }
     });
-    return openShifts.map((shift): StaffingGapRecord => ({
-      id: `gap_${shift.unitId}_${shift.roleRequired.name}`,
-      unitId: shift.unitId,
-      role: shift.roleRequired.name,
-      requiredCount: 1,
-      assignedCount: 0,
-      gapCount: 1,
-      severity: "HIGH",
-      recommendedActions: ["Review qualified staff", "Broadcast to eligible employees"]
-    }));
+    return requirements.map((requirement) =>
+      calculateCoverageGap({
+        id: requirement.id,
+        unitId: requirement.unitId,
+        role: requirement.role.name,
+        roleId: requirement.roleId,
+        requiredCount: requirement.minRequired,
+        certificationRequiredIds: requirement.certificationRequiredIds,
+        startsAt: requirement.startAt.toISOString(),
+        endsAt: requirement.endAt.toISOString(),
+        slots: requirement.shiftSlots.map((slot) => ({
+          status: slot.status,
+          assignments: slot.assignments.map((assignment) => ({
+            status: assignment.status,
+            employee: {
+              roleId: assignment.employee.roleId,
+              certifications: assignment.employee.certifications.map(
+                (credential) => ({
+                  certificationId: credential.certificationId,
+                  status: credential.status,
+                  expiresAt: credential.expiresAt?.toISOString() ?? null
+                })
+              ),
+              availabilityWindows:
+                assignment.employee.availabilityWindows.map((window) => ({
+                  type: window.type,
+                  status: window.status,
+                  startsAt: window.startAt.toISOString(),
+                  endsAt: window.endAt.toISOString()
+                }))
+            }
+          }))
+        }))
+      })
+    );
   }
 
   async listCoverageCandidates(query: { organizationId: string; gapId: string }) {
