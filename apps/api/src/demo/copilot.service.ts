@@ -3,6 +3,7 @@ import {
   LlmModelRouter,
   LlmGatewayFactory,
   parseLlmRouteOverrides,
+  toProviderToolDefinition,
   type LlmGateway,
   type LlmModelRoute,
   type LlmResponse,
@@ -314,18 +315,18 @@ export class CopilotService {
       mode: process.env.ENABLE_DEMO_AUTH === "false" ? "PRODUCTION" : "DEMO"
     };
     const modelRoute = this.router.route(route);
-    const availableTools = llmRuntimeTools
+    const availableToolDefinitions = llmRuntimeTools
       .filter((tool) =>
         tool.routeAvailability.includes(route) &&
         tool.roleAccess[session.role] !== "BLOCKED" &&
         (tool.pageContexts.includes("*") || tool.pageContexts.includes(roleContext.currentPage))
       )
-      .map((tool) => tool.name);
+      .map(toProviderToolDefinition);
     const response = await this.gateway.complete({
       route: modelRoute.route,
       messages: [{ role: "user", content: message }],
       roleContext,
-      availableTools
+      availableTools: availableToolDefinitions
     });
 
     return {
@@ -334,7 +335,7 @@ export class CopilotService {
       route: response.route,
       latencyMs: response.latencyMs,
       usage: response.usage,
-      availableTools,
+      availableTools: availableToolDefinitions.map((tool) => tool.name),
       pageContext,
       actorRole: session.role,
       scopeSummary: this.scopeSummary(session),

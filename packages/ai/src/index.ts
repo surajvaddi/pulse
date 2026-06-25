@@ -1,4 +1,10 @@
 import { z } from "zod";
+import { zodToJsonSchema } from "zod-to-json-schema";
+
+const convertZodSchema = zodToJsonSchema as unknown as (
+  schema: unknown,
+  options: Record<string, unknown>
+) => Record<string, unknown>;
 
 export const LlmAccountRoleSchema = z.enum([
   "ORGANIZATION_OWNER",
@@ -202,9 +208,28 @@ export type LlmRequest = {
   route: LlmModelRoute;
   messages: LlmMessage[];
   roleContext: LlmRoleContext;
-  availableTools: string[];
+  availableTools: LlmProviderToolDefinition[];
   responseFormat?: "text" | "json";
 };
+
+export type LlmProviderToolDefinition = {
+  name: string;
+  description: string;
+  parameters: Record<string, unknown>;
+};
+
+export function toProviderToolDefinition(
+  tool: Pick<LlmToolDefinition, "name" | "description" | "inputSchema">
+): LlmProviderToolDefinition {
+  return {
+    name: tool.name,
+    description: tool.description,
+    parameters: convertZodSchema(tool.inputSchema, {
+      $refStrategy: "none",
+      target: "openApi3"
+    })
+  };
+}
 
 export type LlmResponse = {
   provider: string;
@@ -473,6 +498,16 @@ export class OpenAICompatibleGateway implements LlmGateway {
             content: message.content,
             ...(message.name ? { name: message.name } : {})
           })),
+          tools: request.availableTools.length
+            ? request.availableTools.map((tool) => ({
+                type: "function",
+                function: {
+                  name: tool.name,
+                  description: tool.description,
+                  parameters: tool.parameters
+                }
+              }))
+            : undefined,
           tool_choice: request.availableTools.length ? "auto" : undefined,
           response_format: request.responseFormat === "json" ? { type: "json_object" } : undefined
         }),

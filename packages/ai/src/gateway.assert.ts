@@ -49,7 +49,13 @@ const response = await gateway.complete({
   route: "SELF_SERVICE_CHAT",
   messages: [{ role: "user", content: "When do I work next?" }],
   roleContext: employeeContext,
-  availableTools: ["get_my_schedule"]
+  availableTools: [
+    {
+      name: "get_my_schedule",
+      description: "Read schedule",
+      parameters: { type: "object", properties: {} }
+    }
+  ]
 });
 
 assert.equal(response.provider, "mock");
@@ -106,6 +112,57 @@ assert.equal(providerResponse.provider, "openai-compatible");
 assert.equal(providerResponse.content, "Provider answer");
 assert.equal(providerResponse.usage.totalTokens, 5);
 assert.equal(successfulProvider.redactedConfig().apiKey, "[REDACTED]");
+
+let capturedProviderBody: Record<string, unknown> | undefined;
+const toolProvider = new OpenAICompatibleGateway(
+  {
+    baseUrl: "https://llm.example.test/v1",
+    apiKey: "secret-key",
+    model: "test-model",
+    timeoutMs: 100,
+    maxRetries: 0,
+    enabled: true
+  },
+  async (_input, init) => {
+    capturedProviderBody = JSON.parse(String(init?.body)) as Record<string, unknown>;
+    return new Response(
+      JSON.stringify({
+        model: "test-model",
+        choices: [{ message: { content: "" }, finish_reason: "stop" }]
+      }),
+      { status: 200, headers: { "content-type": "application/json" } }
+    );
+  }
+);
+await toolProvider.complete({
+  route: "SELF_SERVICE_CHAT",
+  messages: [{ role: "user", content: "show my schedule" }],
+  roleContext: employeeContext,
+  availableTools: [
+    {
+      name: "get_my_schedule",
+      description: "Read the current user's schedule.",
+      parameters: { type: "object", properties: {}, additionalProperties: false }
+    }
+  ]
+});
+assert.equal(capturedProviderBody?.tool_choice, "auto");
+assert.equal(
+  (
+    capturedProviderBody?.tools as Array<{
+      function: { name: string; parameters: { type: string } };
+    }>
+  )[0]?.function.name,
+  "get_my_schedule"
+);
+assert.equal(
+  (
+    capturedProviderBody?.tools as Array<{
+      function: { name: string; parameters: { type: string } };
+    }>
+  )[0]?.function.parameters.type,
+  "object"
+);
 
 const rateLimitedProvider = new OpenAICompatibleGateway(
   {
