@@ -9,14 +9,14 @@ import {
   type LlmRoleContext
 } from "@pulseshift/ai";
 
-import type { Permission } from "@pulseshift/domain";
-
 import type { DemoSession } from "../auth/demo-users";
-import { PermissionService, type ObjectScope } from "../auth/permission.service";
+import { PermissionService } from "../auth/permission.service";
 import { MonitoringService } from "../security/monitoring.service";
 import { demoAIToolCalls, demoSchedules, demoTimecardExceptions } from "./demo-data";
-import { llmSqlReportTools } from "../workflows/llm-sql-tool.registry";
-import { llmWorkflowTools } from "../workflows/llm-workflow-tool.registry";
+import {
+  llmRuntimeToolRegistry,
+  llmRuntimeTools
+} from "../workflows/llm-tool-runtime";
 
 type ToolRiskLevel = "READ_ONLY" | "LOW_RISK_WRITE" | "APPROVAL_REQUIRED" | "BLOCKED";
 type ToolStatus = "EXECUTED" | "BLOCKED" | "FAILED";
@@ -29,24 +29,6 @@ type CopilotLlmContext = Pick<LlmResponse, "provider" | "model" | "route" | "lat
   actorRole: string;
   scopeSummary: string;
 };
-
-type ToolDefinition = {
-  name: string;
-  riskLevel: ToolRiskLevel;
-  requiredPermissions: Permission[];
-};
-
-const tools: ToolDefinition[] = [
-  { name: "get_my_schedule", riskLevel: "READ_ONLY", requiredPermissions: ["schedule:read:self"] },
-  { name: "get_facility_schedule_summary", riskLevel: "READ_ONLY", requiredPermissions: ["schedule:read:facility"] },
-  { name: "compute_staffing_gaps", riskLevel: "READ_ONLY", requiredPermissions: ["schedule:read:unit"] },
-  { name: "get_timecard_exceptions", riskLevel: "READ_ONLY", requiredPermissions: ["timecard:read:self", "timecard:read:unit"] },
-  { name: "get_credential_expiry_report", riskLevel: "READ_ONLY", requiredPermissions: ["credential:read"] },
-  { name: "get_audit_activity_report", riskLevel: "READ_ONLY", requiredPermissions: ["audit:read", "ai:admin"] },
-  { name: "create_shift_swap_request", riskLevel: "LOW_RISK_WRITE", requiredPermissions: ["shift:swap:create"] },
-  { name: "edit_timecard_event", riskLevel: "BLOCKED", requiredPermissions: ["timecard:resolve"] },
-  { name: "blocked_database_request", riskLevel: "BLOCKED", requiredPermissions: ["ai:admin"] }
-];
 
 @Injectable()
 export class CopilotService {
@@ -106,7 +88,7 @@ export class CopilotService {
     }
 
     if (normalized.includes("facility") || normalized.includes("coverage overview")) {
-      this.authorizeTool(session, "get_facility_schedule_summary");
+      this.authorizeTool(session, "get_staffing_gaps_report");
       return {
         mode: "ANSWER",
         answer:
@@ -114,7 +96,7 @@ export class CopilotService {
         toolCalls: [
           this.logTool(
             session,
-            "get_facility_schedule_summary",
+            "get_staffing_gaps_report",
             { facilityId: "fac_mercy_main" },
             { unitsReviewed: ["unit_icu", "unit_ed"], riskUnits: ["unit_icu"] },
             llmContext
@@ -224,26 +206,9 @@ export class CopilotService {
     if (tool.riskLevel === "BLOCKED") {
       throw new ForbiddenException("Tool is blocked by AI safety policy");
     }
-    if (
-      !tool.requiredPermissions.some((permission) =>
-        this.permissions.hasPermission(session, permission, this.scopeForPermission(session, permission))
-      )
-    ) {
+    if (tool.roleAccess[session.role] === "BLOCKED") {
       throw new ForbiddenException("Tool is outside the requesting user's effective permissions");
     }
-  }
-
-  private scopeForPermission(session: DemoSession, permission: Permission): ObjectScope {
-    if (permission.endsWith(":self") || permission.includes(":create")) {
-      return { type: "SELF", userId: session.userId };
-    }
-    if (permission.endsWith(":facility")) {
-      return { type: "FACILITY", facilityId: "fac_mercy_main" };
-    }
-    if (permission === "audit:read" || permission === "ai:admin" || permission === "credential:read") {
-      return { type: "ORG", organizationId: session.organizationId };
-    }
-    return { type: "UNIT", unitId: "unit_icu" };
   }
 
   private blockedTool(session: DemoSession, toolName: string, message: string, llmContext: CopilotLlmContext) {
@@ -329,7 +294,7 @@ export class CopilotService {
   }
 
   private findTool(toolName: string) {
-    const tool = tools.find((candidate) => candidate.name === toolName);
+    const tool = llmRuntimeToolRegistry.get(toolName);
     if (!tool) {
       throw new Error(`Unknown tool: ${toolName}`);
     }
@@ -349,7 +314,7 @@ export class CopilotService {
       mode: process.env.ENABLE_DEMO_AUTH === "false" ? "PRODUCTION" : "DEMO"
     };
     const modelRoute = this.router.route(route);
-    const availableTools = [...llmWorkflowTools, ...llmSqlReportTools]
+    const availableTools = llmRuntimeTools
       .filter((tool) =>
         tool.routeAvailability.includes(route) &&
         tool.roleAccess[session.role] !== "BLOCKED" &&
