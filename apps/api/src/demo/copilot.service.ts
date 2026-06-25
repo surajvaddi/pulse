@@ -1,7 +1,7 @@
 import { ForbiddenException, Inject, Injectable } from "@nestjs/common";
 import {
   LlmModelRouter,
-  MockLlmGateway,
+  LlmGatewayFactory,
   parseLlmRouteOverrides,
   type LlmGateway,
   type LlmModelRoute,
@@ -33,7 +33,7 @@ type CopilotLlmContext = Pick<LlmResponse, "provider" | "model" | "route" | "lat
 @Injectable()
 export class CopilotService {
   private readonly router = new LlmModelRouter(parseLlmRouteOverrides(process.env));
-  private readonly gateway: LlmGateway = new MockLlmGateway();
+  private readonly gateway: LlmGateway = LlmGatewayFactory.fromEnvironment(process.env);
 
   constructor(
     @Inject(PermissionService) private readonly permissions: PermissionService,

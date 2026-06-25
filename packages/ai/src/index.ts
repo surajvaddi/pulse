@@ -550,6 +550,31 @@ export class OpenAICompatibleGateway implements LlmGateway {
   }
 }
 
+export class LlmGatewayFactory {
+  static fromEnvironment(
+    env: Record<string, string | undefined>,
+    fetchImpl: typeof fetch = fetch
+  ): LlmGateway {
+    if (!env.LLM_PROVIDER || env.LLM_PROVIDER === "mock") {
+      return new MockLlmGateway();
+    }
+    if (env.LLM_PROVIDER !== "openai-compatible") {
+      throw new Error(`Unsupported LLM provider: ${env.LLM_PROVIDER}`);
+    }
+    return new OpenAICompatibleGateway(
+      {
+        baseUrl: env.LLM_BASE_URL ?? "https://api.openai.com/v1",
+        ...(env.LLM_API_KEY ? { apiKey: env.LLM_API_KEY } : {}),
+        model: env.LLM_MODEL ?? "gpt-4.1-mini",
+        timeoutMs: Number(env.LLM_TIMEOUT_MS ?? 10_000),
+        maxRetries: Number(env.LLM_MAX_RETRIES ?? 1),
+        enabled: env.LLM_PROVIDER_ENABLED === "true"
+      },
+      fetchImpl
+    );
+  }
+}
+
 function parseToolArguments(value: string | undefined): Record<string, unknown> {
   if (!value) {
     return {};
