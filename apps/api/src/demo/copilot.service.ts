@@ -7,18 +7,23 @@ import {
   type LlmGateway,
   type LlmModelRoute,
   type LlmResponse,
-  type LlmRoleContext
+  type LlmRoleContext,
+  type LlmToolProposal
 } from "@pulseshift/ai";
 
 import type { DemoSession } from "../auth/demo-users";
 import { PermissionService } from "../auth/permission.service";
 import { MonitoringService } from "../security/monitoring.service";
-import { demoSchedules, demoTimecardExceptions } from "./demo-data";
 import {
   llmRuntimeToolRegistry,
-  llmRuntimeTools
+  llmRuntimeTools,
+  normalizeToolProposal
 } from "../workflows/llm-tool-runtime";
 import { CopilotActivityService } from "../workflows/copilot-activity.service";
+import { LlmWorkflowDispatcherService } from "../workflows/llm-workflow-dispatcher.service";
+import { SqlReportExecutorService } from "../workflows/sql-report-executor.service";
+import { AIToolPreviewService } from "../workflows/ai-tool-preview.service";
+import type { SqlReportName } from "../workflows/repository-contracts";
 
 type ToolRiskLevel = "READ_ONLY" | "LOW_RISK_WRITE" | "APPROVAL_REQUIRED" | "BLOCKED";
 type ToolStatus = "EXECUTED" | "BLOCKED" | "FAILED";
@@ -31,7 +36,22 @@ type CopilotLlmContext = Pick<LlmResponse, "provider" | "model" | "route" | "lat
   pageContext: string;
   actorRole: string;
   scopeSummary: string;
+  providerContent: string;
+  toolProposals: LlmToolProposal[];
 };
+
+export function answerFromToolResult(toolName: string, output: unknown) {
+  if (Array.isArray(output)) {
+    if (output.length === 0) {
+      return `No records were found for ${toolName.replaceAll("_", " ")} in your current scope.`;
+    }
+    return `I found ${output.length} record${output.length === 1 ? "" : "s"} for ${toolName.replaceAll("_", " ")}: ${JSON.stringify(output.slice(0, 3))}`;
+  }
+  if (output && typeof output === "object") {
+    return `The ${toolName.replaceAll("_", " ")} result is ${JSON.stringify(output)}.`;
+  }
+  return `The ${toolName.replaceAll("_", " ")} request completed with no additional data.`;
+}
 
 @Injectable()
 export class CopilotService {
@@ -42,7 +62,13 @@ export class CopilotService {
     @Inject(PermissionService) private readonly permissions: PermissionService,
     @Inject(MonitoringService) private readonly monitoring: MonitoringService,
     @Inject(CopilotActivityService)
-    private readonly activity: CopilotActivityService
+    private readonly activity: CopilotActivityService,
+    @Inject(LlmWorkflowDispatcherService)
+    private readonly workflowDispatcher: LlmWorkflowDispatcherService,
+    @Inject(SqlReportExecutorService)
+    private readonly sqlReports: SqlReportExecutorService,
+    @Inject(AIToolPreviewService)
+    private readonly previews: AIToolPreviewService
   ) {}
 
   async handleMessage(session: DemoSession, message: string) {
@@ -57,149 +83,149 @@ export class CopilotService {
   private async buildResponse(session: DemoSession, message: string) {
     const normalized = message.toLowerCase();
     const llmContext = await this.prepareLlmContext(session, message, normalized);
-
-    if (normalized.includes("clock-in") && normalized.includes("change")) {
+    const proposed =
+      llmContext.toolProposals[0] ??
+      this.deterministicMockProposal(session, normalized);
+    if (!proposed) {
       return {
-        ...(await this.blockedTool(session, "edit_timecard_event", message, llmContext)),
+        mode: "ANSWER",
+        answer:
+          llmContext.providerContent ||
+          "I could not identify a permitted workforce action for that request.",
+        toolCalls: [],
         llm: llmContext
       };
     }
-
-    if (normalized.includes("direct sql") || normalized.includes("raw sql") || normalized.includes("database")) {
+    if (["edit_timecard_event", "blocked_database_request"].includes(proposed.toolName)) {
       return {
-        ...(await this.blockedTool(session, "blocked_database_request", message, llmContext)),
+        ...(await this.blockedTool(
+          session,
+          proposed.toolName,
+          message,
+          llmContext
+        )),
         llm: llmContext
       };
     }
-
-    if (normalized.includes("swap")) {
-      this.authorizeTool(session, "create_shift_swap_request");
+    const normalizedProposal = normalizeToolProposal(proposed);
+    this.authorizeTool(session, normalizedProposal.toolName);
+    const tool = this.findTool(normalizedProposal.toolName);
+    if (tool.allowsMutation) {
+      const preview = await this.previews.create(session, {
+        toolName: tool.name,
+        normalizedArgs: normalizedProposal.argumentsJson,
+        policyResult: {
+          allowed: true,
+          requiresApproval: normalizedProposal.requiresApproval,
+          riskLevel: normalizedProposal.riskLevel
+        },
+        idempotencyKey: `${llmContext.conversationId}:${tool.name}`
+      });
+      const output = { previewId: preview.id, status: preview.status };
       return {
         mode: "ACTION_PREVIEW",
-        answer:
-          "I can create a swap request for Priya's Friday ICU night shift with Maya. Maya must accept, then Jordan must approve before the schedule changes.",
-        toolCalls: [await this.logTool(session, "create_shift_swap_request", { message }, { preview: true }, llmContext)],
-        llm: llmContext
-      };
-    }
-
-    if (normalized.includes("short") || normalized.includes("gap")) {
-      this.authorizeTool(session, "compute_staffing_gaps");
-      return {
-        mode: "ANSWER",
-        answer: "ICU RN Night is short 1 nurse. Recommended action: ask Nina Patel or broadcast to ICU-qualified RNs.",
+        answer: "The action is ready for your review. Confirm the preview to continue.",
         toolCalls: [
           await this.logTool(
             session,
-            "compute_staffing_gaps",
-            { unitId: "unit_icu" },
-            { gapCount: 1, severity: "HIGH" },
-            llmContext
+            tool.name,
+            normalizedProposal.argumentsJson,
+            output,
+            llmContext,
+            "EXECUTED",
+            tool.riskLevel
           )
         ],
+        preview,
         llm: llmContext
       };
     }
-
-    if (normalized.includes("facility") || normalized.includes("coverage overview")) {
-      this.authorizeTool(session, "get_staffing_gaps_report");
-      return {
-        mode: "ANSWER",
-        answer:
-          "Mercy Main has a facility coverage overview with ICU night risk, ED day coverage stable, and float pool options visible for staffing review.",
-        toolCalls: [
-          await this.logTool(
-            session,
-            "get_staffing_gaps_report",
-            { facilityId: "fac_mercy_main" },
-            { unitsReviewed: ["unit_icu", "unit_ed"], riskUnits: ["unit_icu"] },
-            llmContext
-          )
-        ],
-        llm: llmContext
-      };
-    }
-
-    if (normalized.includes("flagged") || normalized.includes("timecard")) {
-      this.authorizeTool(session, "get_timecard_exceptions");
-      return {
-        mode: "ANSWER",
-        answer:
-          session.role === "PAYROLL_ADMIN"
-            ? "There is 1 flagged timecard exception in ICU for Priya. Payroll can review the exception but corrections stay in the approval workflow."
-            : demoTimecardExceptions[0]?.explanation ?? "No open timecard exceptions are visible.",
-        toolCalls: [
-          await this.logTool(
-            session,
-            "get_timecard_exceptions",
-            session.role === "PAYROLL_ADMIN" ? { unitId: "unit_icu" } : { userId: session.userId },
-            {
-              exceptionIds: demoTimecardExceptions.map((exception) => exception.id)
-            },
-            llmContext
-          )
-        ],
-        llm: llmContext
-      };
-    }
-
-    if (normalized.includes("credential") || normalized.includes("certification")) {
-      this.authorizeTool(session, "get_credential_expiry_report");
-      return {
-        mode: "ANSWER",
-        answer:
-          "Nina Patel has a BLS credential expiring soon. Credentialing can verify renewal status before she is placed into restricted coverage.",
-        toolCalls: [
-          await this.logTool(
-            session,
-            "get_credential_expiry_report",
-            { organizationId: session.organizationId },
-            { expiringEmployeeIds: ["emp_nina"] },
-            llmContext
-          )
-        ],
-        llm: llmContext
-      };
-    }
-
-    if (normalized.includes("audit") || normalized.includes("admin summary")) {
-      this.authorizeTool(session, "get_audit_activity_report");
-      return {
-        mode: "ANSWER",
-        answer:
-          "The audit summary shows recent schedule, notification, and AI tool-call events with blocked AI attempts separated for compliance review.",
-        toolCalls: [
-          await this.logTool(
-            session,
-            "get_audit_activity_report",
-            { organizationId: session.organizationId },
-            { eventCategories: ["SCHEDULE", "AI_SAFETY", "INTEGRATION"] },
-            llmContext
-          )
-        ],
-        llm: llmContext
-      };
-    }
-
-    this.authorizeTool(session, "get_my_schedule");
-    const visibleShift = demoSchedules.find((shift) => shift.userId === session.userId);
+    const output = tool.usesSqlReport
+      ? await this.sqlReports.executeSqlReport(
+          session,
+          tool.name as SqlReportName,
+          normalizedProposal.argumentsJson
+        )
+      : await this.workflowDispatcher.execute(
+          session,
+          tool.name,
+          normalizedProposal.argumentsJson
+        );
+    const outputJson = { records: output };
     return {
       mode: "ANSWER",
-      answer: visibleShift
-        ? `Your next visible shift is ${visibleShift.title} starting ${visibleShift.startsAt}.`
-        : "I do not see an upcoming shift in your self-scoped schedule.",
+      answer: answerFromToolResult(tool.name, output),
       toolCalls: [
         await this.logTool(
           session,
-          "get_my_schedule",
-          { userId: session.userId },
-          {
-            shiftIds: visibleShift ? [visibleShift.id] : []
-          },
+          tool.name,
+          normalizedProposal.argumentsJson,
+          outputJson,
           llmContext
         )
       ],
       llm: llmContext
+    };
+  }
+
+  private deterministicMockProposal(
+    session: DemoSession,
+    normalized: string
+  ): LlmToolProposal | undefined {
+    if (normalized.includes("direct sql") || normalized.includes("raw sql") || normalized.includes("database")) {
+      return this.mockProposal("blocked_database_request", {});
+    }
+    if (normalized.includes("clock-in") && normalized.includes("change")) {
+      return this.mockProposal("edit_timecard_event", {});
+    }
+    const candidates: Array<[boolean, string, Record<string, unknown>]> = [
+      [normalized.includes("swap"), "list_swappable_shifts", {}],
+      [
+        normalized.includes("short") ||
+          normalized.includes("gap") ||
+          normalized.includes("staffing") ||
+          normalized.includes("coverage"),
+        "compute_staffing_gaps",
+        {}
+      ],
+      [
+        normalized.includes("timecard") || normalized.includes("flagged"),
+        session.role === "EMPLOYEE"
+          ? "get_timecard_exceptions"
+          : "get_timecard_exceptions_report",
+        {}
+      ],
+      [
+        normalized.includes("credential") || normalized.includes("certification"),
+        "get_credential_expiry_report",
+        {}
+      ],
+      [normalized.includes("audit"), "get_audit_activity_report", {}]
+    ];
+    const selected = candidates.find(
+      ([matches, name]) =>
+        matches &&
+        llmRuntimeToolRegistry.get(name)?.roleAccess[session.role] !== "BLOCKED"
+    );
+    if (selected) return this.mockProposal(selected[1], selected[2]);
+    if (
+      llmRuntimeToolRegistry.get("get_my_schedule")?.roleAccess[session.role] !==
+      "BLOCKED"
+    ) {
+      return this.mockProposal("get_my_schedule", { userId: session.userId });
+    }
+    return undefined;
+  }
+
+  private mockProposal(
+    toolName: string,
+    argumentsJson: Record<string, unknown>
+  ): LlmToolProposal {
+    return {
+      toolName,
+      argumentsJson,
+      riskLevel: "READ_ONLY",
+      requiresApproval: false
     };
   }
 
@@ -349,7 +375,9 @@ export class CopilotService {
       pageContext,
       actorRole: session.role,
       scopeSummary: this.scopeSummary(session),
-      fallback: true
+      fallback: response.provider === "mock",
+      providerContent: response.content,
+      toolProposals: response.toolProposals
     };
   }
 
