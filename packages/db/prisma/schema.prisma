@@ -707,13 +707,19 @@ model ApprovalRequest {
   approvalType      ApprovalType
   targetObjectType  String
   targetObjectId    String
+  claimId           String?
+  slotId            String?
+  managerScope      Json?
   status            ApprovalStatus @default(PENDING)
   riskFlags         String[]
   decisionReason    String?
+  decidedAt         DateTime?
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
 
   @@index([approverUserId, status])
+  @@index([claimId])
+  @@index([slotId, status])
   @@map("approval_requests")
 }
 

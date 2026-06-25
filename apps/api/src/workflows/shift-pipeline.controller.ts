@@ -132,7 +132,24 @@ export class ShiftPipelineController {
   async listApprovals(@CurrentSession() session: DemoSession, @Query("status") status?: "PENDING" | "APPROVED" | "DENIED") {
     this.ensureSeeded();
     if (usePrismaWorkflow()) {
-      return [];
+      const context = await this.workspaceContext.getContext(session);
+      const query = scopeQueryForSession(session, context, "approvals");
+      return prisma.approvalRequest.findMany({
+        where: {
+          organizationId: query.organizationId,
+          approvalType: "SHIFT_ASSIGNMENT",
+          ...(status ? { status } : {}),
+          ...(query.unitId
+            ? {
+                managerScope: {
+                  path: ["unitIds"],
+                  array_contains: query.unitId
+                }
+              }
+            : {})
+        },
+        orderBy: { createdAt: "desc" }
+      });
     }
     const repository = this.repositories.repository();
     const query = scopeQueryForSession(

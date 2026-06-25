@@ -57,6 +57,14 @@ export class ShiftClaimService {
     }
 
     if (policyDecision.requiresApproval) {
+      if (process.env.WORKFLOW_PERSISTENCE === "prisma") {
+        return this.createPersistedApprovalClaim(
+          session,
+          slot,
+          employeeId,
+          policyDecision
+        );
+      }
       const approval = this.createApproval(session, slotId, policyDecision.riskFlags);
       const claim = await repository.createClaim({
         organizationId: session.organizationId,
@@ -207,6 +215,175 @@ export class ShiftClaimService {
     };
     demoApprovals.push(approval);
     return approval;
+  }
+
+  private async createPersistedApprovalClaim(
+    session: DemoSession,
+    slot: {
+      id: string;
+      organizationId: string;
+      facilityId: string;
+      unitId: string;
+      roleRequiredId: string;
+      certificationRequiredIds: string[];
+      startsAt: string;
+      endsAt: string;
+      status: string;
+      source: string;
+      riskFlags: string[];
+    },
+    employeeId: string,
+    policyDecision: ShiftClaimRequestContract["policyDecision"]
+  ) {
+    const manager = await prisma.unit.findFirst({
+      where: {
+        id: slot.unitId,
+        facility: { organizationId: session.organizationId }
+      },
+      select: { managerUserIds: true }
+    });
+    const approverUserId = manager?.managerUserIds.at(0);
+    const result = await prisma.$transaction(
+      async (tx) => {
+        const activeClaim = await tx.shiftClaimRequest.findFirst({
+          where: {
+            organizationId: session.organizationId,
+            slotId: slot.id,
+            employeeId,
+            status: {
+              in: [
+                "SUBMITTED",
+                "PENDING_POLICY_REVIEW",
+                "PENDING_APPROVAL",
+                "APPROVED",
+                "ASSIGNED"
+              ]
+            }
+          }
+        });
+        if (activeClaim) {
+          throw new BadRequestException(
+            "Employee already has an active claim for this shift slot."
+          );
+        }
+        const currentSlot = await tx.shiftSlot.findFirst({
+          where: {
+            id: slot.id,
+            organizationId: session.organizationId,
+            status: "OPEN"
+          }
+        });
+        if (!currentSlot) {
+          throw new BadRequestException("Shift slot is no longer open.");
+        }
+        const claim = await tx.shiftClaimRequest.create({
+          data: {
+            organizationId: session.organizationId,
+            slotId: slot.id,
+            employeeId,
+            userId: session.userId,
+            status: "PENDING_APPROVAL",
+            policyDecision
+          }
+        });
+        const approval = await tx.approvalRequest.create({
+          data: {
+            organizationId: session.organizationId,
+            requestedByUserId: session.userId,
+            ...(approverUserId ? { approverUserId } : {}),
+            approvalType: "SHIFT_ASSIGNMENT",
+            targetObjectType: "ShiftClaimRequest",
+            targetObjectId: claim.id,
+            claimId: claim.id,
+            slotId: slot.id,
+            managerScope: {
+              type: "UNIT",
+              unitIds: [slot.unitId]
+            },
+            status: "PENDING",
+            riskFlags: policyDecision.riskFlags
+          }
+        });
+        const linkedClaim = await tx.shiftClaimRequest.update({
+          where: { id: claim.id },
+          data: { approvalRequestId: approval.id }
+        });
+        const updatedSlot = await tx.shiftSlot.update({
+          where: { id: slot.id },
+          data: {
+            status: "CLAIM_PENDING",
+            riskFlags: policyDecision.riskFlags
+          }
+        });
+        if (approverUserId) {
+          await tx.notification.create({
+            data: {
+              organizationId: session.organizationId,
+              recipientUserId: approverUserId,
+              channel: "IN_APP",
+              type: "APPROVAL_REQUIRED",
+              category: "APPROVAL",
+              priority: "HIGH",
+              payload: {
+                claimId: claim.id,
+                approvalId: approval.id,
+                slotId: slot.id,
+                riskFlags: policyDecision.riskFlags
+              }
+            }
+          });
+        }
+        await tx.auditLog.create({
+          data: {
+            organizationId: session.organizationId,
+            actorUserId: session.userId,
+            actorType: "USER",
+            action: "shift_pipeline.claim.pending_approval",
+            objectType: "ShiftClaimRequest",
+            objectId: claim.id,
+            after: {
+              approvalId: approval.id,
+              slotId: slot.id,
+              riskFlags: policyDecision.riskFlags
+            }
+          }
+        });
+        return { claim: linkedClaim, approval, slot: updatedSlot };
+      },
+      { isolationLevel: "Serializable" }
+    );
+    return {
+      status: "PENDING_APPROVAL" as const,
+      claim: {
+        id: result.claim.id,
+        organizationId: result.claim.organizationId,
+        slotId: result.claim.slotId,
+        employeeId: result.claim.employeeId,
+        userId: result.claim.userId,
+        status: result.claim.status,
+        policyDecision,
+        approvalRequestId: result.approval.id,
+        createdAt: result.claim.createdAt.toISOString()
+      },
+      approval: {
+        id: result.approval.id,
+        approvalType: result.approval.approvalType,
+        requestedByUserId: result.approval.requestedByUserId,
+        ...(result.approval.approverUserId
+          ? { approverUserId: result.approval.approverUserId }
+          : {}),
+        targetObjectType: result.approval.targetObjectType,
+        targetObjectId: result.approval.targetObjectId,
+        status: result.approval.status,
+        riskFlags: result.approval.riskFlags
+      },
+      slot: {
+        ...slot,
+        status: result.slot.status,
+        riskFlags: result.slot.riskFlags
+      },
+      policyDecision
+    };
   }
 
   private async assertSlotInvariant(organizationId: string, slotId: string) {

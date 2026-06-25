@@ -151,6 +151,9 @@ export class ShiftManagerService {
   }
 
   async decidePendingClaim(session: DemoSession, claimId: string, decision: "approve" | "deny", reason?: string) {
+    if (process.env.WORKFLOW_PERSISTENCE === "prisma") {
+      return this.decidePersistedClaim(session, claimId, decision, reason);
+    }
     const repository = this.repositories.repository();
     const [claim] = await repository
       .listClaims({ organizationId: session.organizationId, statuses: ["PENDING_APPROVAL"] })
@@ -416,6 +419,201 @@ export class ShiftManagerService {
     return certifications
       .map((certification) => ids[certification])
       .filter((id): id is string => Boolean(id));
+  }
+
+  private async decidePersistedClaim(
+    session: DemoSession,
+    claimId: string,
+    decision: "approve" | "deny",
+    reason?: string
+  ) {
+    const existing = await prisma.shiftClaimRequest.findFirst({
+      where: {
+        id: claimId,
+        organizationId: session.organizationId,
+        status: "PENDING_APPROVAL"
+      },
+      include: { slot: true }
+    });
+    if (!existing) throw new NotFoundException("Pending claim not found");
+    this.assertCanAssign(session, existing.slot.unitId);
+
+    try {
+      return await prisma.$transaction(
+        async (tx) => {
+          const claim = await tx.shiftClaimRequest.findFirst({
+            where: {
+              id: claimId,
+              organizationId: session.organizationId,
+              status: "PENDING_APPROVAL"
+            }
+          });
+          if (!claim?.approvalRequestId) {
+            throw new NotFoundException("Claim approval request not found");
+          }
+          const approval = await tx.approvalRequest.findFirst({
+            where: {
+              id: claim.approvalRequestId,
+              organizationId: session.organizationId,
+              claimId,
+              slotId: claim.slotId,
+              status: "PENDING"
+            }
+          });
+          if (!approval) {
+            throw new NotFoundException("Claim approval request not found");
+          }
+          const decidedAt = new Date();
+
+          if (decision === "deny") {
+            const [deniedClaim, deniedApproval, openSlot] =
+              await Promise.all([
+                tx.shiftClaimRequest.update({
+                  where: { id: claim.id },
+                  data: { status: "DENIED", decidedAt }
+                }),
+                tx.approvalRequest.update({
+                  where: { id: approval.id },
+                  data: {
+                    status: "DENIED",
+                    approverUserId: session.userId,
+                    decisionReason: reason ?? null,
+                    decidedAt
+                  }
+                }),
+                tx.shiftSlot.update({
+                  where: { id: claim.slotId },
+                  data: { status: "OPEN" }
+                })
+              ]);
+            await tx.notification.create({
+              data: {
+                organizationId: session.organizationId,
+                recipientUserId: claim.userId,
+                channel: "IN_APP",
+                type: "SHIFT_UPDATED",
+                category: "APPROVAL",
+                payload: {
+                  claimId: claim.id,
+                  approvalId: approval.id,
+                  decision: "DENIED",
+                  reason: reason ?? null
+                }
+              }
+            });
+            await tx.auditLog.create({
+              data: {
+                organizationId: session.organizationId,
+                actorUserId: session.userId,
+                actorType: "USER",
+                action: "shift_pipeline.claim.denied",
+                objectType: "ShiftClaimRequest",
+                objectId: claim.id,
+                reason: reason ?? null,
+                after: { approvalId: approval.id, slotId: claim.slotId }
+              }
+            });
+            return {
+              status: "DENIED" as const,
+              claim: deniedClaim,
+              approval: deniedApproval,
+              slot: openSlot
+            };
+          }
+
+          const activeAssignment = await tx.shiftAssignment.findFirst({
+            where: { slotId: claim.slotId, status: "ACTIVE" }
+          });
+          if (activeAssignment) {
+            throw new BadRequestException(
+              "Shift slot already has an active assignment."
+            );
+          }
+          const assignment = await tx.shiftAssignment.create({
+            data: {
+              organizationId: session.organizationId,
+              slotId: claim.slotId,
+              employeeId: claim.employeeId,
+              assignedByUserId: session.userId,
+              status: "ACTIVE",
+              source: "CLAIM"
+            }
+          });
+          const assignedClaim = await tx.shiftClaimRequest.update({
+            where: { id: claim.id },
+            data: {
+              status: "ASSIGNED",
+              assignmentId: assignment.id,
+              decidedAt
+            }
+          });
+          const approved = await tx.approvalRequest.update({
+            where: { id: approval.id },
+            data: {
+              status: "APPROVED",
+              approverUserId: session.userId,
+              decisionReason: reason ?? null,
+              decidedAt
+            }
+          });
+          const assignedSlot = await tx.shiftSlot.update({
+            where: { id: claim.slotId },
+            data: { status: "ASSIGNED" }
+          });
+          await tx.notification.create({
+            data: {
+              organizationId: session.organizationId,
+              recipientUserId: claim.userId,
+              channel: "IN_APP",
+              type: "SHIFT_ASSIGNED",
+              category: "APPROVAL",
+              priority: "HIGH",
+              payload: {
+                claimId: claim.id,
+                approvalId: approval.id,
+                assignmentId: assignment.id
+              }
+            }
+          });
+          await tx.auditLog.create({
+            data: {
+              organizationId: session.organizationId,
+              actorUserId: session.userId,
+              actorType: "USER",
+              action: "shift_pipeline.claim.approved",
+              objectType: "ShiftClaimRequest",
+              objectId: claim.id,
+              reason: reason ?? null,
+              after: {
+                approvalId: approval.id,
+                slotId: claim.slotId,
+                assignmentId: assignment.id
+              }
+            }
+          });
+          return {
+            status: "ASSIGNED" as const,
+            claim: assignedClaim,
+            approval: approved,
+            assignment,
+            slot: assignedSlot
+          };
+        },
+        { isolationLevel: "Serializable" }
+      );
+    } catch (error) {
+      if (
+        typeof error === "object" &&
+        error &&
+        "code" in error &&
+        error.code === "P2034"
+      ) {
+        throw new BadRequestException(
+          "Claim decision conflicted with another assignment. Refresh and retry."
+        );
+      }
+      throw error;
+    }
   }
 
   private async assertSlotInvariant(organizationId: string, slotId: string) {
