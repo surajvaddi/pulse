@@ -1,6 +1,12 @@
 import { z } from "zod";
 import { zodToJsonSchema } from "zod-to-json-schema";
 
+export {
+  FixtureLlmGateway,
+  providerFixtureProposal,
+  type ProviderFixtureKind
+} from "./eval-fixtures.js";
+
 const convertZodSchema = zodToJsonSchema as unknown as (
   schema: unknown,
   options: Record<string, unknown>
