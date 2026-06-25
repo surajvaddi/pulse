@@ -70,6 +70,7 @@ import { ShiftManagerService } from "../workflows/shift-manager.service";
 import { OpenShiftService } from "../workflows/open-shift.service";
 import { LlmWorkflowDispatcherService } from "../workflows/llm-workflow-dispatcher.service";
 import { SqlReportExecutorService } from "../workflows/sql-report-executor.service";
+import { AIToolPreviewService } from "../workflows/ai-tool-preview.service";
 import { ShiftPipelineController } from "../workflows/shift-pipeline.controller";
 import { OperationalScheduleController } from "../workflows/operational-schedule.controller";
 import { ShiftSwapEligibilityService } from "../workflows/shift-swap-eligibility.service";
@@ -147,6 +148,7 @@ import {
     OpenShiftService,
     LlmWorkflowDispatcherService,
     SqlReportExecutorService,
+    AIToolPreviewService,
     ShiftSwapEligibilityService,
     ShiftSwapService,
     InMemoryShiftSwapRepository,

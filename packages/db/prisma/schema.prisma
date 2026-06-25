@@ -341,6 +341,7 @@ model Organization {
   shiftSwapRequests  ShiftSwapRequest[]
   notifications      Notification[]
   aiConversations    AIConversation[]
+  aiToolPreviews     AIToolPreview[]
   auditLogs          AuditLog[]
   invitations        Invitation[]
   integrationConnections IntegrationConnectionRecord[]
@@ -407,6 +408,7 @@ model User {
   notificationPreferences NotificationPreference[]
   aiConversations      AIConversation[]
   aiToolCalls          AIToolCall[]
+  aiToolPreviews       AIToolPreview[]
   requestedApprovals   ApprovalRequest[]  @relation("RequestedApprovals")
   assignedApprovals    ApprovalRequest[]  @relation("AssignedApprovals")
   shiftClaims          ShiftClaimRequest[] @relation("ShiftClaimsByUser")
@@ -898,6 +900,29 @@ model AIToolCall {
   @@index([actorRole])
   @@index([safetyStatus])
   @@map("ai_tool_calls")
+}
+
+model AIToolPreview {
+  id                String       @id @default(cuid())
+  organizationId    String
+  organization      Organization @relation(fields: [organizationId], references: [id])
+  actorUserId       String
+  actorUser         User         @relation(fields: [actorUserId], references: [id])
+  toolName          String
+  normalizedArgs    Json
+  policyResult      Json
+  targetVersion     String?
+  idempotencyKey    String
+  status            String       @default("PENDING")
+  expiresAt         DateTime
+  confirmedAt       DateTime?
+  executionOutput   Json?
+  createdAt         DateTime     @default(now())
+
+  @@unique([organizationId, idempotencyKey])
+  @@index([actorUserId, status])
+  @@index([organizationId, expiresAt])
+  @@map("ai_tool_previews")
 }
 
 model AuditLog {
