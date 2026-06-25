@@ -60,12 +60,12 @@ export class ShiftSwapService {
       throw new ForbiddenException("User is not allowed to create shift swap requests.");
     }
 
-    const { originalShift, decision } = this.eligibility.evaluateOriginalShift(session, input.originalSlotId);
+    const { originalShift, decision } = await this.eligibility.evaluateOriginalShift(session, input.originalSlotId);
     if (!decision.allowed) {
       throw new BadRequestException({ message: "Original shift is not eligible for swap.", decision });
     }
 
-    const candidate = this.eligibility.evaluateCandidate(session, originalShift, input.proposedUserId);
+    const candidate = await this.eligibility.evaluateCandidate(session, originalShift, input.proposedUserId);
     if (!candidate.eligible) {
       throw new BadRequestException({ message: "Proposed swap candidate is not eligible.", candidate });
     }
@@ -168,7 +168,13 @@ export class ShiftSwapService {
       status: "PENDING_MANAGER",
       approvalRequestId: approval.id
     });
-    assertShiftSwapInvariants({ swap: accepted, originalShift: this.eligibility.evaluateOriginalShift(session, swap.originalSlotId).originalShift });
+    assertShiftSwapInvariants({
+      swap: accepted,
+      originalShift: (await this.eligibility.evaluateOriginalShift(
+        session,
+        swap.originalSlotId
+      )).originalShift
+    });
     recordShiftPipelineEvent({
       organizationId: session.organizationId,
       actorUserId: session.userId,
@@ -260,7 +266,10 @@ export class ShiftSwapService {
     await this.assertSlotInvariant(session.organizationId, swap.originalSlotId);
     assertShiftSwapInvariants({
       swap,
-      originalShift: this.eligibility.evaluateOriginalShift({ ...session, userId: swap.proposedUserId }, swap.originalSlotId).originalShift
+      originalShift: (await this.eligibility.evaluateOriginalShift(
+        { ...session, userId: swap.proposedUserId },
+        swap.originalSlotId
+      )).originalShift
     });
     recordShiftPipelineEvent({
       organizationId: session.organizationId,

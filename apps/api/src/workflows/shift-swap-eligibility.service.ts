@@ -1,10 +1,13 @@
-import { BadRequestException, Injectable } from "@nestjs/common";
+import { BadRequestException, Inject, Injectable } from "@nestjs/common";
+import { prisma } from "@pulseshift/db";
 import type { OperationalShiftContract, ShiftAssignmentContract, ShiftSlotContract, ShiftSwapCandidateContract } from "@pulseshift/domain";
 import { operationalShiftFromSlot } from "@pulseshift/domain";
 
 import { demoEmployeeByUserId, demoStaffDirectory } from "../demo/demo-data";
 import type { DemoSession } from "../auth/demo-users";
 import { demoShiftAssignments, demoShiftSlots } from "./shift-pipeline.repository";
+import { ShiftPipelineRepositoryProvider } from "./shift-pipeline.repository";
+import { evaluateAssignmentCandidate } from "./assignment-candidate";
 
 const CERTIFICATION_LABEL_BY_ID: Record<string, string> = {
   cert_bls: "BLS",
@@ -30,6 +33,12 @@ function roleAllows(staffRole: string, requiredRoleId: string) {
 
 @Injectable()
 export class ShiftSwapEligibilityService {
+  constructor(
+    @Inject(ShiftPipelineRepositoryProvider)
+    private readonly repositories: ShiftPipelineRepositoryProvider =
+      new ShiftPipelineRepositoryProvider()
+  ) {}
+
   listOperationalShifts(input: {
     organizationId: string;
     employeeId?: string;
@@ -49,19 +58,19 @@ export class ShiftSwapEligibilityService {
       .filter((shift) => !input.employeeId || shift.employeeId === input.employeeId);
   }
 
-  listSwappableShifts(session: DemoSession): OperationalShiftContract[] {
-    const employeeId = demoEmployeeByUserId.get(session.userId);
+  async listSwappableShifts(session: DemoSession): Promise<OperationalShiftContract[]> {
+    const employeeId = await this.employeeIdForUser(session);
     if (!employeeId) {
       return [];
     }
-    return this.listOperationalShifts({ organizationId: session.organizationId, employeeId }).filter((shift) =>
+    return (await this.operationalShifts(session.organizationId, employeeId)).filter((shift) =>
       this.originalShiftIsSwappable(session, shift).allowed
     );
   }
 
-  evaluateOriginalShift(session: DemoSession, originalSlotId: string) {
-    const employeeId = demoEmployeeByUserId.get(session.userId);
-    const originalShift = this.listOperationalShifts({ organizationId: session.organizationId }).find(
+  async evaluateOriginalShift(session: DemoSession, originalSlotId: string) {
+    const employeeId = await this.employeeIdForUser(session);
+    const originalShift = (await this.operationalShifts(session.organizationId)).find(
       (shift) => shift.slotId === originalSlotId
     );
     if (!originalShift) {
@@ -75,17 +84,133 @@ export class ShiftSwapEligibilityService {
     return { originalShift, decision };
   }
 
-  listCandidates(session: DemoSession, originalSlotId: string): ShiftSwapCandidateContract[] {
-    const { originalShift, decision } = this.evaluateOriginalShift(session, originalSlotId);
+  async listCandidates(session: DemoSession, originalSlotId: string): Promise<ShiftSwapCandidateContract[]> {
+    const { originalShift, decision } = await this.evaluateOriginalShift(session, originalSlotId);
     if (!decision.allowed) {
       return [];
     }
-    return demoStaffDirectory
+    if (process.env.WORKFLOW_PERSISTENCE === "prisma") {
+      const employees = await prisma.employeeProfile.findMany({
+        where: { organizationId: session.organizationId },
+        include: {
+          user: true,
+          certifications: true,
+          availabilityWindows: {
+            where: {
+              status: "ACTIVE",
+              type: "UNAVAILABLE",
+              startAt: { lt: new Date(originalShift.endsAt) },
+              endAt: { gt: new Date(originalShift.startsAt) }
+            }
+          },
+          shiftAssignments: {
+            where: { status: "ACTIVE" },
+            include: { slot: true }
+          }
+        }
+      });
+      return employees
+        .filter(
+          (employee): employee is typeof employee & {
+            userId: string;
+            user: NonNullable<typeof employee.user>;
+          } => Boolean(employee.userId && employee.user)
+        )
+        .map((employee) => {
+          const evaluated = evaluateAssignmentCandidate(
+            {
+              id: originalShift.slotId,
+              organizationId: originalShift.organizationId,
+              facilityId: originalShift.facilityId,
+              unitId: originalShift.unitId,
+              roleRequiredId: originalShift.roleRequiredId,
+              certificationRequiredIds:
+                originalShift.certificationRequiredIds,
+              startsAt: originalShift.startsAt,
+              endsAt: originalShift.endsAt,
+              status: "OPEN",
+              source: originalShift.source,
+              riskFlags: originalShift.riskFlags
+            },
+            {
+              employeeId: employee.id,
+              userId: employee.userId,
+              displayName:
+                employee.preferredName ??
+                employee.legalName ??
+                employee.user.displayName,
+              accountActive: employee.user.status === "ACTIVE",
+              employeeActive: employee.status === "ACTIVE",
+              unitId: employee.primaryUnitId,
+              roleId: employee.roleId,
+              verifiedCertificationIds: employee.certifications
+                .filter(
+                  (certification) =>
+                    certification.status === "VERIFIED" &&
+                    (!certification.expiresAt ||
+                      certification.expiresAt >
+                        new Date(originalShift.startsAt))
+                )
+                .map((certification) => certification.certificationId),
+              unavailableWindows: employee.availabilityWindows.map(
+                (window) => ({
+                  startsAt: window.startAt.toISOString(),
+                  endsAt: window.endAt.toISOString()
+                })
+              ),
+              assignedSlots: employee.shiftAssignments.map((assignment) => ({
+                id: assignment.slot.id,
+                startsAt: assignment.slot.startAt.toISOString(),
+                endsAt: assignment.slot.endAt.toISOString()
+              }))
+            }
+          );
+          const selfBlock =
+            employee.userId === session.userId
+              ? ["Candidate cannot be the requesting employee."]
+              : [];
+          return {
+            userId: employee.userId,
+            employeeId: employee.id,
+            displayName: evaluated.displayName,
+            eligible:
+              evaluated.eligibility !== "BLOCKED" && selfBlock.length === 0,
+            requiresApproval: true,
+            riskFlags: [
+              "MANAGER_APPROVAL_REQUIRED",
+              ...evaluated.riskFlags
+            ],
+            blockingReasons: [...selfBlock, ...evaluated.reasons.filter(() => evaluated.eligibility === "BLOCKED")],
+            warnings: [
+              "Accepted swaps require manager approval before schedule changes.",
+              ...evaluated.reasons.filter(() => evaluated.eligibility === "WARNING")
+            ],
+            evaluatedAt: new Date().toISOString()
+          };
+        });
+    }
+    return Promise.all(demoStaffDirectory
       .filter((member) => Boolean(member.userId))
-      .map((member) => this.evaluateCandidate(session, originalShift, member.userId ?? ""));
+      .map((member) => this.evaluateCandidate(session, originalShift, member.userId ?? "")));
   }
 
-  evaluateCandidate(session: DemoSession, originalShift: OperationalShiftContract, candidateUserId: string): ShiftSwapCandidateContract {
+  async evaluateCandidate(session: DemoSession, originalShift: OperationalShiftContract, candidateUserId: string): Promise<ShiftSwapCandidateContract> {
+    if (process.env.WORKFLOW_PERSISTENCE === "prisma") {
+      const candidates = await this.listCandidates(session, originalShift.slotId);
+      return (
+        candidates.find((candidate) => candidate.userId === candidateUserId) ?? {
+          userId: candidateUserId,
+          employeeId: "",
+          displayName: candidateUserId,
+          eligible: false,
+          requiresApproval: true,
+          riskFlags: ["MANAGER_APPROVAL_REQUIRED"],
+          blockingReasons: ["Candidate does not have an active workforce profile."],
+          warnings: [],
+          evaluatedAt: new Date().toISOString()
+        }
+      );
+    }
     const evaluatedAt = new Date().toISOString();
     const staff = demoStaffDirectory.find((member) => member.userId === candidateUserId);
     const riskFlags: string[] = ["MANAGER_APPROVAL_REQUIRED"];
@@ -131,6 +256,41 @@ export class ShiftSwapEligibilityService {
       warnings,
       evaluatedAt
     };
+  }
+
+  private async operationalShifts(
+    organizationId: string,
+    employeeId?: string
+  ) {
+    if (process.env.WORKFLOW_PERSISTENCE !== "prisma") {
+      return this.listOperationalShifts({
+        organizationId,
+        ...(employeeId ? { employeeId } : {})
+      });
+    }
+    const repository = this.repositories.repository();
+    return this.listOperationalShifts({
+      organizationId,
+      ...(employeeId ? { employeeId } : {}),
+      slots: await repository.listSlots({ organizationId }),
+      assignments: await repository.listAssignments({ organizationId })
+    });
+  }
+
+  private async employeeIdForUser(session: DemoSession) {
+    if (process.env.WORKFLOW_PERSISTENCE !== "prisma") {
+      return demoEmployeeByUserId.get(session.userId);
+    }
+    return (
+      await prisma.employeeProfile.findFirst({
+        where: {
+          organizationId: session.organizationId,
+          userId: session.userId,
+          status: "ACTIVE"
+        },
+        select: { id: true }
+      })
+    )?.id;
   }
 
   private originalShiftIsSwappable(session: DemoSession, shift: OperationalShiftContract) {
