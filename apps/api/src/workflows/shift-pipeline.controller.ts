@@ -11,6 +11,7 @@ import { prisma } from "@pulseshift/db";
 import { ShiftClaimService } from "./shift-claim.service";
 import { ShiftCreationService } from "./shift-creation.service";
 import { ShiftManagerService } from "./shift-manager.service";
+import { OpenShiftService } from "./open-shift.service";
 import { demoShiftSlots, ShiftPipelineRepositoryProvider } from "./shift-pipeline.repository";
 import { seedDemoShiftPipelineState } from "./shift-pipeline.seed";
 
@@ -31,8 +32,37 @@ export class ShiftPipelineController {
     @Inject(WorkspaceContextService)
     private readonly workspaceContext: WorkspaceContextService,
     @Inject(ShiftCreationService)
-    private readonly creation: ShiftCreationService
+    private readonly creation: ShiftCreationService,
+    @Inject(OpenShiftService)
+    private readonly openShifts: OpenShiftService
   ) {}
+
+  @Get("open-slots")
+  listOpenSlots(
+    @CurrentSession() session: DemoSession,
+    @Query("dateFrom") dateFrom?: string,
+    @Query("dateTo") dateTo?: string,
+    @Query("facilityId") facilityId?: string,
+    @Query("unitId") unitId?: string,
+    @Query("roleId") roleId?: string,
+    @Query("minDurationHours") minDurationHours?: string,
+    @Query("maxDurationHours") maxDurationHours?: string,
+    @Query("qualification") qualification?: "eligible" | "all",
+    @Query("overtimeRisk") overtimeRisk?: "exclude" | "include"
+  ) {
+    this.ensureSeeded();
+    return this.openShifts.list(session, {
+      ...(dateFrom ? { dateFrom } : {}),
+      ...(dateTo ? { dateTo } : {}),
+      ...(facilityId ? { facilityId } : {}),
+      ...(unitId ? { unitId } : {}),
+      ...(roleId ? { roleId } : {}),
+      ...(minDurationHours ? { minDurationHours: Number(minDurationHours) } : {}),
+      ...(maxDurationHours ? { maxDurationHours: Number(maxDurationHours) } : {}),
+      ...(qualification ? { qualification } : {}),
+      ...(overtimeRisk ? { overtimeRisk } : {})
+    });
+  }
 
   @Get("slots")
   async listSlots(

@@ -1,5 +1,5 @@
 import { BadRequestException, ForbiddenException, Inject, Injectable, NotFoundException } from "@nestjs/common";
-import { assertShiftCoverageInvariants } from "@pulseshift/domain";
+import { assertShiftCoverageInvariants, type ShiftSlotContract } from "@pulseshift/domain";
 import { prisma } from "@pulseshift/db";
 
 import {
@@ -40,7 +40,27 @@ export class ShiftManagerService {
     });
     if (!slot) throw new NotFoundException("Shift slot not found");
     this.assertCanAssign(session, slot.unitId);
+    return this.assignmentCandidates(session, slot);
+  }
 
+  async evaluateCurrentUserForSlot(
+    session: DemoSession,
+    slotId: string
+  ): Promise<AssignmentCandidate | undefined> {
+    const slot = await this.repositories.repository().findSlot({
+      organizationId: session.organizationId,
+      slotId
+    });
+    if (!slot) throw new NotFoundException("Shift slot not found");
+    return (await this.assignmentCandidates(session, slot)).find(
+      (candidate) => candidate.userId === session.userId
+    );
+  }
+
+  private async assignmentCandidates(
+    session: DemoSession,
+    slot: ShiftSlotContract
+  ): Promise<AssignmentCandidate[]> {
     if (process.env.WORKFLOW_PERSISTENCE !== "prisma") {
       return demoSessions
         .filter((candidate) => candidate.role !== "AI_AGENT_SERVICE")

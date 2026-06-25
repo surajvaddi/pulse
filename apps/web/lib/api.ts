@@ -221,6 +221,20 @@ export type ShiftPipelineSlot = {
   riskFlags: string[];
 };
 
+export type OpenShiftEligibility = {
+  employeeId: string;
+  userId: string;
+  displayName: string;
+  eligibility: "ELIGIBLE" | "WARNING" | "BLOCKED";
+  reasons: string[];
+  riskFlags: string[];
+};
+
+export type OpenShiftResult = {
+  slot: ShiftPipelineSlot;
+  eligibility: OpenShiftEligibility | null;
+};
+
 export type ShiftPipelineClaim = {
   id: string;
   organizationId: string;

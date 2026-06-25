@@ -67,6 +67,7 @@ import { ShiftClaimService } from "../workflows/shift-claim.service";
 import { ShiftCreationService } from "../workflows/shift-creation.service";
 import { ShiftEligibilityService } from "../workflows/shift-eligibility.service";
 import { ShiftManagerService } from "../workflows/shift-manager.service";
+import { OpenShiftService } from "../workflows/open-shift.service";
 import { ShiftPipelineController } from "../workflows/shift-pipeline.controller";
 import { OperationalScheduleController } from "../workflows/operational-schedule.controller";
 import { ShiftSwapEligibilityService } from "../workflows/shift-swap-eligibility.service";
@@ -141,6 +142,7 @@ import {
     ShiftCreationService,
     ShiftEligibilityService,
     ShiftManagerService,
+    OpenShiftService,
     ShiftSwapEligibilityService,
     ShiftSwapService,
     InMemoryShiftSwapRepository,
