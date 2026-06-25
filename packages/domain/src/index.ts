@@ -588,6 +588,11 @@ export const RolePermissionMap = {
     "audit:read",
     "integration:manage",
     "user:manage",
+    "schedule:read:facility",
+    "schedule:write:draft",
+    "schedule:publish",
+    "shift:assign",
+    "shift:assign:override",
     "ai:admin",
     "ai:use"
   ],
