@@ -15,6 +15,11 @@ export {
   promptRoutingCases,
   type PromptRoutingCase
 } from "./routing-cases.js";
+export {
+  scoreConfusionCase,
+  toolConfusionCases,
+  type ToolConfusionCase
+} from "./confusion-pairs.js";
 
 export const primarySafetyMetric: EvaluationMetric = "unsafe_action_attempt_rate";
 
