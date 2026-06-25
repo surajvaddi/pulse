@@ -2,12 +2,24 @@ import { BadRequestException, ForbiddenException, Inject, Injectable, NotFoundEx
 import { assertShiftCoverageInvariants } from "@pulseshift/domain";
 import { prisma } from "@pulseshift/db";
 
-import { demoApprovals, demoEmployeeByUserId } from "../demo/demo-data";
+import {
+  demoApprovals,
+  demoEmployeeByUserId,
+  demoStaffDirectory
+} from "../demo/demo-data";
 import { demoSessions, type DemoSession } from "../auth/demo-users";
 import { PermissionService } from "../auth/permission.service";
 import { ShiftEligibilityService } from "./shift-eligibility.service";
 import { recordShiftPipelineEvent } from "./shift-pipeline-events";
 import { ShiftPipelineRepositoryProvider } from "./shift-pipeline.repository";
+import {
+  demoShiftAssignments,
+  demoShiftSlots
+} from "./shift-pipeline.repository";
+import {
+  evaluateAssignmentCandidate,
+  type AssignmentCandidate
+} from "./assignment-candidate";
 
 @Injectable()
 export class ShiftManagerService {
@@ -16,6 +28,127 @@ export class ShiftManagerService {
     @Inject(ShiftEligibilityService) private readonly eligibility: ShiftEligibilityService,
     @Inject(ShiftPipelineRepositoryProvider) private readonly repositories: ShiftPipelineRepositoryProvider
   ) {}
+
+  async listAssignmentCandidates(
+    session: DemoSession,
+    slotId: string
+  ): Promise<AssignmentCandidate[]> {
+    const repository = this.repositories.repository();
+    const slot = await repository.findSlot({
+      organizationId: session.organizationId,
+      slotId
+    });
+    if (!slot) throw new NotFoundException("Shift slot not found");
+    this.assertCanAssign(session, slot.unitId);
+
+    if (process.env.WORKFLOW_PERSISTENCE !== "prisma") {
+      return demoSessions
+        .filter((candidate) => candidate.role !== "AI_AGENT_SERVICE")
+        .map((candidate) => {
+          const employeeId = demoEmployeeByUserId.get(candidate.userId);
+          const staff = demoStaffDirectory.find(
+            (member) => member.employeeId === employeeId
+          );
+          return evaluateAssignmentCandidate(slot, {
+            employeeId: employeeId ?? "",
+            userId: candidate.userId,
+            displayName: candidate.displayName,
+            accountActive: Boolean(employeeId),
+            employeeActive: Boolean(employeeId),
+            unitId: staff?.unitId ?? "",
+            roleId: this.demoRoleId(staff?.role),
+            verifiedCertificationIds: this.demoCertificationIds(
+              staff?.certifications ?? []
+            ),
+            unavailableWindows: [],
+            assignedSlots: demoShiftAssignments
+              .filter(
+                (assignment) =>
+                  assignment.employeeId === employeeId &&
+                  assignment.status === "ACTIVE"
+              )
+              .map((assignment) =>
+                demoShiftSlots.find(
+                  (candidateSlot) => candidateSlot.id === assignment.slotId
+                )
+              )
+              .filter((candidateSlot): candidateSlot is typeof slot =>
+                Boolean(candidateSlot)
+              )
+              .map((candidateSlot) => ({
+                id: candidateSlot.id,
+                startsAt: candidateSlot.startsAt,
+                endsAt: candidateSlot.endsAt
+              }))
+          });
+        })
+        .sort((left, right) =>
+          left.eligibility.localeCompare(right.eligibility)
+        );
+    }
+
+    const employees = await prisma.employeeProfile.findMany({
+      where: { organizationId: session.organizationId },
+      include: {
+        user: true,
+        certifications: true,
+        availabilityWindows: {
+          where: {
+            status: "ACTIVE",
+            type: "UNAVAILABLE",
+            startAt: { lt: new Date(slot.endsAt) },
+            endAt: { gt: new Date(slot.startsAt) }
+          }
+        },
+        shiftAssignments: {
+          where: { status: "ACTIVE" },
+          include: { slot: true }
+        }
+      }
+    });
+
+    return employees
+      .filter(
+        (employee): employee is typeof employee & {
+          userId: string;
+          user: NonNullable<typeof employee.user>;
+        } => Boolean(employee.userId && employee.user)
+      )
+      .map((employee) =>
+        evaluateAssignmentCandidate(slot, {
+          employeeId: employee.id,
+          userId: employee.userId,
+          displayName:
+            employee.preferredName ??
+            employee.legalName ??
+            employee.user.displayName,
+          accountActive: employee.user.status === "ACTIVE",
+          employeeActive: employee.status === "ACTIVE",
+          unitId: employee.primaryUnitId,
+          roleId: employee.roleId,
+          verifiedCertificationIds: employee.certifications
+            .filter(
+              (certification) =>
+                certification.status === "VERIFIED" &&
+                (!certification.expiresAt ||
+                  certification.expiresAt > new Date(slot.startsAt))
+            )
+            .map((certification) => certification.certificationId),
+          unavailableWindows: employee.availabilityWindows.map((window) => ({
+            startsAt: window.startAt.toISOString(),
+            endsAt: window.endAt.toISOString()
+          })),
+          assignedSlots: employee.shiftAssignments.map((assignment) => ({
+            id: assignment.slot.id,
+            startsAt: assignment.slot.startAt.toISOString(),
+            endsAt: assignment.slot.endAt.toISOString()
+          }))
+        })
+      )
+      .sort((left, right) =>
+        left.eligibility.localeCompare(right.eligibility)
+      );
+  }
 
   async decidePendingClaim(session: DemoSession, claimId: string, decision: "approve" | "deny", reason?: string) {
     const repository = this.repositories.repository();
@@ -233,6 +366,25 @@ export class ShiftManagerService {
       throw new BadRequestException("Assignee does not have a claimable employee profile.");
     }
     return { session: assigneeSession, employeeId };
+  }
+
+  private demoRoleId(role?: string) {
+    if (role === "Charge RN") return "role_charge_rn";
+    if (role === "Agency RN") return "role_agency_rn";
+    return role?.includes("RN") ? "role_rn" : "";
+  }
+
+  private demoCertificationIds(certifications: string[]) {
+    const ids: Record<string, string> = {
+      BLS: "cert_bls",
+      ACLS: "cert_acls",
+      "ICU Qualified": "cert_icu_qualified",
+      "Charge Nurse Authorization": "cert_charge_authorization",
+      "Agency Contract": "cert_agency_contract"
+    };
+    return certifications
+      .map((certification) => ids[certification])
+      .filter((id): id is string => Boolean(id));
   }
 
   private async assertSlotInvariant(organizationId: string, slotId: string) {

@@ -161,6 +161,15 @@ export class ShiftPipelineController {
     return this.claims.claimOpenSlot(session, slotId);
   }
 
+  @Get("slots/:slotId/candidates")
+  listAssignmentCandidates(
+    @CurrentSession() session: DemoSession,
+    @Param("slotId") slotId: string
+  ) {
+    this.ensureSeeded();
+    return this.managers.listAssignmentCandidates(session, slotId);
+  }
+
   @Post("claims/:claimId/cancel")
   cancelClaim(@CurrentSession() session: DemoSession, @Param("claimId") claimId: string) {
     this.ensureSeeded();
