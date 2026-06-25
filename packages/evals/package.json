@@ -9,7 +9,7 @@
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc --noEmit",
     "lint": "eslint \"src/**/*.ts\"",
-    "test": "tsx src/confusion-pairs.assert.ts && tsx src/argument-scoring.assert.ts && tsc --noEmit"
+    "test": "tsx src/confusion-pairs.assert.ts && tsx src/argument-scoring.assert.ts && tsx src/tool-availability.assert.ts && tsc --noEmit"
   },
   "devDependencies": {
     "tsx": "^4.20.6"
