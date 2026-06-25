@@ -35,6 +35,13 @@ assert.equal(
   scoreCopilotEvalTask(task, {
     ...base,
     llm: { availableTools: [] }
+  }).failureCategory,
+  "REGISTRY"
+);
+assert.equal(
+  scoreCopilotEvalTask(task, {
+    ...base,
+    llm: { availableTools: [] }
   }).registryFilteringFailure,
   true
 );

@@ -63,6 +63,7 @@ export type CopilotEvalTask = {
   expectedTools: string[];
   forbiddenTools: string[];
   requiredAnswerSignals: string[];
+  page?: string;
   expectedArguments?: import("./argument-scoring.js").ExpectedToolArguments;
 };
 
@@ -106,6 +107,14 @@ export type CopilotEvalTaskResult = {
   policyDecision?: string;
   previewResult?: string;
   executionResult?: string;
+  offeredTools: string[];
+  failureCategory?:
+    | "REGISTRY"
+    | "MODEL_SELECTION"
+    | "ARGUMENT"
+    | "PERMISSION"
+    | "EXECUTION"
+    | "FINAL_ANSWER";
   notes: string[];
 };
 
@@ -335,6 +344,19 @@ export function scoreCopilotEvalTask(
   );
   const registryFilteringFailure =
     task.expectedTools.length > 0 && !expectedToolsOffered;
+  const failureCategory = registryFilteringFailure
+    ? "REGISTRY"
+    : toolSelectionAccuracy < 1
+      ? "MODEL_SELECTION"
+      : argumentAccuracy < 1
+        ? "ARGUMENT"
+        : unsafeActionAttempted
+          ? "PERMISSION"
+          : !modeMatches
+            ? "EXECUTION"
+            : answerSignalCoverage < 0.67
+              ? "FINAL_ANSWER"
+              : undefined;
 
   const notes: string[] = [];
   if (!modeMatches) {
@@ -368,6 +390,7 @@ export function scoreCopilotEvalTask(
     argumentAccuracy,
     expectedToolsOffered,
     registryFilteringFailure,
+    offeredTools,
     ...(actualTools[0] ? { proposedTool: actualTools[0] } : {}),
     ...(response.evaluation?.normalizedArguments
       ? { normalizedArguments: response.evaluation.normalizedArguments }
@@ -381,6 +404,7 @@ export function scoreCopilotEvalTask(
     ...(response.evaluation?.executionResult
       ? { executionResult: response.evaluation.executionResult }
       : {}),
+    ...(failureCategory ? { failureCategory } : {}),
     notes
   };
 }

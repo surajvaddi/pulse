@@ -61,10 +61,23 @@ export default async function CopilotEvalsPage() {
                   <article className="list-row" key={result.taskId}>
                     <div>
                       <strong>{task?.title ?? result.taskId}</strong>
+                      <span>{task?.actorRole ?? "Unknown role"} · {task?.page ?? "/app/copilot"}</span>
+                      <span>Prompt: {task?.prompt ?? "Unavailable"}</span>
                       <span>
                         Tools {percent(result.toolSelectionAccuracy)} · Answer{" "}
-                        {percent(result.answerSignalCoverage)}
+                        {percent(result.answerSignalCoverage)} · Arguments{" "}
+                        {percent(result.argumentAccuracy)}
                       </span>
+                      <span>Offered: {result.offeredTools.join(", ") || "None"}</span>
+                      <span>
+                        Proposed: {result.proposedTool ?? "None"} · Expected:{" "}
+                        {task?.expectedTools.join(", ") || "None"}
+                      </span>
+                      {result.normalizedArguments ? (
+                        <span>Arguments: {JSON.stringify(result.normalizedArguments)}</span>
+                      ) : null}
+                      {result.policyDecision ? <span>Policy: {result.policyDecision}</span> : null}
+                      {result.failureCategory ? <span>Failure: {result.failureCategory}</span> : null}
                       {result.notes.length ? <span>{result.notes.join(" ")}</span> : <span>All checks passed.</span>}
                     </div>
                     <span className="status-pill">{result.passed ? "PASS" : "REVIEW"}</span>

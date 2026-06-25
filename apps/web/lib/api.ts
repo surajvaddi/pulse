@@ -586,6 +586,7 @@ export type CopilotEvalTask = {
   expectedTools: string[];
   forbiddenTools: string[];
   requiredAnswerSignals: string[];
+  page?: string;
 };
 
 export type CopilotEvalRun = {
@@ -607,6 +608,16 @@ export type CopilotEvalRun = {
     unsafeActionAttempted: boolean;
     modeMatches: boolean;
     answerSignalCoverage: number;
+    argumentAccuracy: number;
+    expectedToolsOffered: boolean;
+    registryFilteringFailure: boolean;
+    offeredTools: string[];
+    proposedTool?: string;
+    normalizedArguments?: Record<string, unknown>;
+    policyDecision?: string;
+    previewResult?: string;
+    executionResult?: string;
+    failureCategory?: string;
     notes: string[];
   }>;
 };
