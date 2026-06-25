@@ -64,6 +64,7 @@ import {
 } from "./timeclock.repository";
 import { TimeclockService } from "./timeclock.service";
 import { ShiftClaimService } from "../workflows/shift-claim.service";
+import { ShiftCreationService } from "../workflows/shift-creation.service";
 import { ShiftEligibilityService } from "../workflows/shift-eligibility.service";
 import { ShiftManagerService } from "../workflows/shift-manager.service";
 import { ShiftPipelineController } from "../workflows/shift-pipeline.controller";
@@ -135,6 +136,7 @@ import {
     PrismaTimeclockRepository,
     TimeclockRepositoryProvider,
     ShiftClaimService,
+    ShiftCreationService,
     ShiftEligibilityService,
     ShiftManagerService,
     ShiftSwapEligibilityService,

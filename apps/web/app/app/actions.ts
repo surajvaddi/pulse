@@ -28,6 +28,51 @@ export async function updateWorkspaceContextAction(formData: FormData) {
   revalidatePath("/app", "layout");
 }
 
+export async function createDraftShiftAction(formData: FormData) {
+  await apiPostSession("/shift-pipeline/slots/draft", {
+    facilityId: String(formData.get("facilityId") ?? ""),
+    unitId: String(formData.get("unitId") ?? ""),
+    roleRequiredId: String(formData.get("roleRequiredId") ?? ""),
+    certificationRequiredIds: [],
+    startsAt: new Date(String(formData.get("startsAt") ?? "")).toISOString(),
+    endsAt: new Date(String(formData.get("endsAt") ?? "")).toISOString()
+  });
+  revalidatePath("/app/schedule/planning");
+}
+
+export async function expandStaffingRequirementAction(formData: FormData) {
+  await apiPostSession("/shift-pipeline/slots/expand-requirement", {
+    facilityId: String(formData.get("facilityId") ?? ""),
+    unitId: String(formData.get("unitId") ?? ""),
+    roleId: String(formData.get("roleRequiredId") ?? ""),
+    certificationRequiredIds: [],
+    startAt: new Date(String(formData.get("startsAt") ?? "")).toISOString(),
+    endAt: new Date(String(formData.get("endsAt") ?? "")).toISOString(),
+    minRequired: Number(formData.get("minRequired") ?? 1),
+    idealRequired: Number(formData.get("idealRequired") ?? 1)
+  });
+  revalidatePath("/app/schedule/planning");
+}
+
+export async function publishDraftShiftsAction(formData: FormData) {
+  await apiPostSession("/shift-pipeline/slots/publish", {
+    facilityId: String(formData.get("facilityId") ?? ""),
+    slotIds: formData.getAll("slotId").map(String),
+    confirmed: formData.get("confirmed") === "on"
+  });
+  revalidatePath("/app/schedule/planning");
+  revalidatePath("/app/open-shifts");
+}
+
+export async function lockScheduleSlotsAction(formData: FormData) {
+  await apiPostSession("/shift-pipeline/slots/lock", {
+    facilityId: String(formData.get("facilityId") ?? ""),
+    slotIds: formData.getAll("slotId").map(String),
+    reason: String(formData.get("reason") ?? "")
+  });
+  revalidatePath("/app/schedule/planning");
+}
+
 export async function createSwapAction(formData: FormData) {
   const originalShiftId = String(formData.get("originalShiftId"));
   await apiPost(

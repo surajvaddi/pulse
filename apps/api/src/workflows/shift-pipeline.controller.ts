@@ -9,6 +9,7 @@ import { demoApprovals } from "../demo/demo-data";
 import { demoEmployeeByUserId } from "../demo/demo-data";
 import { prisma } from "@pulseshift/db";
 import { ShiftClaimService } from "./shift-claim.service";
+import { ShiftCreationService } from "./shift-creation.service";
 import { ShiftManagerService } from "./shift-manager.service";
 import { demoShiftSlots, ShiftPipelineRepositoryProvider } from "./shift-pipeline.repository";
 import { seedDemoShiftPipelineState } from "./shift-pipeline.seed";
@@ -28,7 +29,9 @@ export class ShiftPipelineController {
     @Inject(ShiftClaimService) private readonly claims: ShiftClaimService,
     @Inject(ShiftManagerService) private readonly managers: ShiftManagerService,
     @Inject(WorkspaceContextService)
-    private readonly workspaceContext: WorkspaceContextService
+    private readonly workspaceContext: WorkspaceContextService,
+    @Inject(ShiftCreationService)
+    private readonly creation: ShiftCreationService
   ) {}
 
   @Get("slots")
@@ -225,6 +228,99 @@ export class ShiftPipelineController {
     }
     return this.managers.directAssignSlot(session, slotId, body.userId, {
       ...(body.overrideReason ? { overrideReason: body.overrideReason } : {})
+    });
+  }
+
+  @Post("slots/draft")
+  createDraftSlot(
+    @CurrentSession() session: DemoSession,
+    @Body()
+    body: {
+      facilityId?: string;
+      unitId?: string;
+      roleRequiredId?: string;
+      certificationRequiredIds?: string[];
+      startsAt?: string;
+      endsAt?: string;
+    }
+  ) {
+    return this.creation.createDraftSlot(session, {
+      facilityId: body.facilityId ?? "",
+      unitId: body.unitId ?? "",
+      roleRequiredId: body.roleRequiredId ?? "",
+      certificationRequiredIds: body.certificationRequiredIds ?? [],
+      startsAt: body.startsAt ?? "",
+      endsAt: body.endsAt ?? ""
+    });
+  }
+
+  @Post("slots/expand-requirement")
+  expandRequirement(
+    @CurrentSession() session: DemoSession,
+    @Body()
+    body: {
+      id?: string;
+      facilityId?: string;
+      unitId?: string;
+      roleId?: string;
+      certificationRequiredIds?: string[];
+      startAt?: string;
+      endAt?: string;
+      minRequired?: number;
+      idealRequired?: number;
+    }
+  ) {
+    return this.creation.createSlotsFromRequirement(session, {
+      id: body.id ?? `requirement_${Date.now()}`,
+      organizationId: session.organizationId,
+      facilityId: body.facilityId ?? "",
+      unitId: body.unitId ?? "",
+      roleId: body.roleId ?? "",
+      certificationRequiredIds: body.certificationRequiredIds ?? [],
+      startAt: body.startAt ?? "",
+      endAt: body.endAt ?? "",
+      minRequired: body.minRequired ?? 1,
+      ...(body.idealRequired ? { idealRequired: body.idealRequired } : {}),
+      source: "MANUAL"
+    });
+  }
+
+  @Post("slots/validate")
+  validateDraftSlots(
+    @CurrentSession() session: DemoSession,
+    @Body() body: { facilityId?: string; slotIds?: string[] }
+  ) {
+    return this.creation.validateDraftSlots(session, {
+      facilityId: body.facilityId ?? "",
+      slotIds: body.slotIds ?? []
+    });
+  }
+
+  @Post("slots/publish")
+  publishDraftSlots(
+    @CurrentSession() session: DemoSession,
+    @Body()
+    body: { facilityId?: string; slotIds?: string[]; confirmed?: boolean }
+  ) {
+    if (!body.confirmed) {
+      throw new BadRequestException("Schedule publish requires confirmation.");
+    }
+    return this.creation.publishDraftSlots(session, {
+      facilityId: body.facilityId ?? "",
+      slotIds: body.slotIds ?? []
+    });
+  }
+
+  @Post("slots/lock")
+  lockSlots(
+    @CurrentSession() session: DemoSession,
+    @Body()
+    body: { facilityId?: string; slotIds?: string[]; reason?: string }
+  ) {
+    return this.creation.lockPublishedSlots(session, {
+      facilityId: body.facilityId ?? "",
+      slotIds: body.slotIds ?? [],
+      reason: body.reason ?? ""
     });
   }
 

@@ -55,6 +55,11 @@ export default async function ManagerPage() {
         <p>Review coverage, approvals, staffing risk, and recent audit activity for your unit.</p>
       </div>
       <WorkflowNote route="/app/manager" role="UNIT_MANAGER" />
+      <div className="action-row">
+        <Link className="command-button" href="/app/schedule/planning">
+          Open schedule planner
+        </Link>
+      </div>
       <div className="dashboard-grid">
         {dashboard.cards.map((card, index) => {
           const Icon = icons[index] ?? Users;

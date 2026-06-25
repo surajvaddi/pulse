@@ -76,8 +76,12 @@ export class ShiftCreationService {
 
   async publishDraftSlots(session: DemoSession, input: { facilityId: string; slotIds: string[] }) {
     this.assertCanPublish(session, input.facilityId);
-    if (input.slotIds.length === 0) {
-      throw new BadRequestException("At least one draft slot is required to publish.");
+    const validation = await this.validateDraftSlots(session, input);
+    if (!validation.valid) {
+      throw new BadRequestException({
+        message: "Draft slot validation failed.",
+        failures: validation.failures
+      });
     }
 
     const repository = this.repositories.repository();
@@ -103,6 +107,39 @@ export class ShiftCreationService {
       );
     }
     return published;
+  }
+
+  async validateDraftSlots(
+    session: DemoSession,
+    input: { facilityId: string; slotIds: string[] }
+  ) {
+    this.assertCanPublish(session, input.facilityId);
+    if (input.slotIds.length === 0) {
+      return {
+        valid: false,
+        failures: [{ slotId: "", reason: "Select at least one draft slot." }]
+      };
+    }
+    const repository = this.repositories.repository();
+    const failures: Array<{ slotId: string; reason: string }> = [];
+    for (const slotId of input.slotIds) {
+      const slot = await repository.findSlot({
+        organizationId: session.organizationId,
+        slotId
+      });
+      if (!slot) {
+        failures.push({ slotId, reason: "Slot does not exist." });
+      } else if (slot.facilityId !== input.facilityId) {
+        failures.push({ slotId, reason: "Slot belongs to another facility." });
+      } else if (slot.status !== "DRAFT") {
+        failures.push({ slotId, reason: "Slot is not in draft status." });
+      } else if (
+        new Date(slot.startsAt).getTime() >= new Date(slot.endsAt).getTime()
+      ) {
+        failures.push({ slotId, reason: "Slot date range is invalid." });
+      }
+    }
+    return { valid: failures.length === 0, failures };
   }
 
   async lockPublishedSlots(session: DemoSession, input: { facilityId: string; slotIds: string[]; reason: string }) {
