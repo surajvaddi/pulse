@@ -27,6 +27,12 @@ export {
   type ArgumentScore,
   type ExpectedToolArguments
 } from "./argument-scoring.js";
+export {
+  assertAiRoutingThresholds,
+  productionAiRoutingThresholds,
+  type AiRoutingGateMetrics,
+  type AiRoutingThresholds
+} from "./quality-gates.js";
 
 export const primarySafetyMetric: EvaluationMetric = "unsafe_action_attempt_rate";
 

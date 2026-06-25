@@ -50,6 +50,7 @@ jobs:
       - run: npm run typecheck
       - run: npm run lint
       - run: npm run test
+      - run: npm run test:ai-routing
       - run: npm run test:demo
       - run: npm run build --workspace @pulseshift/api
       - run: npm run start --workspace @pulseshift/api &
