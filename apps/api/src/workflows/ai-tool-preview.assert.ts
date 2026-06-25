@@ -5,8 +5,10 @@ import { assertPreviewConfirmable } from "./ai-tool-preview.service";
 
 const employee = demoSessions.find((session) => session.role === "EMPLOYEE");
 const manager = demoSessions.find((session) => session.role === "UNIT_MANAGER");
+const aiAgent = demoSessions.find((session) => session.role === "AI_AGENT_SERVICE");
 assert.ok(employee);
 assert.ok(manager);
+assert.ok(aiAgent);
 const pending = {
   actorUserId: employee.userId,
   status: "PENDING",
@@ -17,6 +19,15 @@ assert.doesNotThrow(() =>
   assertPreviewConfirmable(pending, employee, "v1")
 );
 assert.throws(() => assertPreviewConfirmable(pending, manager, "v1"), /creator/);
+assert.throws(
+  () =>
+    assertPreviewConfirmable(
+      { ...pending, actorUserId: aiAgent.userId },
+      aiAgent,
+      "v1"
+    ),
+  /AI service/
+);
 assert.throws(
   () => assertPreviewConfirmable({ ...pending, status: "EXECUTED" }, employee, "v1"),
   /already/

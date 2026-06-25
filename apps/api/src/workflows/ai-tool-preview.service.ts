@@ -34,6 +34,9 @@ export function assertPreviewConfirmable(
   session: DemoSession,
   currentTargetVersion: string | null
 ) {
+  if (session.role === "AI_AGENT_SERVICE") {
+    throw new ForbiddenException("AI service identities cannot confirm or approve actions.");
+  }
   if (preview.actorUserId !== session.userId) {
     throw new ForbiddenException("Only the preview creator can confirm this action.");
   }
