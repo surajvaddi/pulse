@@ -1,10 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import { CalendarPlus, MessageSquare, RefreshCw, Send } from "lucide-react";
 
 import type { ScheduleViewModel, ScheduleShiftView } from "@/lib/schedule-view-model";
-import { createSwapAction } from "../actions";
 
 function formatShiftTime(value: string) {
   return new Intl.DateTimeFormat("en-US", {
@@ -124,12 +124,9 @@ export function ScheduleWorkspace({ schedule }: { schedule: ScheduleViewModel })
                   <h3>Actions</h3>
                   <span>Use these for the selected shift only.</span>
                 </div>
-                <form action={createSwapAction}>
-                  <input type="hidden" name="originalShiftId" value={selectedShift.id} />
-                  <button className="command-button" type="submit">
-                    <RefreshCw size={16} /> Request Swap
-                  </button>
-                </form>
+                <Link className="command-button" href={`/app/swaps?slotId=${selectedShift.id}`}>
+                  <RefreshCw size={16} /> Request Swap
+                </Link>
                 <button className="command-button" type="button">
                   <MessageSquare size={16} /> Message Manager
                 </button>

@@ -73,45 +73,13 @@ export async function lockScheduleSlotsAction(formData: FormData) {
   revalidatePath("/app/schedule/planning");
 }
 
-export async function createSwapAction(formData: FormData) {
-  const originalShiftId = String(formData.get("originalShiftId"));
-  await apiPost(
-    "/workflows/swaps",
-    {
-      originalShiftId,
-      proposedUserId: "user_maya"
-    },
-    "user_priya"
-  );
-  revalidatePath("/app/swaps");
-}
-
-export async function acceptSwapAction(formData: FormData) {
-  const swapId = String(formData.get("swapId"));
-  await apiPost(`/workflows/swaps/${swapId}/accept`, {}, "user_maya");
-  revalidatePath("/app/swaps");
-  revalidatePath("/app/manager");
-}
-
-export async function approveSwapAction(formData: FormData) {
-  const swapId = String(formData.get("swapId"));
-  await apiPost(
-    `/workflows/swaps/${swapId}/approve`,
-    {
-      reason: "Demo manager approval after policy review"
-    },
-    "user_jordan_manager"
-  );
-  revalidatePath("/app/swaps");
-  revalidatePath("/app/schedule");
-  revalidatePath("/app/manager");
-}
-
 export async function createCanonicalSwapAction(formData: FormData) {
   const originalSlotId = String(formData.get("originalSlotId"));
   const proposedUserId = String(formData.get("proposedUserId"));
-  const requesterUserId = String(formData.get("requesterUserId") ?? "user_priya") as DemoUserId;
-  await apiPost("/swap-pipeline/swaps", { originalSlotId, proposedUserId }, requesterUserId);
+  await apiPostSession("/swap-pipeline/swaps", {
+    originalSlotId,
+    proposedUserId
+  });
   revalidatePath("/app/swaps");
   revalidatePath("/app/schedule");
   revalidatePath("/app/manager");

@@ -17,13 +17,21 @@ function labelStatus(status: string) {
   return status.replaceAll("_", " ").toLowerCase();
 }
 
-export default async function SwapsPage() {
+export default async function SwapsPage({
+  searchParams
+}: {
+  searchParams: Promise<{ slotId?: string }>;
+}) {
+  const { slotId } = await searchParams;
   const [swappableShifts, swaps] = await Promise.all([
     apiGet<OperationalShift[]>("/swap-pipeline/eligible-original-shifts"),
     apiGet<ShiftSwapRequest[]>("/swap-pipeline/swaps")
   ]);
+  const orderedShifts = [...swappableShifts].sort((left, right) =>
+    left.slotId === slotId ? -1 : right.slotId === slotId ? 1 : 0
+  );
   const candidatePairs = await Promise.all(
-    swappableShifts.map(async (shift) => ({
+    orderedShifts.map(async (shift) => ({
       shift,
       candidates: await apiGet<ShiftSwapCandidate[]>(`/swap-pipeline/shifts/${shift.slotId}/candidates`)
     }))
@@ -83,7 +91,6 @@ export default async function SwapsPage() {
                       <div className="action-row">
                         {eligibleCandidates.map((candidate) => (
                           <form action={createCanonicalSwapAction} key={candidate.userId}>
-                            <input type="hidden" name="requesterUserId" value="user_priya" />
                             <input type="hidden" name="originalSlotId" value={shift.slotId} />
                             <input type="hidden" name="proposedUserId" value={candidate.userId} />
                             <button className="command-button" type="submit">

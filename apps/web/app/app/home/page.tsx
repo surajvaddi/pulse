@@ -10,7 +10,7 @@ import {
 } from "@/lib/api";
 import { buildEmployeeDashboard, formatDashboardDate } from "@/lib/employee-dashboard";
 import { buildRoleDashboard } from "@/lib/role-dashboard";
-import { clockInAction, clockOutAction, createSwapAction } from "../actions";
+import { clockInAction, clockOutAction } from "../actions";
 import { WorkflowNote } from "../workflow-note";
 
 function workspaceLabel(prefix: string, id: string | undefined) {
@@ -118,13 +118,10 @@ export default async function HomePage() {
                     {dashboard.primaryAction === "CLOCK_IN" ? "Clock in" : "Clock out"}
                   </button>
                 </form>
-                <form action={createSwapAction}>
-                  <input type="hidden" name="originalShiftId" value={dashboard.nextShift.id} />
-                  <button className="command-button" type="submit">
-                    <RefreshCw size={16} aria-hidden="true" />
-                    Request swap
-                  </button>
-                </form>
+                <Link className="command-button" href={`/app/swaps?slotId=${dashboard.nextShift.id}`}>
+                  <RefreshCw size={16} aria-hidden="true" />
+                  Request swap
+                </Link>
               </div>
             </div>
           ) : (
