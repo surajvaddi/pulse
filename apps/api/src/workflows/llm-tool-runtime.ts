@@ -1,4 +1,8 @@
-import { LlmToolRegistry, type LlmToolDefinition } from "@pulseshift/ai";
+import {
+  LlmToolRegistry,
+  type LlmToolDefinition,
+  type LlmToolProposal
+} from "@pulseshift/ai";
 
 import { llmSqlReportTools } from "./llm-sql-tool.registry";
 import { llmWorkflowTools } from "./llm-workflow-tool.registry";
@@ -24,4 +28,38 @@ export function assertLlmRuntimeRegistry(executorNames?: Iterable<string>) {
     );
   }
   return true;
+}
+
+export type NormalizedToolProposal = {
+  toolName: string;
+  argumentsJson: Record<string, unknown>;
+  riskLevel: LlmToolDefinition["riskLevel"];
+  requiresApproval: boolean;
+};
+
+export function normalizeToolProposal(
+  proposal: LlmToolProposal
+): NormalizedToolProposal {
+  const tool = llmRuntimeToolRegistry.get(proposal.toolName);
+  if (!tool) throw new Error(`Unknown LLM tool proposal: ${proposal.toolName}`);
+  if (proposal.argumentParseError) {
+    throw new Error(`Malformed JSON arguments for ${proposal.toolName}`);
+  }
+  const parsed = tool.inputSchema.safeParse(proposal.argumentsJson);
+  if (!parsed.success) {
+    throw new Error(
+      `Invalid arguments for ${proposal.toolName}: ${parsed.error.issues
+        .map((issue) => issue.message)
+        .join("; ")}`
+    );
+  }
+  return {
+    toolName: tool.name,
+    argumentsJson: parsed.data as Record<string, unknown>,
+    riskLevel: tool.riskLevel,
+    requiresApproval:
+      tool.riskLevel === "APPROVAL_REQUIRED" ||
+      tool.roleAccess.ORGANIZATION_OWNER === "APPROVAL_REQUIRED" ||
+      Boolean(tool.allowsMutation)
+  };
 }

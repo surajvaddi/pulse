@@ -84,6 +84,7 @@ export type LlmToolProposal = {
   argumentsJson: Record<string, unknown>;
   riskLevel: LlmToolRiskLevel;
   requiresApproval: boolean;
+  argumentParseError?: boolean;
 };
 
 export type LlmToolDefinition = {
@@ -538,12 +539,18 @@ export class OpenAICompatibleGateway implements LlmGateway {
         model: payload.model ?? this.config.model,
         route: request.route,
         content: choice.message.content ?? "",
-        toolProposals: (choice.message.tool_calls ?? []).map((toolCall) => ({
-          toolName: toolCall.function?.name ?? "unknown_tool",
-          argumentsJson: parseToolArguments(toolCall.function?.arguments),
-          riskLevel: "READ_ONLY",
-          requiresApproval: false
-        })),
+        toolProposals: (choice.message.tool_calls ?? []).map((toolCall) => {
+          const parsedArguments = parseToolArguments(toolCall.function?.arguments);
+          return {
+            toolName: toolCall.function?.name ?? "unknown_tool",
+            argumentsJson: parsedArguments.argumentsJson,
+            riskLevel: "READ_ONLY",
+            requiresApproval: false,
+            ...(parsedArguments.argumentParseError
+              ? { argumentParseError: true }
+              : {})
+          };
+        }),
         usage: {
           inputTokens: payload.usage?.prompt_tokens ?? 0,
           outputTokens: payload.usage?.completion_tokens ?? 0,
@@ -610,17 +617,25 @@ export class LlmGatewayFactory {
   }
 }
 
-function parseToolArguments(value: string | undefined): Record<string, unknown> {
+function parseToolArguments(value: string | undefined): {
+  argumentsJson: Record<string, unknown>;
+  argumentParseError: boolean;
+} {
   if (!value) {
-    return {};
+    return { argumentsJson: {}, argumentParseError: false };
   }
   try {
     const parsed: unknown = JSON.parse(value);
-    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
-      ? (parsed as Record<string, unknown>)
-      : {};
+    return {
+      argumentsJson:
+        parsed && typeof parsed === "object" && !Array.isArray(parsed)
+          ? (parsed as Record<string, unknown>)
+          : {},
+      argumentParseError:
+        !parsed || typeof parsed !== "object" || Array.isArray(parsed)
+    };
   } catch {
-    return {};
+    return { argumentsJson: {}, argumentParseError: true };
   }
 }
 
