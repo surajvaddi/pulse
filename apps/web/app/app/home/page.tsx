@@ -11,6 +11,7 @@ import {
 import { buildEmployeeDashboard, formatDashboardDate } from "@/lib/employee-dashboard";
 import { buildRoleDashboard } from "@/lib/role-dashboard";
 import { clockInAction, clockOutAction } from "../actions";
+import { EmployeeEmptyState } from "../employee-empty-state";
 import { WorkflowNote } from "../workflow-note";
 
 function workspaceLabel(prefix: string, id: string | undefined) {
@@ -125,7 +126,7 @@ export default async function HomePage() {
               </div>
             </div>
           ) : (
-            <p className="empty-state">No assigned shifts are visible for this account.</p>
+            <EmployeeEmptyState kind="NO_SCHEDULE" />
           )}
         </section>
 

@@ -7,6 +7,7 @@ import {
 } from "@/lib/api";
 import { buildOpenShiftCards } from "@/lib/shift-pipeline-view";
 import { claimOpenShiftAction } from "../actions";
+import { EmployeeEmptyState } from "../employee-empty-state";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
@@ -108,6 +109,9 @@ export default async function OpenShiftsPage({
           Apply filters
         </button>
       </form>
+      {openShifts.length === 0 ? (
+        <EmployeeEmptyState kind="NO_AVAILABLE_SHIFTS" />
+      ) : null}
       <div className="dashboard-grid">
         {openShifts.map((shift) => {
           const eligibility = eligibilityBySlot.get(shift.id);

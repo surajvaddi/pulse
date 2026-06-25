@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { CalendarPlus, MessageSquare, RefreshCw, Send } from "lucide-react";
 
 import type { ScheduleViewModel, ScheduleShiftView } from "@/lib/schedule-view-model";
+import { EmployeeEmptyState } from "../employee-empty-state";
 
 function formatShiftTime(value: string) {
   return new Intl.DateTimeFormat("en-US", {
@@ -139,7 +140,7 @@ export function ScheduleWorkspace({ schedule }: { schedule: ScheduleViewModel })
               </div>
             </div>
           ) : (
-            <p className="empty-state">No assigned shifts are visible for this demo user.</p>
+            <EmployeeEmptyState kind="NO_SCHEDULE" />
           )}
         </aside>
       </div>
