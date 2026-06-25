@@ -68,6 +68,7 @@ import { ShiftCreationService } from "../workflows/shift-creation.service";
 import { ShiftEligibilityService } from "../workflows/shift-eligibility.service";
 import { ShiftManagerService } from "../workflows/shift-manager.service";
 import { OpenShiftService } from "../workflows/open-shift.service";
+import { LlmWorkflowDispatcherService } from "../workflows/llm-workflow-dispatcher.service";
 import { ShiftPipelineController } from "../workflows/shift-pipeline.controller";
 import { OperationalScheduleController } from "../workflows/operational-schedule.controller";
 import { ShiftSwapEligibilityService } from "../workflows/shift-swap-eligibility.service";
@@ -143,6 +144,7 @@ import {
     ShiftEligibilityService,
     ShiftManagerService,
     OpenShiftService,
+    LlmWorkflowDispatcherService,
     ShiftSwapEligibilityService,
     ShiftSwapService,
     InMemoryShiftSwapRepository,
