@@ -7,6 +7,7 @@ import { ShiftPipelineRepositoryProvider, demoShiftAssignments, demoShiftSlots }
 import { seedDemoShiftPipelineState } from "./shift-pipeline.seed";
 import { ShiftSwapEligibilityService } from "./shift-swap-eligibility.service";
 import { ShiftSwapService, demoShiftSwapRequests } from "./shift-swap.service";
+import { ShiftSwapRepositoryProvider } from "./shift-swap.repository";
 
 function session(userId: string) {
   const found = demoSessions.find((candidate) => candidate.userId === userId);
@@ -33,8 +34,8 @@ async function main() {
     unitId: "unit_icu",
     roleRequiredId: "role_rn",
     certificationRequiredIds: ["cert_bls", "cert_acls", "cert_icu_qualified"],
-    startsAt: "2026-06-20T11:00:00.000Z",
-    endsAt: "2026-06-20T23:00:00.000Z",
+    startsAt: "2026-07-20T11:00:00.000Z",
+    endsAt: "2026-07-20T23:00:00.000Z",
     status: "ASSIGNED",
     source: "MANUAL",
     riskFlags: []
@@ -52,7 +53,12 @@ async function main() {
   demoShiftSwapRequests.splice(0, demoShiftSwapRequests.length);
 
   const repositoryProvider = new ShiftPipelineRepositoryProvider();
-  const service = new ShiftSwapService(new PermissionService(), new ShiftSwapEligibilityService(), repositoryProvider);
+  const service = new ShiftSwapService(
+    new PermissionService(),
+    new ShiftSwapEligibilityService(),
+    repositoryProvider,
+    new ShiftSwapRepositoryProvider()
+  );
 
   await rejectsWithMessage(
     () =>

@@ -16,6 +16,7 @@ type SwapMutationInput = { organizationId: string; swapId: string };
 type SwapApprovalInput = Parameters<SwapRepository["approveSwapAndAssignShift"]>[0];
 type PrismaSwapStatus =
   | "DRAFT"
+  | "PREVIEW"
   | "PENDING_COUNTERPARTY"
   | "PENDING_MANAGER"
   | "APPROVED"
@@ -27,7 +28,8 @@ type PrismaSwapRecord = {
   id: string;
   requesterEmployeeId: string;
   requesterEmployee: { userId: string | null };
-  originalShiftId: string;
+  originalShiftId: string | null;
+  originalSlotId: string | null;
   proposedEmployeeId: string | null;
   proposedEmployee: { userId: string | null } | null;
   unitId: string;
@@ -47,7 +49,7 @@ function persistenceEnabled() {
 }
 
 function mapSwapStatus(status: PrismaSwapStatus): DemoSwapRecord["status"] {
-  if (status === "DRAFT") {
+  if (status === "DRAFT" || status === "PREVIEW") {
     return "PENDING_COUNTERPARTY";
   }
   if (status === "EXPIRED") {
@@ -78,7 +80,7 @@ function mapPrismaSwap(swap: PrismaSwapRecord): DemoSwapRecord {
     id: swap.id,
     requesterEmployeeId: swap.requesterEmployeeId,
     requesterUserId: swap.requesterEmployee.userId ?? swap.createdBy,
-    originalShiftId: swap.originalShiftId,
+    originalShiftId: swap.originalShiftId ?? swap.originalSlotId ?? "",
     proposedEmployeeId: swap.proposedEmployeeId ?? "",
     proposedUserId: swap.proposedEmployee?.userId ?? "",
     unitId: swap.unitId,
@@ -202,7 +204,7 @@ export class PrismaSwapRepository implements SwapRepository {
   async listSwaps(query: SwapQuery) {
     const swaps = await prisma.shiftSwapRequest.findMany({
       where: {
-        originalShift: { organizationId: query.organizationId },
+        organizationId: query.organizationId,
         ...(query.unitId ? { unitId: query.unitId } : {}),
         ...(query.statuses ? { status: { in: query.statuses } } : {}),
         ...(query.requesterUserId || query.proposedUserId
@@ -224,7 +226,7 @@ export class PrismaSwapRepository implements SwapRepository {
     const swap = await prisma.shiftSwapRequest.findFirst({
       where: {
         id: swapId,
-        originalShift: { organizationId }
+        organizationId
       },
       include: swapIncludes
     });
@@ -232,13 +234,31 @@ export class PrismaSwapRepository implements SwapRepository {
   }
 
   async createSwap(input: Omit<DemoSwapRecord, "id">) {
+    const shift = demoSchedules.find(
+      (candidate) => candidate.id === input.originalShiftId
+    );
+    const organizationId =
+      shift && "organizationId" in shift
+        ? String(shift.organizationId)
+        : "org_pulseshift_demo";
     const data = {
+      organizationId,
       requesterEmployeeId: input.requesterEmployeeId,
+      requesterUserId: input.requesterUserId,
       originalShiftId: input.originalShiftId,
       proposedEmployeeId: input.proposedEmployeeId,
+      proposedUserId: input.proposedUserId,
       unitId: input.unitId,
       status: input.status,
       riskFlags: input.riskFlags,
+      policyDecision: {
+        allowed: true,
+        requiresApproval: input.managerApprovalRequired,
+        riskFlags: input.riskFlags,
+        blockingReasons: [],
+        warnings: [],
+        evaluatedAt: new Date().toISOString()
+      },
       createdBy: input.requesterUserId,
       managerApprovalRequired: input.managerApprovalRequired
     };
@@ -314,7 +334,7 @@ export class PrismaSwapRepository implements SwapRepository {
     await prisma.shiftSwapRequest.updateMany({
       where: {
         id: input.swapId,
-        originalShift: { organizationId: input.organizationId }
+        organizationId: input.organizationId
       },
       data: { status }
     });

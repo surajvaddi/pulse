@@ -166,6 +166,7 @@ enum AvailabilityStatus {
 
 enum SwapStatus {
   DRAFT
+  PREVIEW
   PENDING_COUNTERPARTY
   PENDING_MANAGER
   APPROVED
@@ -337,6 +338,7 @@ model Organization {
   shiftAssignments   ShiftAssignment[]
   shiftClaims        ShiftClaimRequest[]
   approvalRequests   ApprovalRequest[]
+  shiftSwapRequests  ShiftSwapRequest[]
   notifications      Notification[]
   aiConversations    AIConversation[]
   auditLogs          AuditLog[]
@@ -601,6 +603,7 @@ model ShiftSlot {
   riskFlags                String[]
   assignments              ShiftAssignment[]
   claims                   ShiftClaimRequest[]
+  swapRequests             ShiftSwapRequest[]
   createdAt                DateTime             @default(now())
   updatedAt                DateTime             @updatedAt
 
@@ -675,17 +678,29 @@ model AvailabilityWindow {
 
 model ShiftSwapRequest {
   id                      String           @id @default(cuid())
+  organizationId          String
+  organization            Organization     @relation(fields: [organizationId], references: [id])
   requesterEmployeeId     String
   requesterEmployee       EmployeeProfile  @relation("RequesterSwaps", fields: [requesterEmployeeId], references: [id])
-  originalShiftId         String
-  originalShift           Shift            @relation(fields: [originalShiftId], references: [id])
+  requesterUserId         String
+  originalShiftId         String?
+  originalShift           Shift?           @relation(fields: [originalShiftId], references: [id])
+  originalSlotId          String?
+  originalSlot            ShiftSlot?       @relation(fields: [originalSlotId], references: [id])
   proposedEmployeeId      String?
   proposedEmployee        EmployeeProfile? @relation("ProposedSwaps", fields: [proposedEmployeeId], references: [id])
   proposedShiftId         String?
+  proposedUserId          String
   unitId                  String
   unit                    Unit             @relation(fields: [unitId], references: [id])
   status                  SwapStatus
   riskFlags               String[]
+  policyDecision          Json
+  approvalRequestId       String?
+  assignmentId            String?
+  counterpartRespondedAt  DateTime?
+  decidedAt               DateTime?
+  expiresAt               DateTime?
   createdBy               String
   managerApprovalRequired Boolean
   createdAt               DateTime         @default(now())
@@ -693,6 +708,8 @@ model ShiftSwapRequest {
 
   @@index([requesterEmployeeId])
   @@index([proposedEmployeeId])
+  @@index([organizationId, status])
+  @@index([originalSlotId, status])
   @@map("shift_swap_requests")
 }
 

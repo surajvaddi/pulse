@@ -8,8 +8,13 @@ import { PermissionService } from "../auth/permission.service";
 import { ShiftPipelineRepositoryProvider } from "./shift-pipeline.repository";
 import { recordShiftPipelineEvent } from "./shift-pipeline-events";
 import { ShiftSwapEligibilityService } from "./shift-swap-eligibility.service";
+import {
+  ShiftSwapRepositoryProvider,
+  demoShiftSwapRequests
+} from "./shift-swap.repository";
+import { prisma } from "@pulseshift/db";
 
-export const demoShiftSwapRequests: ShiftSwapRequestContract[] = [];
+export { demoShiftSwapRequests } from "./shift-swap.repository";
 
 export type CreateSwapRequestInput = {
   originalSlotId: string;
@@ -37,21 +42,16 @@ export class ShiftSwapService {
   constructor(
     @Inject(PermissionService) private readonly permissions: PermissionService,
     @Inject(ShiftSwapEligibilityService) private readonly eligibility: ShiftSwapEligibilityService,
-    @Inject(ShiftPipelineRepositoryProvider) private readonly repositories: ShiftPipelineRepositoryProvider
+    @Inject(ShiftPipelineRepositoryProvider) private readonly repositories: ShiftPipelineRepositoryProvider,
+    @Inject(ShiftSwapRepositoryProvider)
+    private readonly swapRepositories: ShiftSwapRepositoryProvider
   ) {}
 
   listSwapRequests(session: DemoSession, status?: ShiftSwapRequestContract["status"]) {
-    return demoShiftSwapRequests.filter((swap) => {
-      if (swap.organizationId !== session.organizationId) {
-        return false;
-      }
-      if (status && swap.status !== status) {
-        return false;
-      }
-      if (this.canApproveAnySwap(session)) {
-        return true;
-      }
-      return swap.requesterUserId === session.userId || swap.proposedUserId === session.userId;
+    return this.swapRepositories.repository().list({
+      organizationId: session.organizationId,
+      ...(status ? { status } : {}),
+      ...(!this.canApproveAnySwap(session) ? { userId: session.userId } : {})
     });
   }
 
@@ -70,11 +70,12 @@ export class ShiftSwapService {
       throw new BadRequestException({ message: "Proposed swap candidate is not eligible.", candidate });
     }
 
-    const duplicate = demoShiftSwapRequests.find(
+    const duplicate = (await this.swapRepositories.repository().list({
+      organizationId: session.organizationId,
+      userId: session.userId
+    })).find(
       (swap) =>
-        swap.organizationId === session.organizationId &&
         swap.originalSlotId === input.originalSlotId &&
-        swap.requesterUserId === session.userId &&
         swap.proposedUserId === input.proposedUserId &&
         ACTIVE_SWAP_STATUSES.includes(swap.status)
     );
@@ -82,8 +83,7 @@ export class ShiftSwapService {
       throw new BadRequestException("An active swap request already exists for this shift and candidate.");
     }
 
-    const swap: ShiftSwapRequestContract = {
-      id: `swap_${demoShiftSwapRequests.length + 1}`,
+    const swap = await this.swapRepositories.repository().create({
       organizationId: session.organizationId,
       originalSlotId: input.originalSlotId,
       requesterEmployeeId: originalShift.employeeId ?? "",
@@ -102,9 +102,8 @@ export class ShiftSwapService {
       },
       managerApprovalRequired: true,
       createdAt: new Date().toISOString()
-    };
+    });
     assertShiftSwapInvariants({ swap, originalShift });
-    demoShiftSwapRequests.push(swap);
     recordShiftPipelineEvent({
       organizationId: session.organizationId,
       actorUserId: session.userId,
@@ -119,7 +118,7 @@ export class ShiftSwapService {
   }
 
   async respondToSwap(session: DemoSession, swapId: string, input: RespondToSwapInput) {
-    const swap = this.findSwap(session.organizationId, swapId);
+    const swap = await this.findSwap(session.organizationId, swapId);
     if (swap.proposedUserId !== session.userId) {
       throw new ForbiddenException("Only the proposed counterpart can respond to this swap.");
     }
@@ -128,8 +127,12 @@ export class ShiftSwapService {
     }
 
     if (input.decision === "decline") {
-      swap.status = "DENIED";
-      swap.decidedAt = new Date().toISOString();
+      const denied = await this.swapRepositories.repository().update({
+        organizationId: session.organizationId,
+        id: swap.id,
+        status: "DENIED",
+        decidedAt: new Date().toISOString()
+      });
       recordShiftPipelineEvent({
         organizationId: session.organizationId,
         actorUserId: session.userId,
@@ -141,13 +144,31 @@ export class ShiftSwapService {
         notifyUserId: swap.requesterUserId,
         notificationType: "SHIFT_SWAP_DECLINED"
       });
-      return swap;
+      return denied;
     }
 
-    const approval = this.createApproval(session, swap);
-    swap.status = "PENDING_MANAGER";
-    swap.approvalRequestId = approval.id;
-    assertShiftSwapInvariants({ swap, originalShift: this.eligibility.evaluateOriginalShift(session, swap.originalSlotId).originalShift });
+    const approval =
+      process.env.WORKFLOW_PERSISTENCE === "prisma"
+        ? await prisma.approvalRequest.create({
+            data: {
+              organizationId: session.organizationId,
+              requestedByUserId: swap.requesterUserId,
+              approvalType: "SHIFT_SWAP",
+              targetObjectType: "ShiftSwapRequest",
+              targetObjectId: swap.id,
+              slotId: swap.originalSlotId,
+              managerScope: { type: "UNIT", unitIds: [swap.unitId] },
+              riskFlags: swap.policyDecision.riskFlags
+            }
+          })
+        : this.createApproval(session, swap);
+    const accepted = await this.swapRepositories.repository().update({
+      organizationId: session.organizationId,
+      id: swap.id,
+      status: "PENDING_MANAGER",
+      approvalRequestId: approval.id
+    });
+    assertShiftSwapInvariants({ swap: accepted, originalShift: this.eligibility.evaluateOriginalShift(session, swap.originalSlotId).originalShift });
     recordShiftPipelineEvent({
       organizationId: session.organizationId,
       actorUserId: session.userId,
@@ -158,11 +179,11 @@ export class ShiftSwapService {
       notifyUserId: "user_jordan_manager",
       notificationType: "SHIFT_SWAP_APPROVAL_REQUIRED"
     });
-    return swap;
+    return accepted;
   }
 
   async decideSwap(session: DemoSession, swapId: string, input: DecideSwapInput) {
-    const swap = this.findSwap(session.organizationId, swapId);
+    const swap = await this.findSwap(session.organizationId, swapId);
     if (swap.status !== "PENDING_MANAGER") {
       throw new BadRequestException("Swap is not waiting for manager decision.");
     }
@@ -174,6 +195,9 @@ export class ShiftSwapService {
     }
     if (!this.permissions.hasPermission(session, "shift:swap:approve", { type: "UNIT", unitId: slot.unitId })) {
       throw new ForbiddenException("User is not allowed to approve swaps for this unit.");
+    }
+    if (process.env.WORKFLOW_PERSISTENCE === "prisma") {
+      return this.decidePersistedSwap(session, swap, input);
     }
 
     const approval = this.findApproval(swap);
@@ -252,8 +276,178 @@ export class ShiftSwapService {
     return { status: "APPROVED" as const, swap, assignment, approval };
   }
 
-  private findSwap(organizationId: string, swapId: string) {
-    const swap = demoShiftSwapRequests.find((candidate) => candidate.organizationId === organizationId && candidate.id === swapId);
+  private async decidePersistedSwap(
+    session: DemoSession,
+    swap: ShiftSwapRequestContract,
+    input: DecideSwapInput
+  ) {
+    try {
+      return await prisma.$transaction(
+        async (tx) => {
+          const current = await tx.shiftSwapRequest.findFirst({
+            where: {
+              id: swap.id,
+              organizationId: session.organizationId,
+              status: "PENDING_MANAGER"
+            }
+          });
+          if (!current?.approvalRequestId) {
+            throw new NotFoundException("Swap approval request not found.");
+          }
+          const approval = await tx.approvalRequest.findFirst({
+            where: {
+              id: current.approvalRequestId,
+              organizationId: session.organizationId,
+              status: "PENDING"
+            }
+          });
+          if (!approval) {
+            throw new NotFoundException("Swap approval request not found.");
+          }
+          if (!current.originalSlotId) {
+            throw new BadRequestException(
+              "Canonical swap is missing its original shift slot."
+            );
+          }
+          const decidedAt = new Date();
+          if (input.decision === "deny") {
+            const [deniedSwap, deniedApproval] = await Promise.all([
+              tx.shiftSwapRequest.update({
+                where: { id: current.id },
+                data: { status: "DENIED", decidedAt }
+              }),
+              tx.approvalRequest.update({
+                where: { id: approval.id },
+                data: {
+                  status: "DENIED",
+                  approverUserId: session.userId,
+                  decisionReason: input.reason ?? null,
+                  decidedAt
+                }
+              })
+            ]);
+            await tx.auditLog.create({
+              data: {
+                organizationId: session.organizationId,
+                actorUserId: session.userId,
+                actorType: "USER",
+                action: "shift_pipeline.swap.denied",
+                objectType: "ShiftSwapRequest",
+                objectId: current.id,
+                reason: input.reason ?? null,
+                after: { approvalId: approval.id }
+              }
+            });
+            return {
+              status: "DENIED" as const,
+              swap: deniedSwap,
+              approval: deniedApproval
+            };
+          }
+
+          const activeAssignment = await tx.shiftAssignment.findFirst({
+            where: {
+              slotId: current.originalSlotId,
+              employeeId: current.requesterEmployeeId,
+              status: "ACTIVE"
+            }
+          });
+          if (!activeAssignment || !current.proposedEmployeeId) {
+            throw new BadRequestException(
+              "Original shift assignment is no longer available for swap."
+            );
+          }
+          const competingAssignment = await tx.shiftAssignment.findFirst({
+            where: {
+              slotId: current.originalSlotId,
+              status: "ACTIVE",
+              id: { not: activeAssignment.id }
+            }
+          });
+          if (competingAssignment) {
+            throw new BadRequestException(
+              "Shift assignment changed before swap approval."
+            );
+          }
+          await tx.shiftAssignment.update({
+            where: { id: activeAssignment.id },
+            data: { status: "SUPERSEDED", endedAt: decidedAt }
+          });
+          const assignment = await tx.shiftAssignment.create({
+            data: {
+              organizationId: session.organizationId,
+              slotId: current.originalSlotId,
+              employeeId: current.proposedEmployeeId,
+              assignedByUserId: session.userId,
+              status: "ACTIVE",
+              source: "SWAP"
+            }
+          });
+          const approvedSwap = await tx.shiftSwapRequest.update({
+            where: { id: current.id },
+            data: {
+              status: "APPROVED",
+              assignmentId: assignment.id,
+              decidedAt
+            }
+          });
+          const approved = await tx.approvalRequest.update({
+            where: { id: approval.id },
+            data: {
+              status: "APPROVED",
+              approverUserId: session.userId,
+              decisionReason: input.reason ?? null,
+              decidedAt
+            }
+          });
+          await tx.shiftSlot.update({
+            where: { id: current.originalSlotId },
+            data: {
+              status: "ASSIGNED",
+              riskFlags: current.riskFlags
+            }
+          });
+          await tx.auditLog.create({
+            data: {
+              organizationId: session.organizationId,
+              actorUserId: session.userId,
+              actorType: "USER",
+              action: "shift_pipeline.swap.approved",
+              objectType: "ShiftSwapRequest",
+              objectId: current.id,
+              reason: input.reason ?? null,
+              after: {
+                approvalId: approval.id,
+                assignmentId: assignment.id
+              }
+            }
+          });
+          return {
+            status: "APPROVED" as const,
+            swap: approvedSwap,
+            approval: approved,
+            assignment
+          };
+        },
+        { isolationLevel: "Serializable" }
+      );
+    } catch (error) {
+      if (
+        typeof error === "object" &&
+        error &&
+        "code" in error &&
+        error.code === "P2034"
+      ) {
+        throw new BadRequestException(
+          "Swap approval conflicted with another assignment. Refresh and retry."
+        );
+      }
+      throw error;
+    }
+  }
+
+  private async findSwap(organizationId: string, swapId: string) {
+    const swap = await this.swapRepositories.repository().find({ organizationId, swapId });
     if (!swap) {
       throw new NotFoundException("Shift swap request not found.");
     }
