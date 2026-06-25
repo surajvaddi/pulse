@@ -33,9 +33,12 @@ export class PermissionService {
 
   private scopeAllows(session: DemoSession, grant: PermissionGrant, objectScope: ObjectScope): boolean {
     if (grant.scope.type === "ORG") {
+      if (grant.scope.organizationId !== session.organizationId) {
+        return false;
+      }
       return objectScope.type === "ORG"
         ? grant.scope.organizationId === objectScope.organizationId
-        : grant.scope.organizationId === session.organizationId;
+        : true;
     }
 
     if (grant.scope.type === "SELF") {
@@ -61,4 +64,3 @@ export class PermissionService {
     return session.grants.map((grant) => grant.scope);
   }
 }
-
