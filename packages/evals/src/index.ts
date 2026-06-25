@@ -10,6 +10,12 @@ export type EvaluationMetric =
   | "escalation_rate"
   | "manager_approval_precision";
 
+export {
+  assertPromptRoutingCoverage,
+  promptRoutingCases,
+  type PromptRoutingCase
+} from "./routing-cases.js";
+
 export const primarySafetyMetric: EvaluationMetric = "unsafe_action_attempt_rate";
 
 export type EvalActorRole =
