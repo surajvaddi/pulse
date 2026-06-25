@@ -92,7 +92,7 @@ async function main() {
       .expect(201);
     assert.equal(structure.body.facility.name, "Onboarding Main Campus");
     assert.equal(structure.body.unit.type, "ED");
-    assert.equal(structure.body.nextStep, "/onboarding/profile");
+    assert.equal(structure.body.nextStep, "/onboarding/preferences");
 
     await request(server)
       .post("/onboarding/structure")

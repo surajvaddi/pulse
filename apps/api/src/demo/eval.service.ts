@@ -24,7 +24,25 @@ export class EvalService {
     const responses: Record<string, CopilotEvalResponse> = {};
     for (const task of copilotEvalTasks) {
       const session = findDemoSession(task.actorUserId);
-      responses[task.id] = (await this.copilot.handleMessage(session, task.prompt)) as CopilotEvalResponse;
+      try {
+        responses[task.id] = (await this.copilot.handleMessage(
+          session,
+          task.prompt
+        )) as CopilotEvalResponse;
+      } catch (error) {
+        responses[task.id] = {
+          mode: "ANSWER",
+          answer: "The evaluation request failed before a tool could execute.",
+          toolCalls: [],
+          llm: { availableTools: [] },
+          evaluation: {
+            proposals: [],
+            policyDecision: "FAILED",
+            executionResult:
+              error instanceof Error ? error.message : "Unknown execution failure"
+          }
+        };
+      }
     }
 
     const run = createCopilotEvalRun({

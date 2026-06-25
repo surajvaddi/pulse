@@ -39,6 +39,24 @@ export class ScheduleService {
     const repository = this.repositories.repository();
     const context = await this.workspaceContext.getContext(session);
     const query = scopeQueryForSession(session, context, "schedule");
+    const canReadSelf = this.permissions.hasPermission(
+      session,
+      "schedule:read:self",
+      { type: "SELF", userId: session.userId }
+    );
+    const canReadUnit =
+      Boolean(query.unitId) &&
+      this.permissions.hasPermission(session, "schedule:read:unit", {
+        type: "UNIT",
+        unitId: query.unitId ?? ""
+      });
+    const canReadFacility =
+      Boolean(query.facilityId) &&
+      this.permissions.hasPermission(session, "schedule:read:facility", {
+        type: "FACILITY",
+        facilityId: query.facilityId ?? ""
+      });
+    this.assertAllowed(session, canReadSelf || canReadUnit || canReadFacility);
     if (query.userId) {
       return this.mySchedule(session);
     }

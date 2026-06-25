@@ -7,7 +7,7 @@ import {
   onboardingRequirementsForRole
 } from "@pulseshift/domain";
 
-import { apiPatch, apiPost, apiPatchSession, apiPostSession, type DemoUserId } from "@/lib/api";
+import { apiPost, apiPatchSession, apiPostSession, type DemoUserId } from "@/lib/api";
 import { demoResetEnabledForEnv } from "@/lib/demo-controls";
 
 export async function claimOpenShiftAction(formData: FormData) {

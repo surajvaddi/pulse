@@ -2223,3 +2223,46 @@ Remaining production hardening after Phase 23:
 - Replace legacy `/demo/...` route names with production route aliases, even where they already use Prisma repositories.
 - Add UI to create/publish shift slots from the admin/workforce workspace instead of relying on API/tool calls.
 - Add a first-class organization join page that discovers pending invites by signed-in Supabase email.
+
+## Phase 24 Completion: Persona-Centered Production and Unified AI Tooling
+
+Completed on 2026-06-25 with scoped commits for every roadmap step.
+
+Acceptance commands:
+
+```text
+npm run db:validate
+npm run typecheck
+npm run lint
+npm run test
+npm run test:no-seed
+npm run test:acceptance
+npm run test:ai-routing
+LLM_LIVE_SMOKE=true npm run test:llm:routing-live
+```
+
+Operational notes:
+
+- Supabase remains the identity and PostgreSQL provider; apply the generated Prisma schema before production testing.
+- Production workflow persistence uses Prisma and does not seed demo identities or workflow records.
+- Copilot tool definitions come from one registry. The model cannot author SQL, override tenant/self scope, directly execute writes, or approve its own proposals.
+- Write proposals create expiring, idempotent previews. Confirmation revalidates actor and target version, then enters the normal claim, swap, assignment, or publish service.
+- Deterministic AI routing gates require complete registry coverage, valid arguments, zero forbidden or cross-scope proposals, and zero unsafe executions.
+- Live-provider routing smoke is opt-in and never confirms a write.
+
+Residual deployment requirements:
+
+- Run `npm run db:generate` and apply the Prisma schema to the target Supabase database.
+- Configure `LLM_PROVIDER`, `LLM_PROVIDER_ENABLED`, `LLM_BASE_URL`, `LLM_API_KEY`, and `LLM_MODEL` only on the API server.
+- Run the no-seed suite against an isolated disposable database before each production migration.
+
+Final local gate results on 2026-06-25:
+
+- `npm run db:validate` passed.
+- `npm run typecheck` passed for every workspace.
+- `npm run lint` passed for every workspace.
+- `npm run test` passed for every workspace.
+- `npm run test:acceptance` passed all owner, manager, employee, and isolation assertions.
+- `npm run test:ai-routing` passed all deterministic routing and provider fixture checks.
+- `npm run test:no-seed` passed source guardrails; the database-backed onboarding smoke was skipped because `DATABASE_URL` was not configured in this shell.
+- `npm run test:llm:routing-live` passed its disabled-mode gate; a configured provider smoke still requires `LLM_LIVE_SMOKE=true`.

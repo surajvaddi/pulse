@@ -8,10 +8,7 @@ import { PermissionService } from "../auth/permission.service";
 import { ShiftPipelineRepositoryProvider } from "./shift-pipeline.repository";
 import { recordShiftPipelineEvent } from "./shift-pipeline-events";
 import { ShiftSwapEligibilityService } from "./shift-swap-eligibility.service";
-import {
-  ShiftSwapRepositoryProvider,
-  demoShiftSwapRequests
-} from "./shift-swap.repository";
+import { ShiftSwapRepositoryProvider } from "./shift-swap.repository";
 import { prisma } from "@pulseshift/db";
 
 export { demoShiftSwapRequests } from "./shift-swap.repository";

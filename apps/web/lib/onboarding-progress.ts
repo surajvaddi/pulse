@@ -1,6 +1,6 @@
 import type { SessionSummary } from "@/lib/api";
 import type { PulseShiftSessionIdentity, SupabaseAccessTokenClaims } from "@/lib/supabase-session";
-import { pulseShiftSessionMatchesSupabaseClaims, requiresOrganizationOnboarding } from "@/lib/supabase-session";
+import { requiresOrganizationOnboarding } from "@/lib/supabase-session";
 import { AccountRoleSchema, onboardingRequirementsForRole } from "@pulseshift/domain";
 
 export type OnboardingProgress = {

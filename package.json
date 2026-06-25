@@ -16,6 +16,8 @@
     "lint": "npm run lint --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
     "test:demo": "npm run test:demo --workspace @pulseshift/api",
+    "test:acceptance": "npm run test:acceptance --workspace @pulseshift/api",
+    "test:no-seed": "npm run test:no-seed --workspace @pulseshift/api",
     "test:llm:live": "npm run test:live --workspace @pulseshift/ai",
     "test:llm:routing-live": "npm run test:routing-live --workspace @pulseshift/ai",
     "test:ai-routing": "npm run test --workspace @pulseshift/evals && npm run test --workspace @pulseshift/ai",

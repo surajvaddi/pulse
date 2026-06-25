@@ -10,6 +10,9 @@ import { seedDemoShiftPipelineState } from "./shift-pipeline.seed";
 
 async function main() {
   seedDemoShiftPipelineState();
+  const startsAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
+  startsAt.setUTCHours(11, 0, 0, 0);
+  const endsAt = new Date(startsAt.getTime() + 12 * 60 * 60 * 1000);
   demoShiftSlots.push({
     id: "slot_shift_priya_future_swap_api",
     organizationId: "org_pulseshift_demo",
@@ -17,8 +20,8 @@ async function main() {
     unitId: "unit_icu",
     roleRequiredId: "role_rn",
     certificationRequiredIds: ["cert_bls", "cert_acls", "cert_icu_qualified"],
-    startsAt: "2026-06-20T11:00:00.000Z",
-    endsAt: "2026-06-20T23:00:00.000Z",
+    startsAt: startsAt.toISOString(),
+    endsAt: endsAt.toISOString(),
     status: "ASSIGNED",
     source: "MANUAL",
     riskFlags: []
@@ -31,7 +34,7 @@ async function main() {
     assignedByUserId: "user_jordan_manager",
     status: "ACTIVE",
     source: "MANAGER_ASSIGNMENT",
-    createdAt: "2026-06-07T12:00:00.000Z"
+    createdAt: new Date().toISOString()
   });
 
   const moduleRef = await Test.createTestingModule({
