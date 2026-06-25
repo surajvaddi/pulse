@@ -24,9 +24,14 @@ assert.ok(invitationService.includes("Employee number"));
 assert.ok(onboardingService.includes("acceptedByUserId: session.userId"));
 assert.ok(onboardingService.includes("controlled by the accepted invitation"));
 assert.ok(onboardingService.includes("already in use. Ask an administrator"));
+assert.ok(onboardingService.includes("unit.facilityId !== facility.id"));
+assert.ok(onboardingService.includes(
+  "Invitation workforce placement no longer belongs to the current organization."
+));
 assert.equal(onboardingService.includes('roleName?.trim() || "RN"'), false);
 
 assert.ok(profilePage.includes("Organization-assigned workforce details"));
 assert.equal(profilePage.includes('name="facilityId"'), false);
 assert.equal(profilePage.includes('name="unitId"'), false);
 assert.equal(profilePage.includes('name="employmentType"'), false);
+assert.ok(profilePage.includes("Organization-assigned workforce details"));
